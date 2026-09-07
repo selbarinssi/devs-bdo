@@ -37,6 +37,12 @@ function toIconSlug(name: string): string {
  * and don't match the full item display name.
  */
 const ICON_ALIASES: Record<string, string> = {
+  // Final Carrack ships → permit icon
+  "epheria carrack: advance": "permit",
+  "epheria carrack: balance": "permit",
+  "epheria carrack: volante": "permit",
+  "epheria carrack: valor": "permit",
+
   // Blue / green gear sets
   "+10 epheria caravel blue gear set": "blue_gear",
   "+10 epheria galleass blue gear set": "blue_gear",
@@ -65,8 +71,6 @@ const ICON_ALIASES: Record<string, string> = {
   "brilliant rock salt ingot": "rock_salt",
   "brilliant pearl shard": "brilliant_pearl",
   "tear of the ocean": "tear_ocean",
-
-  // Final ships (no dedicated icon — fall through to letter)
 };
 
 function resolveIconSlug(name: string): string {
