@@ -1,0 +1,36 @@
+{
+  "url": "http://127.0.0.1:8080/",
+  "viewports": {
+    "desktop": {
+      "width": 1280,
+      "height": 800,
+      "status": 200,
+      "title": "The Alchemist",
+      "hasCanvas": false,
+      "bodyTextLen": 1873,
+      "bodyTextHash": "4c05a61068dfcbc75268a25f0f21f7c9d7d89147cb0724a069def5e130b8dc94",
+      "bodyTextPrefix": "BLACK DESERT ONLINE THE ALCHEMIST ALCHEMY · SAILIES · CARRACK Al",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-preview.png"
+    },
+    "mobile": {
+      "width": 390,
+      "height": 844,
+      "status": 200,
+      "title": "The Alchemist",
+      "hasCanvas": false,
+      "bodyTextLen": 1763,
+      "bodyTextHash": "4958584265e14bec12037b1e0033e56f377ae81bc466cdcf3eb58fcb69230ffb",
+      "bodyTextPrefix": "BLACK DESERT ONLINE THE ALCHEMIST ALCHEMY · SAILIES · CARRACK Al",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-preview-mobile.png"
+    }
+  },
+  "brandWarnings": [],
+  "authWarnings": [],
+  "verdictFile": "/workspace/screenshots/app-builder-preview.json"
+}

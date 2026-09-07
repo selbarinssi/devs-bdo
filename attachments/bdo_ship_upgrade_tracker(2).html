@@ -1,0 +1,1186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BDO Ship Upgrade Tracker</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Spectral:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Deep-sea navy base with brass/copper nautical-instrument accents */
+            --bg-color: #071018;
+            --bg-color-alt: #0a1622;
+            --card-bg: #0f1e2c;
+            --card-bg-raised: #14283a;
+            --card-completed: #0e2622;
+            --border-color: #1f3448;
+            --border-completed: #4d9b8a;
+            --text-main: #eaf1f6;
+            --text-muted: #7f97ab;
+            --accent-brass: #d3a24d;
+            --accent-brass-dim: #a67f3c;
+            --accent-teal: #4d9b8a;
+            --accent-copper: #c1663b;
+            --font-display: 'Spectral', Georgia, serif;
+            --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: var(--font-body);
+            background:
+                radial-gradient(ellipse 900px 500px at 50% -10%, rgba(77,155,138,0.10), transparent),
+                var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 32px 16px;
+            display: flex;
+            justify-content: center;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 880px;
+            background: linear-gradient(180deg, var(--bg-color-alt), var(--bg-color));
+            padding: 32px;
+            border-radius: 14px;
+            box-shadow: 0 24px 60px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.03);
+            border: 1px solid var(--border-color);
+        }
+
+        h1 {
+            text-align: center;
+            font-family: var(--font-display);
+            font-weight: 600;
+            color: var(--text-main);
+            margin: 0 0 6px;
+            font-size: 2rem;
+            letter-spacing: 0.01em;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.92rem;
+            margin: 0 0 28px;
+        }
+
+        .controls-panel {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 20px;
+            background: var(--card-bg);
+            padding: 18px;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+        }
+
+        .select-group {
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+        }
+
+        label {
+            font-size: 0.78rem;
+            color: var(--accent-brass);
+            font-weight: 600;
+            letter-spacing: 0.02em;
+        }
+
+        select {
+            padding: 11px 12px;
+            background: var(--bg-color-alt);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            border-radius: 7px;
+            font-family: var(--font-body);
+            font-size: 0.95rem;
+            outline: none;
+            transition: border-color 0.15s ease;
+            appearance: none;
+            background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' fill='%237f97ab'><path d='M2 4l5 5 5-5' stroke='%237f97ab' stroke-width='1.5' fill='none'/></svg>");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            padding-right: 32px;
+        }
+
+        select:focus, select:focus-visible {
+            border-color: var(--accent-teal);
+            box-shadow: 0 0 0 3px rgba(77,155,138,0.18);
+        }
+
+        select:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .progress-bar-container {
+            margin: 20px 0;
+            background: var(--card-bg);
+            padding: 18px;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 10px;
+            font-size: 0.9rem;
+        }
+
+        .progress-header span:first-child {
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        #progress-text {
+            font-family: var(--font-display);
+            font-weight: 600;
+            font-size: 1.05rem;
+            color: var(--accent-brass);
+        }
+
+        .progress-track {
+            height: 14px;
+            background: var(--bg-color-alt);
+            border-radius: 7px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #2c6e8f, var(--accent-teal), var(--accent-brass));
+            transition: width 0.35s ease;
+        }
+
+        .tree-header-action {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            gap: 12px;
+        }
+
+        #tree-title {
+            font-family: var(--font-display);
+            font-weight: 600;
+            font-size: 1.25rem !important;
+            color: var(--text-main) !important;
+        }
+
+        .btn-reset {
+            background: transparent;
+            color: var(--accent-copper);
+            border: 1px solid var(--accent-copper);
+            padding: 8px 14px;
+            border-radius: 7px;
+            cursor: pointer;
+            font-family: var(--font-body);
+            font-size: 0.82rem;
+            font-weight: 600;
+            white-space: nowrap;
+            transition: background 0.15s ease, color 0.15s ease;
+        }
+
+        .btn-reset:hover {
+            background: var(--accent-copper);
+            color: #fff;
+        }
+
+        /* ===== Final step banner ===== */
+        .final-step {
+            background: linear-gradient(135deg, rgba(211,162,77,0.10), var(--card-bg-raised));
+            border: 1px solid var(--accent-brass-dim);
+            border-radius: 12px;
+            padding: 18px 20px;
+            margin-bottom: 18px;
+        }
+
+        .final-step.completed {
+            border-color: var(--accent-teal);
+            background: linear-gradient(135deg, rgba(77,155,138,0.14), var(--card-bg-raised));
+        }
+
+        .final-step-header {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .final-icon {
+            width: 40px;
+            height: 40px;
+        }
+
+        .final-meta { flex: 1; min-width: 0; }
+
+        .final-label {
+            font-size: 0.72rem;
+            color: var(--accent-brass);
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+
+        .final-name {
+            font-family: var(--font-display);
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .final-how {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            margin: 12px 0 14px;
+            line-height: 1.5;
+        }
+
+        .final-toggle {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            width: fit-content;
+        }
+
+        .final-toggle .toggle-text {
+            font-size: 0.88rem;
+            font-weight: 500;
+            color: var(--text-main);
+        }
+
+        /* ===== Section grouping (flat, correctness-preserving DOM) ===== */
+        .node-children.top-level {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 4px 16px 10px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .section-label {
+            font-family: var(--font-display);
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--accent-brass);
+            padding: 16px 0 8px;
+            margin-top: 4px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .section-label:first-child {
+            border-top: none;
+            margin-top: 0;
+        }
+
+        /* ===== Rows ===== */
+        .tree-node {
+            transition: background 0.2s ease;
+        }
+
+        /* Plain leaf rows: quiet table-row look, no boxes */
+        .tree-node:not(.component-node) {
+            border-bottom: 1px solid var(--border-color);
+            padding: 11px 0;
+        }
+
+        .node-children.top-level > .tree-node:not(.component-node):last-child,
+        .node-children.sub-list > .tree-node:not(.component-node):last-child {
+            border-bottom: none;
+        }
+
+        .tree-node.completed:not(.component-node) {
+            background: rgba(77,155,138,0.05);
+        }
+
+        .tree-node.in-progress:not(.component-node) {
+            background: rgba(211,162,77,0.05);
+        }
+
+        /* Component rows: raised card since they expand to reveal sub-materials */
+        .tree-node.component-node {
+            background: var(--card-bg-raised);
+            border: 1px solid var(--border-color);
+            border-radius: 9px;
+            padding: 12px 14px;
+            margin: 8px 0;
+        }
+
+        .tree-node.component-node.completed {
+            border-color: var(--border-completed);
+        }
+
+        .tree-node.component-node.in-progress {
+            border-color: var(--accent-brass-dim);
+        }
+
+        .node-children.sub-list {
+            margin: 12px 0 2px 20px;
+            padding-left: 16px;
+            border-left: 2px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .node-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: default;
+            user-select: none;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .component-node > .node-header {
+            cursor: pointer;
+        }
+
+        .node-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 0;
+        }
+
+        .toggle-btn {
+            color: var(--accent-brass);
+            font-size: 0.7rem;
+            width: 12px;
+            flex-shrink: 0;
+            text-align: center;
+        }
+
+        .toggle-btn.leaf-dot {
+            color: var(--text-muted);
+        }
+
+        .mat-icon {
+            width: 30px;
+            height: 30px;
+            border-radius: 6px;
+            background: var(--bg-color-alt);
+            border: 1px solid var(--border-color);
+            object-fit: cover;
+            flex-shrink: 0;
+        }
+
+        .mat-name {
+            font-weight: 500;
+            font-size: 0.92rem;
+            color: var(--text-main);
+            overflow-wrap: anywhere;
+        }
+
+        .component-node > .node-header .mat-name {
+            font-weight: 600;
+        }
+
+        .info-btn {
+            width: 17px;
+            height: 17px;
+            border-radius: 50%;
+            border: 1px solid var(--border-color);
+            background: transparent;
+            color: var(--text-muted);
+            font-size: 0.65rem;
+            font-style: italic;
+            font-family: Georgia, serif;
+            line-height: 1;
+            cursor: pointer;
+            flex-shrink: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            transition: border-color 0.15s ease, color 0.15s ease;
+        }
+
+        .info-btn:hover {
+            border-color: var(--accent-brass);
+            color: var(--accent-brass);
+        }
+
+        .node-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-shrink: 0;
+        }
+
+        /* Stepper control */
+        .mat-counter {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .stepper-btn {
+            width: 24px;
+            height: 24px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-color-alt);
+            color: var(--text-main);
+            font-size: 0.95rem;
+            line-height: 1;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: border-color 0.15s ease, color 0.15s ease;
+        }
+
+        .stepper-btn:hover {
+            border-color: var(--accent-teal);
+            color: var(--accent-teal);
+        }
+
+        .mat-counter input {
+            width: 64px;
+            padding: 5px 4px;
+            background: var(--bg-color-alt);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            border-radius: 6px;
+            text-align: center;
+            font-family: var(--font-body);
+            font-weight: 600;
+            font-size: 0.88rem;
+            outline: none;
+            transition: border-color 0.15s ease;
+            /* hide native spinners */
+            -moz-appearance: textfield;
+        }
+
+        .mat-counter input::-webkit-outer-spin-button,
+        .mat-counter input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        .mat-counter input:focus {
+            border-color: var(--accent-teal);
+            box-shadow: 0 0 0 3px rgba(77,155,138,0.18);
+        }
+
+        .mat-req {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            white-space: nowrap;
+        }
+
+        /* Toggle switch control (for single-item requirements) */
+        .mat-toggle {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .mat-toggle input {
+            position: absolute;
+            opacity: 0;
+            width: 40px;
+            height: 22px;
+            margin: 0;
+            cursor: pointer;
+        }
+
+        .toggle-track {
+            width: 40px;
+            height: 22px;
+            border-radius: 11px;
+            background: var(--bg-color-alt);
+            border: 1px solid var(--border-color);
+            position: relative;
+            transition: background 0.2s ease, border-color 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .toggle-thumb {
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--text-muted);
+            transition: transform 0.2s ease, background 0.2s ease;
+        }
+
+        .mat-toggle input:checked + .toggle-track {
+            background: rgba(77,155,138,0.25);
+            border-color: var(--accent-teal);
+        }
+
+        .mat-toggle input:checked + .toggle-track .toggle-thumb {
+            transform: translateX(18px);
+            background: var(--accent-teal);
+        }
+
+        .mat-toggle input:focus-visible + .toggle-track {
+            box-shadow: 0 0 0 3px rgba(77,155,138,0.25);
+        }
+
+        .mat-badge {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            background: var(--bg-color-alt);
+            color: var(--text-muted);
+            border: 1px solid var(--border-color);
+            min-width: 66px;
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        .completed .mat-badge {
+            background: rgba(77,155,138,0.16);
+            color: #7fd6c2;
+            border-color: var(--accent-teal);
+        }
+
+        .in-progress .mat-badge {
+            background: rgba(211,162,77,0.14);
+            color: var(--accent-brass);
+            border-color: var(--accent-brass-dim);
+        }
+
+        .node-how {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            margin: 8px 0 4px;
+            padding: 8px 10px;
+            background: var(--bg-color-alt);
+            border-radius: 6px;
+            line-height: 1.5;
+        }
+
+        .node-how strong {
+            color: var(--accent-brass);
+            font-weight: 600;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 48px 20px;
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+
+        @media (max-width: 600px) {
+            .controls-panel { grid-template-columns: 1fr; }
+            .container { padding: 20px 16px; }
+            .node-header { flex-direction: column; align-items: flex-start; }
+            .node-right { width: 100%; justify-content: space-between; }
+            .final-step-header { flex-wrap: wrap; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>BDO Ship Upgrade Tracker</h1>
+    <p class="subtitle">Track materials for your Carrack upgrade, tier by tier</p>
+
+    <div class="controls-panel">
+        <div class="select-group">
+            <label for="current-ship">Current Base Ship</label>
+            <select id="current-ship" onchange="updateTargetOptions()">
+                <option value="" disabled selected>Select Base Ship...</option>
+                <option value="caravel">Epheria Caravel</option>
+                <option value="galleass">Epheria Galleass</option>
+            </select>
+        </div>
+
+        <div class="select-group">
+            <label for="target-ship">Target Upgrade</label>
+            <select id="target-ship" disabled onchange="renderCraftTree()">
+                <option value="" disabled selected>Select Target Upgrade...</option>
+            </select>
+        </div>
+    </div>
+
+    <div id="progress-container" class="progress-bar-container" style="display: none;">
+        <div class="progress-header">
+            <span>Overall Upgrade Completion</span>
+            <span id="progress-text">0%</span>
+        </div>
+        <div class="progress-track">
+            <div class="progress-fill" id="progress-fill"></div>
+        </div>
+    </div>
+
+    <div id="results-area" style="display: none;">
+        <div class="tree-header-action">
+            <h2 id="tree-title" style="margin: 0;"></h2>
+            <button class="btn-reset" onclick="resetProgress()">Reset Active Ship Progress</button>
+        </div>
+
+        <div id="tree-root"></div>
+    </div>
+
+    <div id="empty-state" class="empty-state">
+        Select a base ship and target upgrade above to begin tracking.
+    </div>
+</div>
+
+<script>
+const treeData = {
+    caravel: {
+        carrack_advance: {
+            id: "carrack_advance",
+            name: "Epheria Carrack: Advance",
+            icon: "icons/permit.png",
+            req: 1,
+            how: "Final ship upgrade performed at Port Epheria Wharf.",
+            children: [
+                {
+                    id: "caravel_blue_gear",
+                    name: "+10 Epheria Caravel Blue Gear Set",
+                    icon: "icons/blue_gear.png",
+                    req: 4,
+                    how: "Crafted at Port Epheria 1-4, 2F Ship Part Workshop & enhanced to +10 with Tidal Black Stones.",
+                    children: [
+                        { id: "green_gear", name: "+10 Caravel Green Gear Set", icon: "icons/green_gear.png", req: 4, how: "Buy from Falasi in Port Epheria & enhance with Tidal Black Stones." },
+                        { id: "manganese", name: "Ruddy Manganese Nodule", icon: "icons/manganese.png", req: 90, how: "Barter Level 4 goods, Oquilla Dailies, or Crow Coin Shop." },
+                        { id: "plywood", name: "Enhanced Island Tree Coated Plywood", icon: "icons/plywood.png", req: 300, how: "Barter Level 4 goods, Oquilla Dailies, or Crow Coin Shop." },
+                        { id: "seaweed", name: "Seaweed Stalk", icon: "icons/seaweed.png", req: 205, how: "Barter Level 4 goods, Oquilla Dailies, or Crow Coin Shop." },
+                        { id: "dark_iron", name: "Great Ocean Dark Iron", icon: "icons/dark_iron.png", req: 150, how: "Barter Level 4 goods, Oquilla Dailies, or Crow Coin Shop." },
+                        { id: "pearl_crystal", name: "Pure Pearl Crystal", icon: "icons/pearl_crystal.png", req: 45, how: "Barter Level 3 goods, Oquilla Dailies, or Crow Coin Shop." },
+                        { id: "moon_scale", name: "Moon Scale Plywood", icon: "icons/moon_scale.png", req: 400, how: "Barter / Khan / Oquilla Dailies." },
+                        { id: "tide_timber", name: "Tide-Dyed Standardized Timber Square", icon: "icons/tide_timber.png", req: 180, how: "Sea Monster Hunting or Barter Level 4." },
+                        { id: "bright_reef", name: "Bright Reef Piece", icon: "icons/bright_reef.png", req: 180, how: "Barter Level 3 goods or Oquilla Dailies." },
+                        { id: "artifact_combat", name: "Cox Pirates' Artifact (Combat)", icon: "icons/artifact_combat.png", req: 120, how: "Defeat Cox Pirates or barter." },
+                        { id: "artifact_parley_beginner", name: "Cox Pirates' Artifact (Parley Beginner)", icon: "icons/artifact_parley_beginner.png", req: 60, how: "Barter Level 2 goods, Supplies Delivery dailies, or Crow Coin Shop." },
+                        { id: "artifact_parley_expert", name: "Cox Pirates' Artifact (Parley Expert)", icon: "icons/artifact_parley_expert.png", req: 30, how: "Barter Level 4 goods or Crow Coin Shop." },
+                        { id: "cobalt", name: "Luminous Cobalt Ingot", icon: "icons/cobalt.png", req: 30, how: "Barter Level 4 goods or Crow Coin Shop." },
+                        { id: "tidal_stones", name: "Tidal Black Stones", icon: "icons/tidal_stone.png", req: 220, how: "Used to enhance Blue Gear from +1 to +10." }
+                    ]
+                },
+                { id: "flax_fabric", name: "Moon Vein Flax Fabric", icon: "icons/flax_fabric.png", req: 180, how: "Barter Level 5 goods, Drying Khan's Tendon, Oquilla Dailies, or Crow Coin Shop." },
+                { id: "deep_tide", name: "Deep Tide-Dyed Standardized Timber Square", icon: "icons/deep_tide.png", req: 144, how: "Barter Level 5 goods, Sea Monster Hunting, Oquilla Dailies, or Crow Coin Shop." },
+                { id: "rock_salt", name: "Brilliant Rock Salt Ingot", icon: "icons/rock_salt.png", req: 35, how: "High-tier Barter (Level 5) or Crow Coin Shop." },
+                { id: "brilliant_pearl", name: "Brilliant Pearl Shard", icon: "icons/brilliant_pearl.png", req: 35, how: "High-tier Barter (Level 5) or Crow Coin Shop." },
+                { id: "tear_ocean", name: "Tear of the Ocean", icon: "icons/tear_ocean.png", req: 42, how: "Oquilla's Eye Weekly/Daily Quests, Barter, or Crow Coin Shop." }
+            ]
+        },
+        carrack_balance: {
+            id: "carrack_balance",
+            name: "Epheria Carrack: Balance",
+            icon: "icons/permit.png",
+            req: 1,
+            how: "Final ship upgrade performed at Port Epheria Wharf.",
+            children: [
+                {
+                    id: "caravel_blue_gear",
+                    name: "+10 Epheria Caravel Blue Gear Set",
+                    icon: "icons/blue_gear.png",
+                    req: 4,
+                    how: "Crafted at Port Epheria 1-4, 2F Ship Part Workshop & enhanced to +10 with Tidal Black Stones.",
+                    children: [
+                        { id: "green_gear", name: "+10 Caravel Green Gear Set", icon: "icons/green_gear.png", req: 4, how: "Buy from Falasi in Port Epheria & enhance with Tidal Black Stones." },
+                        { id: "manganese", name: "Ruddy Manganese Nodule", icon: "icons/manganese.png", req: 90, how: "Barter Level 4 goods, Oquilla Dailies, or Crow Coin Shop." },
+                        { id: "plywood", name: "Enhanced Island Tree Coated Plywood", icon: "icons/plywood.png", req: 300, how: "Barter Level 4 goods, Oquilla Dailies, or Crow Coin Shop." },
+                        { id: "seaweed", name: "Seaweed Stalk", icon: "icons/seaweed.png", req: 205, how: "Barter Level 4 goods, Oquilla Dailies, or Crow Coin Shop." },
+                        { id: "dark_iron", name: "Great Ocean Dark Iron", icon: "icons/dark_iron.png", req: 150, how: "Barter Level 4 goods, Oquilla Dailies, or Crow Coin Shop." },
+                        { id: "pearl_crystal", name: "Pure Pearl Crystal", icon: "icons/pearl_crystal.png", req: 45, how: "Barter Level 3 goods, Oquilla Dailies, or Crow Coin Shop." },
+                        { id: "moon_scale", name: "Moon Scale Plywood", icon: "icons/moon_scale.png", req: 400, how: "Barter / Khan / Oquilla Dailies." },
+                        { id: "tide_timber", name: "Tide-Dyed Standardized Timber Square", icon: "icons/tide_timber.png", req: 180, how: "Sea Monster Hunting or Barter Level 4." },
+                        { id: "bright_reef", name: "Bright Reef Piece", icon: "icons/bright_reef.png", req: 180, how: "Barter Level 3 goods or Oquilla Dailies." },
+                        { id: "artifact_combat", name: "Cox Pirates' Artifact (Combat)", icon: "icons/artifact_combat.png", req: 120, how: "Defeat Cox Pirates or barter." },
+                        { id: "artifact_parley_beginner", name: "Cox Pirates' Artifact (Parley Beginner)", icon: "icons/artifact_parley_beginner.png", req: 60, how: "Barter Level 2 goods, Supplies Delivery dailies, or Crow Coin Shop." },
+                        { id: "artifact_parley_expert", name: "Cox Pirates' Artifact (Parley Expert)", icon: "icons/artifact_parley_expert.png", req: 30, how: "Barter Level 4 goods or Crow Coin Shop." },
+                        { id: "cobalt", name: "Luminous Cobalt Ingot", icon: "icons/cobalt.png", req: 30, how: "Barter Level 4 goods or Crow Coin Shop." },
+                        { id: "tidal_stones", name: "Tidal Black Stones", icon: "icons/tidal_stone.png", req: 220, how: "Used to enhance Blue Gear from +1 to +10." }
+                    ]
+                },
+                { id: "flax_fabric", name: "Moon Vein Flax Fabric", icon: "icons/flax_fabric.png", req: 180, how: "Barter Level 5 goods, Drying Khan's Tendon, Oquilla Dailies, or Crow Coin Shop." },
+                { id: "deep_tide", name: "Deep Tide-Dyed Standardized Timber Square", icon: "icons/deep_tide.png", req: 144, how: "Barter Level 5 goods, Sea Monster Hunting, Oquilla Dailies, or Crow Coin Shop." },
+                { id: "rock_salt", name: "Brilliant Rock Salt Ingot", icon: "icons/rock_salt.png", req: 30, how: "High-tier Barter (Level 5) or Crow Coin Shop." },
+                { id: "brilliant_pearl", name: "Brilliant Pearl Shard", icon: "icons/brilliant_pearl.png", req: 30, how: "High-tier Barter (Level 5) or Crow Coin Shop." },
+                { id: "tear_ocean", name: "Tear of the Ocean", icon: "icons/tear_ocean.png", req: 50, how: "Oquilla's Eye Weekly/Daily Quests, Barter, or Crow Coin Shop." }
+            ]
+        }
+    },
+    galleass: {
+        carrack_volante: {
+            id: "carrack_volante",
+            name: "Epheria Carrack: Volante",
+            icon: "icons/permit.png",
+            req: 1,
+            how: "Final ship upgrade performed at Port Epheria Wharf.",
+            children: [
+                {
+                    id: "galleass_blue_gear",
+                    name: "+10 Epheria Galleass Blue Gear Set",
+                    icon: "icons/blue_gear.png",
+                    req: 4,
+                    how: "Crafted at Port Epheria 1-4, 2F Ship Part Workshop & enhanced to +10 with Tidal Black Stones.",
+                    children: [
+                        { id: "green_gear", name: "+10 Galleass Green Gear Set", icon: "icons/green_gear.png", req: 4, how: "Buy from Falasi in Port Epheria & enhance with Tidal Black Stones." },
+                        { id: "manganese", name: "Ruddy Manganese Nodule", icon: "icons/manganese.png", req: 100, how: "Barter Level 4 goods, Oquilla Dailies, or Crow Coin Shop." },
+                        { id: "plywood", name: "Enhanced Island Tree Coated Plywood", icon: "icons/plywood.png", req: 300, how: "Barter Level 4 goods, Oquilla Dailies, or Crow Coin Shop." },
+                        { id: "seaweed", name: "Seaweed Stalk", icon: "icons/seaweed.png", req: 250, how: "Barter Level 4 goods, Oquilla Dailies, or Crow Coin Shop." },
+                        { id: "dark_iron", name: "Great Ocean Dark Iron", icon: "icons/dark_iron.png", req: 150, how: "Barter Level 4 goods, Oquilla Dailies, or Crow Coin Shop." },
+                        { id: "pearl_crystal", name: "Pure Pearl Crystal", icon: "icons/pearl_crystal.png", req: 45, how: "Barter Level 3 goods, Oquilla Dailies, or Crow Coin Shop." },
+                        { id: "moon_scale", name: "Moon Scale Plywood", icon: "icons/moon_scale.png", req: 600, how: "Barter / Khan / Oquilla Dailies." },
+                        { id: "tide_timber", name: "Tide-Dyed Standardized Timber Square", icon: "icons/tide_timber.png", req: 180, how: "Sea Monster Hunting or Barter Level 4." },
+                        { id: "bright_reef", name: "Bright Reef Piece", icon: "icons/bright_reef.png", req: 180, how: "Barter Level 3 goods or Oquilla Dailies." },
+                        { id: "artifact_combat", name: "Cox Pirates' Artifact (Combat)", icon: "icons/artifact_combat.png", req: 250, how: "Defeat Cox Pirates or barter." },
+                        { id: "artifact_parley_beginner", name: "Cox Pirates' Artifact (Parley Beginner)", icon: "icons/artifact_parley_beginner.png", req: 60, how: "Barter Level 2 goods, Supplies Delivery dailies, or Crow Coin Shop." },
+                        { id: "artifact_parley_expert", name: "Cox Pirates' Artifact (Parley Expert)", icon: "icons/artifact_parley_expert.png", req: 30, how: "Barter Level 4 goods or Crow Coin Shop." },
+                        { id: "cobalt", name: "Luminous Cobalt Ingot", icon: "icons/cobalt.png", req: 30, how: "Barter Level 4 goods or Crow Coin Shop." },
+                        { id: "tidal_stones", name: "Tidal Black Stones", icon: "icons/tidal_stone.png", req: 220, how: "Used to enhance Blue Gear from +1 to +10." }
+                    ]
+                },
+                { id: "flax_fabric", name: "Moon Vein Flax Fabric", icon: "icons/flax_fabric.png", req: 210, how: "Barter Level 5 goods, Drying Khan's Tendon, Oquilla Dailies, or Crow Coin Shop." },
+                { id: "deep_tide", name: "Deep Tide-Dyed Standardized Timber Square", icon: "icons/deep_tide.png", req: 144, how: "Barter Level 5 goods, Sea Monster Hunting, Oquilla Dailies, or Crow Coin Shop." },
+                { id: "rock_salt", name: "Brilliant Rock Salt Ingot", icon: "icons/rock_salt.png", req: 30, how: "High-tier Barter (Level 5) or Crow Coin Shop." },
+                { id: "brilliant_pearl", name: "Brilliant Pearl Shard", icon: "icons/brilliant_pearl.png", req: 30, how: "High-tier Barter (Level 5) or Crow Coin Shop." },
+                { id: "tear_ocean", name: "Tear of the Ocean", icon: "icons/tear_ocean.png", req: 42, how: "Oquilla's Eye Weekly/Daily Quests, Barter, or Crow Coin Shop." }
+            ]
+        },
+        carrack_valor: {
+            id: "carrack_valor",
+            name: "Epheria Carrack: Valor",
+            icon: "icons/permit.png",
+            req: 1,
+            how: "Final ship upgrade performed at Port Epheria Wharf.",
+            children: [
+                {
+                    id: "galleass_blue_gear",
+                    name: "+10 Epheria Galleass Blue Gear Set",
+                    icon: "icons/blue_gear.png",
+                    req: 4,
+                    how: "Crafted at Port Epheria 1-4, 2F Ship Part Workshop & enhanced to +10 with Tidal Black Stones.",
+                    children: [
+                        { id: "green_gear", name: "+10 Galleass Green Gear Set", icon: "icons/green_gear.png", req: 4, how: "Buy from Falasi in Port Epheria & enhance with Tidal Black Stones." },
+                        { id: "manganese", name: "Ruddy Manganese Nodule", icon: "icons/manganese.png", req: 100, how: "Barter Level 4 goods, Oquilla Dailies, or Crow Coin Shop." },
+                        { id: "plywood", name: "Enhanced Island Tree Coated Plywood", icon: "icons/plywood.png", req: 300, how: "Barter Level 4 goods, Oquilla Dailies, or Crow Coin Shop." },
+                        { id: "seaweed", name: "Seaweed Stalk", icon: "icons/seaweed.png", req: 250, how: "Barter Level 4 goods, Oquilla Dailies, or Crow Coin Shop." },
+                        { id: "dark_iron", name: "Great Ocean Dark Iron", icon: "icons/dark_iron.png", req: 150, how: "Barter Level 4 goods, Oquilla Dailies, or Crow Coin Shop." },
+                        { id: "pearl_crystal", name: "Pure Pearl Crystal", icon: "icons/pearl_crystal.png", req: 45, how: "Barter Level 3 goods, Oquilla Dailies, or Crow Coin Shop." },
+                        { id: "moon_scale", name: "Moon Scale Plywood", icon: "icons/moon_scale.png", req: 600, how: "Barter / Khan / Oquilla Dailies." },
+                        { id: "tide_timber", name: "Tide-Dyed Standardized Timber Square", icon: "icons/tide_timber.png", req: 180, how: "Sea Monster Hunting or Barter Level 4." },
+                        { id: "bright_reef", name: "Bright Reef Piece", icon: "icons/bright_reef.png", req: 180, how: "Barter Level 3 goods or Oquilla Dailies." },
+                        { id: "artifact_combat", name: "Cox Pirates' Artifact (Combat)", icon: "icons/artifact_combat.png", req: 250, how: "Defeat Cox Pirates or barter." },
+                        { id: "artifact_parley_beginner", name: "Cox Pirates' Artifact (Parley Beginner)", icon: "icons/artifact_parley_beginner.png", req: 60, how: "Barter Level 2 goods, Supplies Delivery dailies, or Crow Coin Shop." },
+                        { id: "artifact_parley_expert", name: "Cox Pirates' Artifact (Parley Expert)", icon: "icons/artifact_parley_expert.png", req: 30, how: "Barter Level 4 goods or Crow Coin Shop." },
+                        { id: "cobalt", name: "Luminous Cobalt Ingot", icon: "icons/cobalt.png", req: 30, how: "Barter Level 4 goods or Crow Coin Shop." },
+                        { id: "tidal_stones", name: "Tidal Black Stones", icon: "icons/tidal_stone.png", req: 220, how: "Used to enhance Blue Gear from +1 to +10." }
+                    ]
+                },
+                { id: "flax_fabric", name: "Moon Vein Flax Fabric", icon: "icons/flax_fabric.png", req: 180, how: "Barter Level 5 goods, Drying Khan's Tendon, Oquilla Dailies, or Crow Coin Shop." },
+                { id: "deep_tide", name: "Deep Tide-Dyed Standardized Timber Square", icon: "icons/deep_tide.png", req: 170, how: "Barter Level 5 goods, Sea Monster Hunting, Oquilla Dailies, or Crow Coin Shop." },
+                { id: "rock_salt", name: "Brilliant Rock Salt Ingot", icon: "icons/rock_salt.png", req: 30, how: "High-tier Barter (Level 5) or Crow Coin Shop." },
+                { id: "brilliant_pearl", name: "Brilliant Pearl Shard", icon: "icons/brilliant_pearl.png", req: 30, how: "High-tier Barter (Level 5) or Crow Coin Shop." },
+                { id: "tear_ocean", name: "Tear of the Ocean", icon: "icons/tear_ocean.png", req: 42, how: "Oquilla's Eye Weekly/Daily Quests, Barter, or Crow Coin Shop." }
+            ]
+        }
+    }
+};
+
+const STORAGE_KEY = "bdo_ship_tree_multi_v4";
+let isCascading = false;
+
+window.addEventListener('DOMContentLoaded', () => {
+    const savedState = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+    if (savedState.lastCurrentShip) {
+        document.getElementById('current-ship').value = savedState.lastCurrentShip;
+        updateTargetOptions();
+        if (savedState.lastTargetUpgrade) {
+            document.getElementById('target-ship').value = savedState.lastTargetUpgrade;
+            renderCraftTree();
+        }
+    }
+});
+
+function getActiveTreeKey() {
+    const currentShip = document.getElementById('current-ship').value;
+    const targetUpgrade = document.getElementById('target-ship').value;
+    if (!currentShip || !targetUpgrade) return null;
+    return `${currentShip}_${targetUpgrade}`;
+}
+
+function updateTargetOptions() {
+    const currentShip = document.getElementById('current-ship').value;
+    const targetSelect = document.getElementById('target-ship');
+    
+    targetSelect.innerHTML = '<option value="" disabled selected>Select Target Upgrade...</option>';
+    
+    if (currentShip && treeData[currentShip]) {
+        targetSelect.disabled = false;
+        for (let key in treeData[currentShip]) {
+            let option = document.createElement('option');
+            option.value = key;
+            option.textContent = treeData[currentShip][key].name;
+            targetSelect.appendChild(option);
+        }
+    } else {
+        targetSelect.disabled = true;
+    }
+
+    document.getElementById('results-area').style.display = 'none';
+    document.getElementById('progress-container').style.display = 'none';
+    document.getElementById('empty-state').style.display = 'block';
+}
+
+function getOwned(input) {
+    const req = parseInt(input.dataset.req) || 0;
+    if (input.type === 'checkbox') return input.checked ? req : 0;
+    return parseInt(input.value) || 0;
+}
+
+function setOwned(input, val) {
+    if (input.type === 'checkbox') {
+        input.checked = val > 0;
+    } else {
+        input.value = val;
+    }
+}
+
+const FALLBACK_ICON = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36">' +
+    '<rect width="36" height="36" rx="6" fill="#14283a"/>' +
+    '<text x="50%" y="58%" font-size="16" text-anchor="middle" fill="#d3a24d">⚓</text>' +
+    '</svg>'
+);
+
+function attachIconFallbacks(root) {
+    root.querySelectorAll('.mat-icon').forEach(img => {
+        img.addEventListener('error', function onErr() {
+            img.removeEventListener('error', onErr);
+            img.src = FALLBACK_ICON;
+        });
+    });
+}
+
+function stepperControlHTML(node, savedVal) {
+    return `
+        <div class="mat-counter">
+            <button type="button" class="stepper-btn" onclick="event.stopPropagation(); stepInput('${node.id}', -1)" aria-label="Decrease">−</button>
+            <input type="number" id="input-${node.id}" min="0" max="${node.req}" value="${savedVal}" oninput="handleInput('${node.id}', true)" data-req="${node.req}">
+            <span class="mat-req">/ ${node.req.toLocaleString()}</span>
+            <button type="button" class="stepper-btn" onclick="event.stopPropagation(); stepInput('${node.id}', 1)" aria-label="Increase">+</button>
+        </div>
+    `;
+}
+
+function toggleControlHTML(node, savedVal, extraClass = '') {
+    return `
+        <label class="mat-counter mat-toggle ${extraClass}" onclick="event.stopPropagation()">
+            <input type="checkbox" id="input-${node.id}" data-req="${node.req}" ${savedVal >= node.req ? 'checked' : ''} onchange="handleInput('${node.id}')">
+            <span class="toggle-track"><span class="toggle-thumb"></span></span>
+        </label>
+    `;
+}
+
+function buildTreeNodeHTML(node, savedCounts, depth) {
+    const hasChildren = node.children && node.children.length > 0;
+    const savedVal = savedCounts[node.id] || 0;
+    const isToggle = node.req === 1;
+
+    let childrenHTML = '';
+    if (hasChildren) {
+        childrenHTML = `<div class="node-children sub-list" id="children-${node.id}">`;
+        node.children.forEach(child => {
+            childrenHTML += buildTreeNodeHTML(child, savedCounts, depth + 1);
+        });
+        childrenHTML += `</div>`;
+    }
+
+    const controlHTML = isToggle ? toggleControlHTML(node, savedVal) : stepperControlHTML(node, savedVal);
+
+    return `
+        <div class="tree-node ${hasChildren ? 'component-node' : ''}" id="node-${node.id}">
+            <div class="node-header" ${hasChildren ? `onclick="toggleNode(event, '${node.id}')"` : ''}>
+                <div class="node-left">
+                    ${hasChildren ? `<span class="toggle-btn" id="toggle-${node.id}">▾</span>` : `<span class="toggle-btn leaf-dot">·</span>`}
+                    <img class="mat-icon" src="${node.icon}" alt="">
+                    <span class="mat-name">${node.name}</span>
+                    <button type="button" class="info-btn" onclick="event.stopPropagation(); toggleInfo('${node.id}')" aria-label="How to obtain ${node.name}">i</button>
+                </div>
+                <div class="node-right" onclick="event.stopPropagation()">
+                    ${controlHTML}
+                    <span class="mat-badge" id="badge-${node.id}">-</span>
+                </div>
+            </div>
+            <div class="node-how" id="how-${node.id}" hidden><strong>How to get it:</strong> ${node.how}</div>
+            ${childrenHTML}
+        </div>
+    `;
+}
+
+function buildFinalStepHTML(node, savedCounts) {
+    const savedVal = savedCounts[node.id] || 0;
+    return `
+        <div class="tree-node final-step" id="node-${node.id}">
+            <div class="final-step-header">
+                <img class="mat-icon final-icon" src="${node.icon}" alt="">
+                <div class="final-meta">
+                    <div class="final-label">Final step</div>
+                    <div class="final-name">${node.name}</div>
+                </div>
+                <span class="mat-badge" id="badge-${node.id}">-</span>
+            </div>
+            <p class="final-how">${node.how}</p>
+            <label class="final-toggle">
+                <input type="checkbox" id="input-${node.id}" data-req="${node.req}" ${savedVal >= node.req ? 'checked' : ''} onchange="handleInput('${node.id}')">
+                <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                <span class="toggle-text">I've turned this in</span>
+            </label>
+        </div>
+    `;
+}
+
+function renderCraftTree() {
+    const currentShip = document.getElementById('current-ship').value;
+    const targetUpgrade = document.getElementById('target-ship').value;
+    const treeKey = getActiveTreeKey();
+
+    if (!currentShip || !targetUpgrade || !treeKey) return;
+
+    const activeTree = treeData[currentShip][targetUpgrade];
+    document.getElementById('tree-title').textContent = `Crafting Tree for ${activeTree.name}`;
+
+    const savedState = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+    const shipTrees = savedState.trees || {};
+    const savedCounts = shipTrees[treeKey] || {};
+
+    const components = activeTree.children.filter(c => c.children && c.children.length > 0);
+    const materials = activeTree.children.filter(c => !(c.children && c.children.length > 0));
+
+    let html = buildFinalStepHTML(activeTree, savedCounts);
+    html += `<div class="node-children top-level" id="children-${activeTree.id}">`;
+    if (components.length) {
+        html += `<div class="section-label">Components to craft</div>`;
+        components.forEach(c => { html += buildTreeNodeHTML(c, savedCounts, 1); });
+    }
+    if (materials.length) {
+        html += `<div class="section-label">Materials to gather</div>`;
+        materials.forEach(c => { html += buildTreeNodeHTML(c, savedCounts, 1); });
+    }
+    html += `</div>`;
+
+    const treeRoot = document.getElementById('tree-root');
+    treeRoot.innerHTML = html;
+    attachIconFallbacks(treeRoot);
+
+    document.getElementById('empty-state').style.display = 'none';
+    document.getElementById('results-area').style.display = 'block';
+    document.getElementById('progress-container').style.display = 'block';
+
+    // Initial state update on load
+    const inputs = document.querySelectorAll('.mat-counter input, .final-toggle input');
+    inputs.forEach(input => {
+        const nodeId = input.id.replace('input-', '');
+        updateNodeVisuals(nodeId);
+    });
+
+    calculateTotalProgress();
+}
+
+function toggleNode(event, nodeId) {
+    const childrenContainer = document.getElementById(`children-${nodeId}`);
+    const toggleBtn = document.getElementById(`toggle-${nodeId}`);
+
+    if (childrenContainer) {
+        if (childrenContainer.style.display === 'none') {
+            childrenContainer.style.display = 'flex';
+            toggleBtn.textContent = '▾';
+        } else {
+            childrenContainer.style.display = 'none';
+            toggleBtn.textContent = '▸';
+        }
+    }
+}
+
+function toggleInfo(nodeId) {
+    const el = document.getElementById(`how-${nodeId}`);
+    if (el) el.hidden = !el.hidden;
+}
+
+function stepInput(nodeId, delta) {
+    const input = document.getElementById(`input-${nodeId}`);
+    if (!input || input.type === 'checkbox') return;
+    const req = parseInt(input.dataset.req) || 0;
+    let owned = (parseInt(input.value) || 0) + delta;
+    if (owned < 0) owned = 0;
+    if (owned > req) owned = req;
+    input.value = owned;
+    handleInput(nodeId, true);
+}
+
+function handleInput(nodeId, userInitiated = true) {
+    const input = document.getElementById(`input-${nodeId}`);
+    if (!input) return;
+
+    const req = parseInt(input.dataset.req) || 0;
+    let owned = getOwned(input);
+
+    if (owned < 0) owned = 0;
+    if (owned > req) owned = req;
+    setOwned(input, owned);
+
+    updateNodeVisuals(nodeId);
+
+    // Cascading logic
+    if (userInitiated && !isCascading) {
+        isCascading = true;
+
+        // 1. Cascade Downward (Parent controls Children)
+        const isParentDone = (owned >= req);
+        const childrenContainer = document.getElementById(`children-${nodeId}`);
+        if (childrenContainer) {
+            const childInputs = childrenContainer.querySelectorAll('.mat-counter input');
+            childInputs.forEach(childInput => {
+                const childReq = parseInt(childInput.dataset.req) || 0;
+                setOwned(childInput, isParentDone ? childReq : 0);
+                const childNodeId = childInput.id.replace('input-', '');
+                updateNodeVisuals(childNodeId);
+            });
+        }
+
+        // 2. Cascade Upward (Children update Parent)
+        checkParentStatus(nodeId);
+
+        isCascading = false;
+    }
+
+    calculateTotalProgress();
+    executeSave();
+}
+
+function checkParentStatus(nodeId) {
+    const nodeElem = document.getElementById(`node-${nodeId}`);
+    if (!nodeElem) return;
+
+    const parentChildrenContainer = nodeElem.closest('.node-children');
+    if (!parentChildrenContainer) return;
+
+    const parentNodeId = parentChildrenContainer.id.replace('children-', '');
+    const parentInput = document.getElementById(`input-${parentNodeId}`);
+    if (!parentInput) return;
+
+    const allChildInputs = parentChildrenContainer.querySelectorAll(':scope > .tree-node .mat-counter input');
+    let allCompleted = true;
+
+    allChildInputs.forEach(cInput => {
+        const cReq = parseInt(cInput.dataset.req) || 0;
+        const cVal = getOwned(cInput);
+        if (cVal < cReq) allCompleted = false;
+    });
+
+    const parentReq = parseInt(parentInput.dataset.req) || 0;
+    if (allCompleted) {
+        setOwned(parentInput, parentReq);
+    }
+
+    updateNodeVisuals(parentNodeId);
+    checkParentStatus(parentNodeId); // Recursive check upwards
+}
+
+function updateNodeVisuals(nodeId) {
+    const input = document.getElementById(`input-${nodeId}`);
+    const badge = document.getElementById(`badge-${nodeId}`);
+    const nodeElem = document.getElementById(`node-${nodeId}`);
+
+    if (!input || !badge || !nodeElem) return;
+
+    const req = parseInt(input.dataset.req) || 0;
+    const owned = getOwned(input);
+    const needed = req - owned;
+
+    nodeElem.classList.remove('completed', 'in-progress');
+
+    if (needed <= 0) {
+        nodeElem.classList.add('completed');
+        badge.textContent = "Done";
+    } else if (input.type === 'checkbox') {
+        badge.textContent = "Pending";
+    } else if (owned > 0) {
+        nodeElem.classList.add('in-progress');
+        badge.textContent = `Need ${needed.toLocaleString()}`;
+    } else {
+        badge.textContent = `Need ${needed.toLocaleString()}`;
+    }
+}
+
+function calculateTotalProgress() {
+    const inputs = document.querySelectorAll('.mat-counter input, .final-toggle input');
+    let totalReq = 0;
+    let totalOwned = 0;
+
+    inputs.forEach(input => {
+        const req = parseInt(input.dataset.req) || 0;
+        const owned = getOwned(input);
+
+        totalReq += req;
+        totalOwned += owned;
+    });
+
+    const percent = totalReq > 0 ? Math.round((totalOwned / totalReq) * 100) : 0;
+    document.getElementById('progress-fill').style.width = `${percent}%`;
+    document.getElementById('progress-text').textContent = `${percent}% (${totalOwned.toLocaleString()} / ${totalReq.toLocaleString()})`;
+}
+
+function executeSave() {
+    const currentShip = document.getElementById('current-ship').value;
+    const targetUpgrade = document.getElementById('target-ship').value;
+    const treeKey = getActiveTreeKey();
+
+    const savedState = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+    if (!savedState.trees) savedState.trees = {};
+
+    if (treeKey) {
+        const inputs = document.querySelectorAll('.mat-counter input, .final-toggle input');
+        const counts = {};
+        inputs.forEach(input => {
+            const nodeId = input.id.replace('input-', '');
+            counts[nodeId] = getOwned(input);
+        });
+        savedState.trees[treeKey] = counts;
+    }
+
+    savedState.lastCurrentShip = currentShip;
+    savedState.lastTargetUpgrade = targetUpgrade;
+
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(savedState));
+}
+
+function resetProgress() {
+    const treeKey = getActiveTreeKey();
+    if (!treeKey) return;
+
+    const targetShipSelect = document.getElementById('target-ship');
+    const activeName = targetShipSelect.options[targetShipSelect.selectedIndex].text;
+
+    if (confirm(`Are you sure you want to reset owned stock ONLY for: ${activeName}?`)) {
+        const inputs = document.querySelectorAll('.mat-counter input, .final-toggle input');
+        isCascading = true;
+        inputs.forEach(input => {
+            setOwned(input, 0);
+            const nodeId = input.id.replace('input-', '');
+            updateNodeVisuals(nodeId);
+        });
+        isCascading = false;
+        calculateTotalProgress();
+        executeSave();
+    }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Voyage Log — Sailies & Bartering</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Spectral:wght@500;600;700&family=Inter:wght@400;500;600&display=swap');
+
+:root{
+  --bg:#0b1520;
+  --card:#101f2f;
+  --card-active:#132537;
+  --line-off:#28394c;
+  --brass:#c9a24b;
+  --brass-dim:rgba(201,162,75,0.35);
+  --teal:#4fd1c5;
+  --teal-dim:rgba(79,209,197,0.18);
+  --red:#d9695f;
+  --ink:#eee6d3;
+  --ink-dim:#93a4b8;
+  --ink-faint:#5f7186;
+  --border:rgba(255,255,255,0.07);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{
+  background:var(--bg);
+  color:var(--ink);
+  font-family:'Inter',system-ui,sans-serif;
+  line-height:1.5;
+  padding-bottom:60px;
+}
+.wrap{max-width:640px;margin:0 auto;padding:22px 16px 40px;}
+
+header{text-align:center;margin-bottom:18px;}
+.brand{
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  color:var(--ink-faint);font-size:0.72rem;letter-spacing:0.08em;
+  margin-bottom:4px;
+}
+h1{
+  font-family:'Spectral',serif;font-weight:600;
+  font-size:clamp(1.4rem,4.5vw,1.9rem);
+  color:var(--ink);
+}
+.subtitle{color:var(--ink-dim);font-size:0.85rem;margin-top:4px;}
+
+.sticky-bar{
+  position:sticky;top:10px;z-index:50;
+  background:rgba(13,24,37,0.92);
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  border:1px solid var(--border);border-radius:12px;
+  padding:14px 16px;margin:18px 0 16px;
+}
+.bar-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;gap:10px;}
+.bar-top .stage{font-size:0.92rem;font-weight:500;color:var(--ink);}
+.bar-top .stage span{color:var(--ink-faint);font-weight:400;}
+.bar-count{font-family:'Spectral',serif;font-size:0.95rem;color:var(--brass);white-space:nowrap;}
+.track{height:8px;background:var(--line-off);border-radius:99px;overflow:hidden;}
+.fill{height:100%;width:0%;background:linear-gradient(90deg,var(--brass),var(--teal));border-radius:99px;transition:width .4s ease;}
+
+.controls{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:8px;}
+.link-btn{
+  background:none;border:none;color:var(--ink-dim);font-family:inherit;font-size:0.82rem;
+  cursor:pointer;padding:4px 2px;text-decoration:underline;text-decoration-color:var(--line-off);
+  text-underline-offset:3px;
+}
+.link-btn:hover{color:var(--ink);}
+.reset-btn{color:var(--red);text-decoration-color:rgba(217,105,95,0.4);}
+
+.notes{
+  display:none;background:var(--card);border:1px solid var(--border);border-radius:12px;
+  padding:14px 16px;margin-bottom:18px;font-size:0.85rem;color:var(--ink-dim);
+}
+.notes.open{display:block;}
+.notes h3{
+  font-family:'Spectral',serif;color:var(--brass);font-size:0.95rem;font-weight:600;margin-bottom:8px;
+}
+.notes ul{list-style:none;display:grid;gap:6px;}
+.notes li{padding-left:14px;position:relative;}
+.notes li::before{content:'—';position:absolute;left:0;color:var(--ink-faint);}
+
+.route{position:relative;}
+.stop{position:relative;display:flex;gap:14px;}
+.node-col{
+  flex-shrink:0;width:30px;display:flex;flex-direction:column;align-items:center;
+}
+.node{
+  width:30px;height:30px;border-radius:50%;
+  border:2px solid var(--line-off);background:var(--bg);
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Spectral',serif;font-size:0.8rem;font-weight:600;color:var(--ink-faint);
+  flex-shrink:0;position:relative;z-index:2;transition:all .3s ease;
+}
+.stop.current .node{border-color:var(--brass);color:var(--brass);box-shadow:0 0 0 4px var(--brass-dim);}
+.stop.done .node{border-color:var(--teal);background:var(--teal);color:#04241f;}
+.connector{width:2px;flex:1;background:var(--line-off);margin:2px 0;min-height:14px;}
+.stop.done .connector{background:var(--teal);}
+.stop:last-child .connector{display:none;}
+
+.card{
+  flex:1;min-width:0;background:var(--card);border:1px solid var(--border);
+  border-radius:12px;margin-bottom:14px;overflow:hidden;transition:border-color .2s ease;
+}
+.stop.current .card{border-color:var(--brass-dim);background:var(--card-active);}
+.stop.done .card{opacity:0.6;}
+
+.card-head{
+  display:flex;justify-content:space-between;align-items:center;gap:10px;
+  padding:14px 16px;cursor:pointer;
+}
+.card-head h2{
+  font-family:'Spectral',serif;font-weight:600;font-size:1rem;color:var(--ink);
+}
+.card-head .loc{display:block;font-size:0.78rem;color:var(--ink-faint);margin-top:2px;font-weight:400;}
+.chev{color:var(--ink-faint);font-size:0.8rem;transition:transform .2s ease;flex-shrink:0;}
+.card.open .chev{transform:rotate(180deg);}
+
+.card-body{display:none;padding:0 16px 16px;}
+.card.open .card-body{display:block;}
+
+.quest{
+  display:flex;align-items:flex-start;gap:10px;padding:8px 0;
+  border-top:1px solid var(--border);
+}
+.quest:first-child{border-top:none;}
+.quest input[type="checkbox"]{
+  appearance:none;-webkit-appearance:none;width:19px;height:19px;flex-shrink:0;margin-top:1px;
+  border:2px solid var(--ink-faint);border-radius:5px;cursor:pointer;position:relative;background:transparent;
+}
+.quest input[type="checkbox"]:checked{background:var(--teal);border-color:var(--teal);}
+.quest input[type="checkbox"]:checked::after{
+  content:'✓';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-size:12px;color:#04241f;font-weight:700;
+}
+.quest label{font-size:0.88rem;color:var(--ink);cursor:pointer;}
+.quest.optional label{color:var(--ink-dim);}
+.quest .tag{
+  font-size:0.68rem;color:var(--brass);border:1px solid rgba(201,162,75,0.35);
+  border-radius:5px;padding:1px 6px;margin-left:6px;white-space:nowrap;vertical-align:1px;
+}
+.quest.checked label{text-decoration:line-through;color:var(--ink-faint);}
+
+.note-line{
+  font-size:0.8rem;color:var(--ink-dim);margin-top:10px;padding:8px 10px;
+  background:rgba(255,255,255,0.03);border-radius:8px;border-left:2px solid var(--line-off);
+}
+.heading-note{
+  font-size:0.78rem;color:var(--ink-dim);padding:6px 0 10px;
+  border-bottom:1px solid var(--border);margin-bottom:8px;display:flex;gap:6px;align-items:baseline;
+}
+.heading-note .compass{color:var(--brass);flex-shrink:0;font-family:'Spectral',serif;font-weight:600;}
+.waypoint{
+  font-size:0.74rem;color:var(--brass);margin:10px 0 4px;padding-top:8px;
+  border-top:1px dashed var(--line-off);letter-spacing:0.01em;
+}
+.quest:first-child .waypoint{border-top:none;padding-top:0;margin-top:0;}
+.choice-block{
+  padding:10px 0;border-top:1px solid var(--border);
+}
+.choice-block:first-child{border-top:none;}
+.choice-block .choice-label{
+  display:inline-block;font-size:0.68rem;color:#04241f;background:var(--brass);
+  border-radius:5px;padding:1px 7px;margin-bottom:8px;font-weight:600;letter-spacing:0.02em;
+}
+.choice-option{display:flex;align-items:flex-start;gap:9px;padding:5px 0 5px 4px;}
+.choice-option input[type="radio"]{
+  appearance:none;-webkit-appearance:none;width:17px;height:17px;flex-shrink:0;margin-top:2px;
+  border:2px solid var(--ink-faint);border-radius:50%;cursor:pointer;position:relative;background:transparent;
+}
+.choice-option input[type="radio"]:checked{border-color:var(--brass);}
+.choice-option input[type="radio"]:checked::after{
+  content:'';position:absolute;inset:3px;border-radius:50%;background:var(--brass);
+}
+.choice-option label{font-size:0.87rem;color:var(--ink);cursor:pointer;}
+.choice-option .reward-hint{display:block;font-size:0.75rem;color:var(--ink-faint);margin-top:1px;}
+.rewards{
+  margin-top:10px;font-size:0.78rem;color:var(--teal);
+  background:var(--teal-dim);border-radius:7px;padding:6px 10px;display:inline-block;
+}
+
+footer{text-align:center;margin-top:28px;color:var(--ink-faint);font-size:0.78rem;}
+
+@media (max-width:420px){
+  .node-col{width:24px;}
+  .node{width:24px;height:24px;font-size:0.7rem;}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="brand">⚓ &nbsp;VOYAGE LOG</div>
+    <h1>Daily Sailies &amp; Bartering</h1>
+    <div class="subtitle">Velia → Iliya → Oquilla's Eye → Margoria → home</div>
+  </header>
+
+  <div class="sticky-bar">
+    <div class="bar-top">
+      <div class="stage" id="stage-label">Stop 1 of 9 <span>· Velia Docks</span></div>
+      <div class="bar-count" id="bar-count">0/9 stops</div>
+    </div>
+    <div class="track"><div class="fill" id="fill"></div></div>
+  </div>
+
+  <div class="controls">
+    <button class="link-btn" onclick="toggleNotes()">Captain's notes</button>
+    <button class="link-btn reset-btn" onclick="resetAll()">Reset voyage</button>
+  </div>
+
+  <div class="notes" id="notes">
+    <h3>Captain's notes</h3>
+    <ul>
+      <li>Take the timed 180-minute deliveries (Croix, Rovinia, Dario) last at each stop, right before you sail — not first.</li>
+      <li>Choosing Adult sea monsters (Candidum / Nineshark / Black Rust) pays Crow Coins or Black Stones; choosing 5× Young pays Carrack materials instead. You can't do both of the same type.</li>
+      <li>A Sailies platoon (World Chat or the Sailing Discord) speeds up the Margoria hunting leg a lot — most platoons only do the Adult versions.</li>
+      <li>Keep a stash of Coral Pieces and a Level 1 barter good in your inventory so Curio's and Baori/Maonil's quests are instant hand-ins.</li>
+      <li>50 Oquilla Coins can be exchanged with Herrad Romsen on Oquilla's Eye for ship-upgrade materials.</li>
+    </ul>
+  </div>
+
+  <div class="route" id="route"></div>
+
+  <footer>Progress saves automatically in this browser.</footer>
+</div>
+
+<script>
+const STOPS = [
+  {
+    id: 'velia-docks',
+    title: "Velia Docks",
+    loc: "NPCs: Croix & Rovinia",
+    quests: [
+      { id:'v1', text:"Wanted: Hekaru <em>or</em> Wanted: Ocean Stalker — defeat 1×" },
+      { id:'v2', text:"Looming Threats from the Ocean — defeat 1× Goldmont Large Battleship" },
+      { id:'v3', text:"Ocean Predators — defeat 3× Goldmont Small Battleships" },
+      { id:'v4', text:"Supplies Delivery: Iliya Island (Croix) — timed 180 min", tag:'Pick up last' },
+      { id:'v5', text:"Supplies Delivery: Tinberra Island (Rovinia) — timed 180 min", tag:'Pick up last' }
+    ],
+    rewards: "Sailing EXP · Crow Coins · Origin of Wind"
+  },
+  {
+    id: 'velia-inn',
+    title: "Dancing Marlin Inn, Velia",
+    loc: "NPCs: Miya & Proix",
+    heading: "Same dock, walk into the inn — no sailing yet.",
+    quests: [
+      { id:'i1', text:"Delivering Goods — pick <strong>Tinberra Island</strong> so it lines up with this route (Baremi/Narvo also offered)" },
+      { id:'i2', text:"Wanted: Hungry Sea Creatures — 3× Hungry Hekaru + 3× Hungry Ocean Stalker" },
+      { id:'i3', text:"Wanted: Cox Scouts in Disguise — kill 20× Cox Pirates" },
+      { id:'i4', text:"How to Recover Sailors — cook &amp; hand in Chowder ×3", optional:true, tag:'Optional · needs residence + cooking' }
+    ],
+    rewards: "Sailing EXP · Crow Coins"
+  },
+  {
+    id: 'iliya-out',
+    title: "Iliya Island",
+    loc: "NPCs: Dario, Villager, Baori & Maonil",
+    heading: "Sail north from Velia to Weita Island first — clear Cox Pirates there for the 20-kill quest — then continue north to Iliya.",
+    quests: [
+      { id:'il1', text:"Hand in Supplies Delivery: Iliya Island to Dario (if chosen at Velia)" },
+      { id:'il2', text:"Supplies Delivery: Oquilla's Eye (Dario) — timed 180 min", tag:'Pick up last' },
+      { id:'il3', text:"Lively Iliya Island I–III — barter 3 / 5 / 10 / 15 times total" },
+      { id:'il4', text:"Barter Goods Support I &amp; II (Baori &amp; Maonil) — hand in 1× Level 1 barter good each" },
+      { id:'il5', text:"Sailing to a Wider World (Dario) — 20 barters, rewards Explorer's Compass parts", optional:true, tag:'Optional' }
+    ],
+    rewards: "Crow Coins · Sailing/Barter EXP · Contribution EXP"
+  },
+  {
+    id: 'tinberra',
+    title: "Tinberra Island",
+    loc: "Turn-ins: Mulicia & Shanjo",
+    heading: "Continue north from Iliya toward Tinberra — kill Hungry Ocean Stalkers ×3 on the way if you haven't already.",
+    quests: [
+      { id:'t1', text:"Hand in Delivering Goods to Mulicia (if Tinberra chosen at Velia)" },
+      { id:'t2', text:"Hand in Supplies Delivery: Tinberra Island to Shanjo (Rovinia's quest)" },
+      { id:'t3', text:"Finish Hungry Ocean Stalkers ×3 if not already done en route" }
+    ],
+    rewards: "Sailing EXP · Crow Coins"
+  },
+  {
+    id: 'oe-out',
+    title: "Oquilla's Eye",
+    loc: "NPCs: Ravikel, Soldier, Si Huram & Curio",
+    heading: "Head north-west from Tinberra to Oquilla's Eye — clear any Small Goldmont Battleships between the islands on the way.",
+    quests: [
+      {
+        id:'o1', choice:[
+          {id:'adult', text:"1× Candidum (adult)", tag:"Crow Coins or Black Stones"},
+          {id:'young', text:"5× Young Candidum", tag:"Carrack materials instead"}
+        ],
+        label:"Old Moon Guild's Candidum Hunter — choose difficulty"
+      },
+      {
+        id:'o2', choice:[
+          {id:'adult', text:"1× Nineshark (adult)", tag:"Crow Coins or Black Stones"},
+          {id:'young', text:"5× Young Nineshark", tag:"Carrack materials instead"}
+        ],
+        label:"Old Moon Guild's Nineshark Hunter — choose difficulty"
+      },
+      {
+        id:'o3', choice:[
+          {id:'adult', text:"1× Black Rust (adult)", tag:"Crow Coins or Black Stones"},
+          {id:'young', text:"5× Young Black Rust", tag:"Carrack materials instead"}
+        ],
+        label:"Old Moon Guild's Black Rust Hunter — choose difficulty"
+      },
+      { id:'o4', text:"Weekly Old Moon Hunter trio (Thursday reset) — Adult only, extra Crow Coins/Black Stones", optional:true, tag:'Weekly' },
+      { id:'o5', text:"Do You Have What It Takes? — kill 1× Hekaru (Soldier)" },
+      { id:'o6', text:"Win-win Situation — kill 1× Ocean Stalker (Soldier)" },
+      { id:'o7', text:"Our Guild is not a Charity Group — kill 2× Young Sea Monsters (Soldier)" },
+      { id:'o8', text:"Through the Rough Tides (Si Huram) — pick the <strong>Velia</strong> delivery so you turn it in on the way home" },
+      { id:'o9', text:"Precious Coral Piece (Curio) — hand in 10× Coral Piece" },
+      { id:'o10', text:"For the Young Otter Merchants (Curio) — hand in 1× Iridescent Coral Piece (gathered with a hoe)" }
+    ],
+    rewards: "Oquilla Coins · Crow Coins · Carrack materials"
+  },
+  {
+    id: 'margoria',
+    title: "Margoria Hunting Grounds",
+    loc: "Ross Sea sea-monster spawns",
+    heading: "Leave Oquilla's Eye heading west — this leg is a loop, follow the waypoints below in order.",
+    quests: [
+      { id:'m1', heading:"West of Oquilla's Eye — Ocean Stalker habitat", text:"Kill 1× Ocean Stalker (adult) + 2× Young Ocean Stalker" },
+      { id:'m2', heading:"Continue west — Hekaru habitat", text:"Kill 1× Hekaru (adult)" },
+      {
+        id:'m3', heading:"Continue west — Predator of Vadabin (Black Rust habitat)",
+        choice:[
+          {id:'adult', text:"1× Black Rust (adult)", tag:"Crow Coins or Black Stones"},
+          {id:'young', text:"5× Young Black Rust", tag:"Carrack materials instead"}
+        ],
+        label:"Choose difficulty"
+      },
+      { id:'m4', heading:"Head north-east — Cholace Chico's Pirate Union (Goldmont Pirate Territory)", text:"Kill 1× Goldmont Large Battleship" },
+      {
+        id:'m5', heading:"Continue — Shipwrecked Haran's Cargo Ship",
+        choice:[
+          {id:'adult', text:"1× Nineshark (adult)", tag:"Crow Coins or Black Stones"},
+          {id:'young', text:"5× Young Nineshark", tag:"Carrack materials instead"}
+        ],
+        label:"Choose difficulty"
+      },
+      {
+        id:'m6', heading:"Continue same direction — Pakio's Combat Raft",
+        choice:[
+          {id:'adult', text:"1× Candidum (adult)", tag:"Crow Coins or Black Stones"},
+          {id:'young', text:"5× Young Candidum", tag:"Carrack materials instead"}
+        ],
+        label:"Choose difficulty"
+      },
+      { id:'m7', text:"Clear any Goldmont Small Battleships you pass along the loop", optional:true, tag:'Optional' }
+    ],
+    note: "Match whatever your Old Moon Hunter choice was at Oquilla's Eye (Stop 5) for m3/m5/m6 — adult and young count toward different quests. Joining a Sailies platoon here is the biggest time-saver in the whole route.",
+    rewards: "Clears Ravikel + Soldier quests"
+  },
+  {
+    id: 'oe-return',
+    title: "Oquilla's Eye — return",
+    loc: "Turn-ins: Ravikel, Soldier & Curio",
+    heading: "From Pakio's Combat Raft, head south-east back to Oquilla's Eye.",
+    quests: [
+      { id:'r1', text:"Turn in all Ravikel sea-monster quests" },
+      { id:'r2', text:"Turn in Soldier's 3 quests" },
+      { id:'r3', text:"Hand in both Curio coral quests" }
+    ],
+    note: "Keep hold of the Old Moon Trade Item — it's turned in at Velia on the way home.",
+    rewards: "Oquilla Coins · Crow Coins · Carrack materials"
+  },
+  {
+    id: 'iliya-return',
+    title: "Iliya Island — return",
+    loc: "Finish bartering & turn-ins",
+    heading: "Sail south from Oquilla's Eye back down to Iliya.",
+    quests: [
+      { id:'ir1', text:"Finish remaining active barters (aim for 15+ total)" },
+      { id:'ir2', text:"Turn in Lively Iliya Island tiers to the Villager" },
+      { id:'ir3', text:"Turn in Barter Goods Support to Baori & Maonil" }
+    ],
+    rewards: "Sailing/Barter EXP · Contribution EXP · Crow Coins"
+  },
+  {
+    id: 'velia-final',
+    title: "Velia — final turn-ins",
+    loc: "Croix, Rovinia, Miya & Proix",
+    heading: "Head south past Lema Island — clear Hungry Hekaru ×3 you pass — then dock at Velia.",
+    quests: [
+      { id:'f1', text:"Turn in Croix's & Rovinia's quests" },
+      { id:'f2', text:"Turn in Miya's & Proix's quests" },
+      { id:'f3', text:"Hand in the Old Moon Trade Item to Robert (Velia Guild Wharf Manager) if you picked Velia" },
+      { id:'f4', text:"Store goods, feed sailors, dock ship" }
+    ],
+    rewards: "Daily Sailing EXP + Crow Coins secured"
+  }
+];
+
+const STORAGE_KEY = 'bdo_voyage_log_v1';
+
+function loadState(){
+  try{
+    return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+  }catch(e){ return {}; }
+}
+function saveState(state){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+let state = loadState();
+let openStopId = state.__open || null;
+
+function isStopDone(stop){
+  return stop.quests.filter(q => !q.optional).every(q => !!state[q.id]);
+}
+
+function render(){
+  const route = document.getElementById('route');
+  route.innerHTML = '';
+
+  let firstIncompleteFound = false;
+  let currentId = null;
+  STOPS.forEach(stop => {
+    if(!isStopDone(stop) && !firstIncompleteFound){
+      firstIncompleteFound = true;
+      currentId = stop.id;
+    }
+  });
+  if(!firstIncompleteFound) currentId = STOPS[STOPS.length-1].id;
+
+  if(openStopId === null) openStopId = currentId;
+
+  STOPS.forEach((stop, idx) => {
+    const done = isStopDone(stop);
+    const isCurrent = stop.id === currentId;
+    const isOpen = stop.id === openStopId;
+
+    const stopEl = document.createElement('div');
+    stopEl.className = 'stop' + (done ? ' done' : '') + (isCurrent ? ' current' : '');
+
+    const nodeCol = document.createElement('div');
+    nodeCol.className = 'node-col';
+    nodeCol.innerHTML = `<div class="node">${done ? '' : (idx+1)}</div><div class="connector"></div>`;
+
+    const card = document.createElement('div');
+    card.className = 'card' + (isOpen ? ' open' : '');
+
+    const head = document.createElement('div');
+    head.className = 'card-head';
+    head.innerHTML = `<div><h2>${stop.title}</h2><span class="loc">${stop.loc}</span></div><span class="chev">▾</span>`;
+    head.onclick = () => {
+      openStopId = (openStopId === stop.id) ? null : stop.id;
+      state.__open = openStopId;
+      saveState(state);
+      render();
+    };
+
+    const body = document.createElement('div');
+    body.className = 'card-body';
+
+    if(stop.heading){
+      const h = document.createElement('div');
+      h.className = 'heading-note';
+      h.innerHTML = `<span class="compass">⤳</span><span>${stop.heading}</span>`;
+      body.appendChild(h);
+    }
+
+    stop.quests.forEach(q => {
+      if(q.waypoint){
+        const wp = document.createElement('div');
+        wp.className = 'waypoint';
+        wp.textContent = q.waypoint;
+        body.appendChild(wp);
+      }
+
+      if(q.choice){
+        if(q.heading){
+          const wp = document.createElement('div');
+          wp.className = 'waypoint';
+          wp.textContent = q.heading;
+          body.appendChild(wp);
+        }
+        const block = document.createElement('div');
+        block.className = 'choice-block';
+        let optsHtml = '';
+        q.choice.forEach(opt => {
+          const checked = state[q.id] === opt.id;
+          const rid = 'r-' + q.id + '-' + opt.id;
+          optsHtml += `
+            <div class="choice-option">
+              <input type="radio" name="${q.id}" id="${rid}" ${checked ? 'checked' : ''}>
+              <label for="${rid}">${opt.text}${opt.tag ? `<span class="reward-hint">${opt.tag}</span>` : ''}</label>
+            </div>`;
+        });
+        block.innerHTML = `<span class="choice-label">${q.label || 'Choose one'}</span>${optsHtml}`;
+        block.querySelectorAll('input').forEach((input, i) => {
+          input.addEventListener('change', () => {
+            state[q.id] = q.choice[i].id;
+            saveState(state);
+            render();
+          });
+        });
+        body.appendChild(block);
+        return;
+      }
+
+      const row = document.createElement('div');
+      row.className = 'quest' + (q.optional ? ' optional' : '') + (state[q.id] ? ' checked' : '');
+      const cbId = 'cb-' + q.id;
+      if(q.heading){
+        const wp = document.createElement('div');
+        wp.className = 'waypoint';
+        wp.textContent = q.heading;
+        body.appendChild(wp);
+      }
+      row.innerHTML = `
+        <input type="checkbox" id="${cbId}" ${state[q.id] ? 'checked' : ''}>
+        <label for="${cbId}">${q.text}${q.tag ? `<span class="tag">${q.tag}</span>` : ''}</label>
+      `;
+      row.querySelector('input').addEventListener('change', (e) => {
+        state[q.id] = e.target.checked;
+        saveState(state);
+        render();
+      });
+      body.appendChild(row);
+    });
+
+    if(stop.note){
+      const note = document.createElement('div');
+      note.className = 'note-line';
+      note.textContent = stop.note;
+      body.appendChild(note);
+    }
+
+    const rewards = document.createElement('div');
+    rewards.className = 'rewards';
+    rewards.textContent = stop.rewards;
+    body.appendChild(rewards);
+
+    card.appendChild(head);
+    card.appendChild(body);
+
+    stopEl.appendChild(nodeCol);
+    stopEl.appendChild(card);
+    route.appendChild(stopEl);
+  });
+
+  updateBar(currentId);
+}
+
+function updateBar(currentId){
+  const doneCount = STOPS.filter(isStopDone).length;
+  const pct = Math.round((doneCount / STOPS.length) * 100);
+  document.getElementById('fill').style.width = pct + '%';
+  document.getElementById('bar-count').textContent = `${doneCount}/${STOPS.length} stops`;
+
+  const currentIdx = STOPS.findIndex(s => s.id === currentId);
+  const label = document.getElementById('stage-label');
+  if(doneCount === STOPS.length){
+    label.innerHTML = `Voyage complete <span>· all stops turned in</span>`;
+  } else {
+    label.innerHTML = `Stop ${currentIdx+1} of ${STOPS.length} <span>· ${STOPS[currentIdx].title}</span>`;
+  }
+}
+
+function toggleNotes(){
+  document.getElementById('notes').classList.toggle('open');
+}
+
+function resetAll(){
+  if(!confirm('Reset all progress for this voyage?')) return;
+  const openPref = state.__open;
+  state = {};
+  openStopId = STOPS[0].id;
+  saveState(state);
+  render();
+}
+
+render();
+</script>
+</body>
+</html>

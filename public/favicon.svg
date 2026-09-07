@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="The Alchemist">
+  <rect width="32" height="32" rx="6" fill="#F3EEE4"/>
+  <rect x="11" y="2" width="10" height="4" rx="1" fill="#20595C"/>
+  <rect x="14" y="5" width="4" height="8" fill="#20595C"/>
+  <circle cx="16" cy="22" r="8" fill="#20595C"/>
+</svg>

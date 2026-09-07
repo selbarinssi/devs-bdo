@@ -1,0 +1,151 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@theme {
+  --color-ivory: #f3eee4;
+  --color-teal: #20595c;
+  --color-teal-deep: #163e40;
+  --color-stone: #d6d2c4;
+  --color-paper: #ffffff;
+  --color-ink: #1a1a18;
+  --color-muted: #5c6b6b;
+  --color-danger: #8c4a44;
+
+  --color-background: var(--color-ivory);
+  --color-foreground: var(--color-ink);
+  --color-card: var(--color-paper);
+  --color-card-foreground: var(--color-ink);
+  --color-primary: var(--color-teal);
+  --color-primary-foreground: var(--color-ivory);
+  --color-secondary: var(--color-stone);
+  --color-secondary-foreground: var(--color-ink);
+  --color-muted-foreground: var(--color-muted);
+  --color-accent: var(--color-teal);
+  --color-accent-foreground: var(--color-ivory);
+  --color-border: var(--color-stone);
+  --color-input: var(--color-stone);
+  --color-ring: var(--color-teal);
+  --color-destructive: var(--color-danger);
+  --color-destructive-foreground: var(--color-ivory);
+
+  --font-serif: "Lora", Georgia, "Times New Roman", serif;
+  --font-sans: "Lora", Georgia, "Times New Roman", serif;
+
+  --radius-xs: 0.375rem;
+  --radius-sm: 0.5rem;
+  --radius-md: 0.625rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.25rem;
+
+  --shadow-border:
+    0px 0px 0px 1px rgba(32, 89, 92, 0.08),
+    0px 1px 2px -1px rgba(26, 26, 24, 0.06),
+    0px 2px 8px 0px rgba(26, 26, 24, 0.04);
+  --shadow-border-hover:
+    0px 0px 0px 1px rgba(32, 89, 92, 0.22),
+    0px 1px 2px -1px rgba(26, 26, 24, 0.08),
+    0px 4px 14px 0px rgba(32, 89, 92, 0.12);
+
+  --ease-out-smooth: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    background-color: var(--color-ivory);
+    color: var(--color-ink);
+    font-family: var(--font-serif);
+    line-height: 1.55;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+
+  h1, h2, h3 {
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
+}
+
+@layer components {
+  .radio-dot {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 1.125rem;
+    height: 1.125rem;
+    flex-shrink: 0;
+    margin-top: 0.125rem;
+    border: 2px solid var(--color-muted);
+    border-radius: 9999px;
+    background: transparent;
+    position: relative;
+  }
+  .radio-dot:checked {
+    border-color: var(--color-teal);
+  }
+  .radio-dot:checked::after {
+    content: "";
+    position: absolute;
+    inset: 3px;
+    border-radius: 9999px;
+    background: var(--color-teal);
+  }
+  .radio-dot:focus-visible {
+    outline: 2px solid var(--color-teal);
+    outline-offset: 2px;
+  }
+
+  .field-select {
+    height: 2.75rem;
+    width: 100%;
+    border-radius: 0.5rem;
+    border: 1px solid var(--color-stone);
+    background-color: var(--color-ivory);
+    color: var(--color-ink);
+    padding: 0 2.5rem 0 0.875rem;
+    font-family: var(--font-serif);
+    font-size: 0.95rem;
+    outline: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' fill='none'><path d='M2 4l5 5 5-5' stroke='%235C6B6B' stroke-width='1.5'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    transition: border-color 150ms var(--ease-out-smooth), box-shadow 150ms var(--ease-out-smooth);
+  }
+  .field-select:focus-visible {
+    border-color: var(--color-teal);
+    box-shadow: 0 0 0 2px rgba(32, 89, 92, 0.2);
+  }
+  .field-select:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BDO Alchemy Planner — Harmony Draught Pipeline</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Main */
+            --ivory: #F3EEE4;
+            --teal: #20595C;
+            /* Support */
+            --black: #000000;
+            --stone: #D6D2C4;
+            --white: #FFFFFF;
+
+            /* Semantic mapping */
+            --bg-main: var(--ivory);
+            --bg-card: var(--white);
+            --bg-card-hover: #FBF9F4;
+            --bg-inner: var(--stone);
+            --accent: var(--teal);
+            --accent-soft: rgba(32, 89, 92, 0.10);
+            --accent-glow: rgba(32, 89, 92, 0.18);
+            --text-main: var(--black);
+            --text-muted: #5C6B6B;
+            --border-color: var(--stone);
+            --border-highlight: var(--teal);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Lora', Georgia, 'Times New Roman', serif; }
+        body { background-color: var(--bg-main); color: var(--text-main); padding: 24px; line-height: 1.55; }
+        .container { max-width: 1400px; margin: 0 auto; }
+
+        header {
+            text-align: center;
+            margin-bottom: 24px;
+            padding: 32px 24px;
+            background: var(--teal);
+            border-radius: 12px;
+            border: 1px solid var(--teal);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+        }
+        h1 {
+            color: var(--ivory);
+            font-size: 2.1rem;
+            font-weight: 500;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5em;
+        }
+        p.subtitle {
+            color: var(--stone);
+            font-size: 0.8rem;
+            font-style: normal;
+            text-transform: uppercase;
+            letter-spacing: 0.35em;
+        }
+
+        .config-panel {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+            background: var(--bg-card);
+            padding: 18px 24px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+        }
+        .config-group { display: flex; flex-direction: column; gap: 6px; }
+        .config-group label { color: var(--teal); font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; }
+        .config-group input, .config-group select {
+            background: var(--ivory);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-family: 'Lora', serif;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .config-group input:focus, .config-group select:focus { border-color: var(--teal); }
+
+        .changelog {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 14px 18px;
+            margin-bottom: 20px;
+            font-size: 0.88rem;
+            color: var(--text-muted);
+        }
+        .changelog summary {
+            cursor: pointer;
+            color: var(--teal);
+            font-weight: 700;
+            font-size: 0.88rem;
+            outline: none;
+        }
+        .changelog ul { margin: 10px 0 0 18px; display: flex; flex-direction: column; gap: 6px; }
+
+        .search-bar { margin-bottom: 16px; }
+        .search-bar input {
+            width: 100%;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 12px 16px;
+            border-radius: 10px;
+            font-size: 0.95rem;
+            font-family: 'Lora', serif;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .search-bar input:focus { border-color: var(--teal); }
+        .recipe-card.hidden { display: none; }
+
+        .tabs { display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; }
+        .tab-btn {
+            flex: 1;
+            min-width: 140px;
+            padding: 16px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            color: var(--text-muted);
+            font-weight: 700;
+            font-size: 1rem;
+            font-family: 'Lora', serif;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        .tab-btn:hover { background: var(--bg-card-hover); color: var(--text-main); border-color: var(--teal); }
+        .tab-btn.active {
+            background: var(--teal);
+            color: var(--ivory);
+            border-color: var(--teal);
+            box-shadow: 0 4px 14px rgba(32, 89, 92, 0.30);
+        }
+        .tab-btn small { opacity: 0.75; font-weight: 500; font-style: italic; }
+
+        .tab-content { display: none; flex-direction: column; gap: 16px; }
+        .tab-content.active { display: flex; }
+
+        .recipe-card {
+            background: var(--bg-card);
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            padding: 16px 20px;
+            display: grid;
+            grid-template-columns: 280px 1fr 300px;
+            gap: 20px;
+            align-items: center;
+            transition: border-color 0.2s, transform 0.2s;
+        }
+        .recipe-card:hover {
+            border-color: var(--teal);
+            background: var(--bg-card-hover);
+        }
+
+        .card-info { display: flex; align-items: center; gap: 16px; }
+        .item-icon-wrapper {
+            position: relative;
+            width: 64px;
+            height: 64px;
+            background: var(--ivory);
+            border-radius: 10px;
+            border: 2px solid var(--teal);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            box-shadow: 0 0 10px var(--accent-glow);
+            overflow: hidden;
+        }
+        .item-icon { width: 44px; height: 44px; object-fit: contain; }
+        .item-details { display: flex; flex-direction: column; gap: 4px; }
+        .recipe-title { font-size: 1.15rem; color: var(--black); font-weight: 700; }
+        .exp-badge {
+            display: inline-block;
+            background: var(--accent-soft);
+            color: var(--teal);
+            border: 1px solid var(--teal);
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            width: fit-content;
+        }
+
+        .craft-input-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 6px;
+        }
+        .craft-input-group label { font-size: 0.8rem; color: var(--text-muted); font-weight: 600; }
+        .craft-input-group input {
+            width: 90px;
+            padding: 4px 8px;
+            background: var(--ivory);
+            border: 1px solid var(--border-color);
+            color: var(--black);
+            font-family: 'Lora', serif;
+            border-radius: 6px;
+            text-align: right;
+            font-weight: 700;
+        }
+
+        .ingredients-wrapper { display: flex; flex-direction: column; gap: 8px; }
+        .ingredients-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 8px;
+        }
+        .ing-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--ivory);
+            padding: 6px 10px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+        .ing-icon { width: 28px; height: 28px; border-radius: 4px; flex-shrink: 0; object-fit: contain; }
+        .ing-details { display: flex; flex-direction: column; min-width: 0; }
+        .ing-name { color: var(--text-main); font-size: 0.82rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .ing-qty { color: var(--teal); font-size: 0.82rem; font-weight: 700; }
+
+        .gathering-spot {
+            background: var(--accent-soft);
+            border-left: 3px solid var(--teal);
+            padding: 6px 12px;
+            border-radius: 0 6px 6px 0;
+            font-size: 0.8rem;
+            color: var(--text-main);
+        }
+        .gathering-spot strong { color: var(--teal); margin-right: 6px; }
+
+        .card-summary {
+            background: var(--ivory);
+            padding: 12px 16px;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .summary-row { display: flex; justify-content: space-between; font-size: 0.85rem; }
+        .summary-label { color: var(--text-muted); }
+        .summary-val { color: var(--teal); font-weight: 700; }
+        .summary-val.highlight { color: var(--black); }
+
+        @media (max-width: 1024px) {
+            .recipe-card { grid-template-columns: 1fr; gap: 16px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>The Alchemist</h1>
+        <p class="subtitle">Black Desert Online</p>
+    </header>
+
+    <details class="changelog">
+        <summary>What was corrected in this version (click to expand)</summary>
+        <ul>
+            <li>All 4 Oils had at least one wrong ingredient (e.g. Oil of Fortitude was missing Monk's Branch/Powder of Flame); added the 5th oil, Oil of Storms, which several elixirs require.</li>
+            <li>Clown's Blood had two wrong ingredients; added Legendary Beast's Blood, which was missing entirely but is needed for Oil of Regeneration and two elixirs.</li>
+            <li>Most of the 21 elixir recipes had incorrect or placeholder ingredients — all rewritten against current live recipe data.</li>
+            <li>EXP values were off for every tier (Oils were 1,200 → actually 1,400; Bloods were 700 → actually 800; most elixir EXP values were also corrected).</li>
+            <li>The Draught and Harmony Draught recipes (Fury/Adaptation/Potential/Corruption/Berserk → Harmony, plus the Party variants) were already correct and are unchanged.</li>
+            <li>Several old "Trace of X" materials (Trace of Ascension, Trace of Savagery, Trace of Origin, Trace of Despair, Trace of Death, Trace of the Earth) were consolidated into "Trace of Nature" in a past game update — updated throughout.</li>
+            <li>A couple of Fury-group EXP values (Elixir of Destruction, Elixir of Edania) aren't on public EXP tables — flagged as estimates in their card notes.</li>
+        </ul>
+    </details>
+
+    <div class="config-panel">
+        <div class="config-group">
+            <label for="alchemy-buffs">Total Life EXP Buffs (%)</label>
+            <input type="number" id="alchemy-buffs" value="150" min="0" max="500" onchange="calculateAll()" oninput="calculateAll()">
+        </div>
+        <div class="config-group">
+            <label for="craft-time">Crafting Speed (Seconds)</label>
+            <input type="number" id="craft-time" value="1.0" step="0.1" min="0.5" max="10.0" onchange="calculateAll()" oninput="calculateAll()">
+        </div>
+        <div class="config-group">
+            <label for="mastery-proc">Average Proc Multiplier</label>
+            <select id="mastery-proc" onchange="calculateAll()">
+                <option value="2.5">2.5x (Master standard)</option>
+                <option value="2.8" selected>2.8x (High Master)</option>
+                <option value="3.0">3.0x (Guru standard)</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="tabs">
+        <button class="tab-btn active" data-tab="oils" type="button">
+            <span>Oils</span>
+            <small>(1,400 EXP)</small>
+        </button>
+        <button class="tab-btn" data-tab="bloods" type="button">
+            <span>Bloods</span>
+            <small>(800 EXP)</small>
+        </button>
+        <button class="tab-btn" data-tab="elixirs" type="button">
+            <span>Elixirs</span>
+            <small>(for Draughts)</small>
+        </button>
+        <button class="tab-btn" data-tab="draughts" type="button">
+            <span>Draughts</span>
+            <small>(Intermediate)</small>
+        </button>
+        <button class="tab-btn" data-tab="harmony" type="button">
+            <span>Harmony</span>
+            <small>(Final)</small>
+        </button>
+    </div>
+
+    <div class="search-bar">
+        <input type="text" id="recipe-search" placeholder="Filter recipes on this tab by name…" oninput="filterCards()">
+    </div>
+
+    <div id="oils" class="tab-content active"></div>
+    <div id="bloods" class="tab-content"></div>
+    <div id="elixirs" class="tab-content"></div>
+    <div id="draughts" class="tab-content"></div>
+    <div id="harmony" class="tab-content"></div>
+</div>
+
+<script>
+    const EXP_TO_GURU = 12500000;
+
+    // ========== ICON SYSTEM ==========
+    // 1. Create a folder named "icons" next to this HTML file.
+    // 2. Download icons from BDO Codex and save them with the exact filenames below.
+    // 3. Until real icons are present, colored SVG placeholders are used automatically.
+
+    function createSvgIcon(color, letter) {
+        const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+            <rect width="64" height="64" rx="10" fill="#F3EEE4"/>
+            <circle cx="32" cy="32" r="22" fill="none" stroke="${color}" stroke-width="4"/>
+            <text x="32" y="39" font-family="Lora, Georgia, serif" font-size="22" font-weight="bold" fill="${color}" text-anchor="middle">${letter}</text>
+        </svg>`;
+        return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+    }
+
+    // Exact filenames expected in the /icons/ folder next to this HTML file.
+    const ICON_MAP = {
+        "Adaptation Draught":                        "icons/adaptation_draught.webp",
+        "Amanita Mushroom":                          "icons/amanita_mushroom.webp",
+        "Ancient Mushroom":                          "icons/ancient_mushroom.webp",
+        "Arrow Mushroom":                            "icons/arrow_mushroom.webp",
+        "Ash Sap":                                   "icons/ash_sap.webp",
+        "Berserk Draught":                           "icons/berserk_draught.webp",
+        "Birch Sap":                                 "icons/birch_sap.webp",
+        "Black Stone Powder":                        "icons/black_stone_powder.webp",
+        "Bloody Tree Knot":                          "icons/bloody_tree_knot.webp",
+        "Bluffer Mushroom":                          "icons/bluffer_mushroom.webp",
+        "Caphras Tree Sap":                          "icons/caphras_tree_sap.webp",
+        "Cedar Sap":                                 "icons/cedar_sap.webp",
+        "Clear Liquid Reagent":                      "icons/clear_liquid_reagent.webp",
+        "Cloud Mushroom":                            "icons/cloud_mushroom.webp",
+        "Clown's Blood":                             "icons/clowns_blood.webp",
+        "Corruption Draught":                        "icons/corruption_draught.webp",
+        "Deer / Sheep / Pig / Waragon Blood":        "icons/deer_sheep_pig_waragon_blood.webp",
+        "Defense Elixir":                            "icons/defense_elixir.webp",
+        "Dwarf Mushroom":                            "icons/dwarf_mushroom.webp",
+        "Elixir of Assassination":                   "icons/elixir_of_assassination.webp",
+        "Elixir of Carnage":                         "icons/elixir_of_carnage.webp",
+        "Elixir of Concentration":                   "icons/elixir_of_concentration.webp",
+        "Elixir of Death":                           "icons/elixir_of_death.webp",
+        "Elixir of Demihuman Hunt":                  "icons/elixir_of_demihuman_hunt.webp",
+        "Elixir of Destruction":                     "icons/elixir_of_destruction.webp",
+        "Elixir of Detection":                       "icons/elixir_of_detection.webp",
+        "Elixir of Draining":                        "icons/elixir_of_draining.webp",
+        "Elixir of Edania":                          "icons/elixir_of_edania.webp",
+        "Elixir of Endurance":                       "icons/elixir_of_endurance.webp",
+        "Elixir of Frenzy":                          "icons/elixir_of_frenzy.webp",
+        "Elixir of Fury":                            "icons/elixir_of_fury.webp",
+        "Elixir of Life":                            "icons/elixir_of_life.webp",
+        "Elixir of Perforation":                     "icons/elixir_of_perforation.webp",
+        "Elixir of Shock":                           "icons/elixir_of_shock.webp",
+        "Elixir of Sky":                             "icons/elixir_of_sky.webp",
+        "Elixir of Spells":                          "icons/elixir_of_spells.webp",
+        "Elixir of Swiftness":                       "icons/elixir_of_swiftness.webp",
+        "Elixir of Will":                            "icons/elixir_of_will.webp",
+        "Elixir of Wind":                            "icons/elixir_of_wind.webp",
+        "Emperor Mushroom":                          "icons/emperor_mushroom.webp",
+        "Fir Sap":                                   "icons/fir_sap.webp",
+        "Fire Flake Flower":                         "icons/fire_flake_flower.webp",
+        "Fortune Teller Mushroom":                   "icons/fortune_teller_mushroom.webp",
+        "Fox / Weasel / Racoon Blood":               "icons/fox_weasel_racoon_blood.webp",
+        "Fruit of Nature":                           "icons/fruit_of_nature.webp",
+        "Fury Draught":                              "icons/fury_draught.webp",
+        "Ghost Mushroom":                            "icons/ghost_mushroom.webp",
+        "Grim Reaper's Elixir":                      "icons/grim_reapers_elixir.webp",
+        "HP Potion (Small)":                         "icons/hp_potion_small.webp",
+        "Harmony Draught":                           "icons/harmony_draught.webp",
+        "Helix Elixir":                              "icons/helix_elixir.webp",
+        "Hump Mushroom":                             "icons/hump_mushroom.webp",
+        "Legendary Beast's Blood":                   "icons/legendary_beasts_blood.webp",
+        "Maple Sap":                                 "icons/maple_sap.webp",
+        "Monk's Branch":                             "icons/monks_branch.webp",
+        "Oil of Corruption":                         "icons/oil_of_corruption.webp",
+        "Oil of Fortitude":                          "icons/oil_of_fortitude.webp",
+        "Oil of Regeneration":                       "icons/oil_of_regeneration.webp",
+        "Oil of Storms":                             "icons/oil_of_storms.webp",
+        "Oil of Tranquility":                        "icons/oil_of_tranquility.webp",
+        "Old Tree Bark":                             "icons/old_tree_bark.webp",
+        "Pine Sap":                                  "icons/pine_sap.webp",
+        "Potential Draught":                         "icons/potential_draught.webp",
+        "Powder of Darkness":                        "icons/powder_of_darkness.webp",
+        "Powder of Earth":                           "icons/powder_of_earth.webp",
+        "Powder of Flame":                           "icons/powder_of_flame.webp",
+        "Powder of Rifts":                           "icons/powder_of_rifts.webp",
+        "Powder of Time":                            "icons/powder_of_time.webp",
+        "Pure Powder Reagent":                       "icons/pure_powder_reagent.webp",
+        "Purified Water":                            "icons/purified_water.webp",
+        "Red Tree Lump":                             "icons/red_tree_lump.webp",
+        "Silver Azalea":                             "icons/silver_azalea.webp",
+        "Sinner's Blood":                            "icons/sinners_blood.webp",
+        "Sky Mushroom":                              "icons/sky_mushroom.webp",
+        "Snowfield Cedar Sap":                       "icons/snowfield_cedar_sap.webp",
+        "Spellbound Catalyst":                       "icons/spellbound_catalyst.webp",
+        "Spirit's Leaf":                             "icons/spirits_leaf.webp",
+        "Sunrise Herb":                              "icons/sunrise_herb.webp",
+        "Thuja Sap":                                 "icons/thuja_sap.webp",
+        "Tiger Mushroom":                            "icons/tiger_mushroom.webp",
+        "Trace of Nature":                           "icons/trace_of_nature.webp",
+        "Troll / Bear / Ogre Blood":                 "icons/troll_bear_ogre_blood.webp",
+        "Truffle Mushroom":                          "icons/truffle_mushroom.webp",
+        "Tyrant's Blood":                            "icons/tyrants_blood.webp",
+        "Wild Grass":                                "icons/wild_grass.webp",
+        "Wise Man's Blood":                          "icons/wise_mans_blood.webp",
+        "Wolf / Flamingo / Rhino / Cheetah Blood":   "icons/wolf_flamingo_rhino_cheetah_blood.webp",
+        "Worm / Lizard / Bat / Kuku / Cobra Blood":  "icons/worm_lizard_bat_kuku_cobra_blood.webp",
+        "[Party] Harmony Draught - Demihuman":       "icons/party_harmony_draught_demihuman.webp",
+        "[Party] Harmony Draught - Edania":          "icons/party_harmony_draught_edania.webp"
+    };
+
+    const FALLBACK = {
+        "Oil of Fortitude": ['#20595C','O'], "Oil of Corruption": ['#6B4A3A','O'],
+        "Oil of Tranquility": ['#4A7A6E','O'], "Oil of Regeneration": ['#8C4A44','O'],
+        "Oil of Storms": ['#5C6B6B','O'],
+        "Clown's Blood": ['#8C4A44','B'], "Sinner's Blood": ['#8C4A44','B'],
+        "Wise Man's Blood": ['#8C4A44','B'], "Tyrant's Blood": ['#8C4A44','B'],
+        "Legendary Beast's Blood": ['#A67C3D','B'],
+        "Elixir of Experience": ['#4A7A6E','E'], "Elixir of Demihuman Hunt": ['#20595C','E'],
+        "Elixir of Frenzy": ['#8C4A44','E'], "Worker's Elixir": ['#A67C3D','E'],
+        "Elixir of Draining": ['#6B4A3A','E'], "Elixir of Death": ['#5C6B6B','E'],
+        "Elixir of Edania": ['#4A7A6E','E'], "Elixir of Will": ['#20595C','E'],
+        "Harmony Draught": ['#20595C','H'],
+        "[Party] Harmony Draught - Edania": ['#4A7A6E','H'],
+        "[Party] Harmony Draught - Demihuman": ['#8C4A44','H'],
+        "Fury Draught": ['#8C4A44','D'], "Adaptation Draught": ['#20595C','D'],
+        "Potential Draught": ['#6B4A3A','D'], "Corruption Draught": ['#5C6B6B','D'],
+        "Berserk Draught": ['#A67C3D','D'], "Spellbound Catalyst": ['#6B4A3A','C']
+    };
+
+    function getIcon(name) {
+        const path = ICON_MAP[name];
+        if (path) return path;               // try local file first
+        const fb = FALLBACK[name] || ['#94a3b8', '?'];
+        return createSvgIcon(fb[0], fb[1]);  // SVG fallback
+    }
+
+    // Helper so <img> can fall back to SVG if the local file is missing
+    function iconImg(name, cls) {
+        const src = getIcon(name);
+        const fb = FALLBACK[name] || ['#94a3b8', '?'];
+        const svgFallback = createSvgIcon(fb[0], fb[1]);
+        return `<img src="${src}" class="${cls}" alt="${name}" loading="lazy"
+                     onerror="this.onerror=null;this.src='${svgFallback}'">`;
+    }
+
+    const recipeData = {
+        oils: [
+            {
+                id: "oil_fortitude", name: "Oil of Fortitude", baseExp: 1400,
+                ingredients: [
+                    { name: "Clown's Blood", qty: 1 },
+                    { name: "Monk's Branch", qty: 1 },
+                    { name: "Fruit of Nature", qty: 1 },
+                    { name: "Powder of Flame", qty: 1 }
+                ],
+                spot: null
+            },
+            {
+                id: "oil_corruption", name: "Oil of Corruption", baseExp: 1400,
+                ingredients: [
+                    { name: "Sinner's Blood", qty: 1 },
+                    { name: "Spirit's Leaf", qty: 1 },
+                    { name: "Fruit of Nature", qty: 1 },
+                    { name: "Powder of Darkness", qty: 1 }
+                ],
+                spot: null
+            },
+            {
+                id: "oil_tranquility", name: "Oil of Tranquility", baseExp: 1400,
+                ingredients: [
+                    { name: "Wise Man's Blood", qty: 1 },
+                    { name: "Bloody Tree Knot", qty: 1 },
+                    { name: "Fruit of Nature", qty: 1 },
+                    { name: "Powder of Earth", qty: 1 }
+                ],
+                spot: null
+            },
+            {
+                id: "oil_regeneration", name: "Oil of Regeneration", baseExp: 1400,
+                ingredients: [
+                    { name: "Legendary Beast's Blood", qty: 1 },
+                    { name: "Red Tree Lump", qty: 1 },
+                    { name: "Fruit of Nature", qty: 1 },
+                    { name: "Powder of Rifts", qty: 1 }
+                ],
+                spot: null
+            },
+            {
+                id: "oil_storms", name: "Oil of Storms", baseExp: 1400,
+                ingredients: [
+                    { name: "Tyrant's Blood", qty: 1 },
+                    { name: "Old Tree Bark", qty: 1 },
+                    { name: "Fruit of Nature", qty: 1 },
+                    { name: "Powder of Time", qty: 1 }
+                ],
+                spot: "Not used directly in Harmony Draughts, but required for Elixir of Destruction, Elixir of Detection and Golden Hand Elixir below."
+            }
+        ],
+        bloods: [
+            {
+                id: "clown_blood", name: "Clown's Blood", baseExp: 800,
+                ingredients: [
+                    { name: "Clear Liquid Reagent", qty: 1 },
+                    { name: "Wolf / Flamingo / Rhino / Cheetah Blood", qty: 2 },
+                    { name: "Spirit's Leaf", qty: 1 },
+                    { name: "Powder of Darkness", qty: 1 }
+                ],
+                spot: "Olvia / Imp Cave (Wolf Hills) — Highest density wolf gathering spot."
+            },
+            {
+                id: "sinners_blood", name: "Sinner's Blood", baseExp: 800,
+                ingredients: [
+                    { name: "Clear Liquid Reagent", qty: 1 },
+                    { name: "Deer / Sheep / Pig / Waragon Blood", qty: 2 },
+                    { name: "Bloody Tree Knot", qty: 1 },
+                    { name: "Powder of Flame", qty: 1 }
+                ],
+                spot: "Lynch Ranch (Sheep) or Behr Deer Herds (South of Behr)."
+            },
+            {
+                id: "wise_mans_blood", name: "Wise Man's Blood", baseExp: 800,
+                ingredients: [
+                    { name: "Clear Liquid Reagent", qty: 1 },
+                    { name: "Fox / Weasel / Racoon Blood", qty: 2 },
+                    { name: "Monk's Branch", qty: 1 },
+                    { name: "Trace of Nature", qty: 1 }
+                ],
+                spot: "Eastern Border (Glish) or Fox node near Bartali Farm."
+            },
+            {
+                id: "tyrants_blood", name: "Tyrant's Blood", baseExp: 800,
+                ingredients: [
+                    { name: "Pure Powder Reagent", qty: 1 },
+                    { name: "Troll / Bear / Ogre Blood", qty: 2 },
+                    { name: "Monk's Branch", qty: 1 },
+                    { name: "Trace of Nature", qty: 1 }
+                ],
+                spot: "Balenos Mountains (East of Olvia) or Mansha Forest (Bears)."
+            },
+            {
+                id: "legendary_beasts_blood", name: "Legendary Beast's Blood", baseExp: 800,
+                ingredients: [
+                    { name: "Pure Powder Reagent", qty: 1 },
+                    { name: "Worm / Lizard / Bat / Kuku / Cobra Blood", qty: 2 },
+                    { name: "Spirit's Leaf", qty: 1 },
+                    { name: "Trace of Nature", qty: 1 }
+                ],
+                spot: "Needed for Oil of Regeneration and several elixirs below — not in the original file."
+            }
+        ],
+        // Elixirs required by the 5 intermediate Draughts
+        // Ingredients and EXP verified against current live recipe/EXP tables.
+        elixirs: [
+            // --- Fury Draught group ---
+            { id: "elixir_fury", name: "Elixir of Fury", baseExp: 460, ingredients: [{ name: "Ash Sap", qty: 1 }, { name: "Dwarf Mushroom", qty: 4 }, { name: "Troll / Bear / Ogre Blood", qty: 4 }, { name: "Purified Water", qty: 3 }], spot: "Used in Fury Draught" },
+            { id: "elixir_frenzy", name: "Elixir of Frenzy", baseExp: 1610, ingredients: [{ name: "Oil of Regeneration", qty: 1 }, { name: "Clear Liquid Reagent", qty: 5 }, { name: "Cedar Sap", qty: 5 }, { name: "Trace of Nature", qty: 3 }, { name: "Ghost Mushroom", qty: 2 }], spot: "Used in Fury Draught" },
+            { id: "elixir_concentration", name: "Elixir of Concentration", baseExp: 460, ingredients: [{ name: "Clear Liquid Reagent", qty: 1 }, { name: "Cloud Mushroom", qty: 3 }, { name: "Wild Grass", qty: 2 }, { name: "Troll / Bear / Ogre Blood", qty: 3 }], spot: "Used in Fury Draught" },
+            { id: "elixir_destruction", name: "Elixir of Destruction", baseExp: 1610, ingredients: [{ name: "Oil of Storms", qty: 1 }, { name: "Trace of Nature", qty: 3 }, { name: "Clear Liquid Reagent", qty: 5 }, { name: "Powder of Flame", qty: 5 }, { name: "Snowfield Cedar Sap", qty: 7 }], spot: "Used in Fury Draught (EXP is an estimate — not listed on public EXP tables)" },
+
+            // --- Adaptation Draught group ---
+            { id: "defense_elixir", name: "Defense Elixir", baseExp: 460, ingredients: [{ name: "Clear Liquid Reagent", qty: 1 }, { name: "Ash Sap", qty: 6 }, { name: "Deer / Sheep / Pig / Waragon Blood", qty: 5 }, { name: "Purified Water", qty: 3 }], spot: "Used in Adaptation Draught" },
+            { id: "helix_elixir", name: "Helix Elixir", baseExp: 200, ingredients: [{ name: "Thuja Sap", qty: 6 }, { name: "Monk's Branch", qty: 3 }, { name: "Clown's Blood", qty: 2 }, { name: "Powder of Flame", qty: 2 }, { name: "Purified Water", qty: 3 }], spot: "Used in Adaptation Draught" },
+            { id: "elixir_life", name: "Elixir of Life", baseExp: 460, ingredients: [{ name: "Pure Powder Reagent", qty: 1 }, { name: "Silver Azalea", qty: 3 }, { name: "Fox / Weasel / Racoon Blood", qty: 5 }, { name: "HP Potion (Small)", qty: 3 }], spot: "Used in Adaptation Draught" },
+            { id: "elixir_endurance", name: "Elixir of Endurance", baseExp: 460, ingredients: [{ name: "Pure Powder Reagent", qty: 1 }, { name: "Dwarf Mushroom", qty: 2 }, { name: "Birch Sap", qty: 5 }, { name: "Troll / Bear / Ogre Blood", qty: 4 }], spot: "Used in Adaptation Draught" },
+
+            // --- Potential Draught group ---
+            { id: "elixir_wind", name: "Elixir of Wind", baseExp: 920, ingredients: [{ name: "Wise Man's Blood", qty: 1 }, { name: "Fortune Teller Mushroom", qty: 5 }, { name: "Pine Sap", qty: 5 }, { name: "Powder of Darkness", qty: 2 }], spot: "Used in Potential Draught" },
+            { id: "elixir_spells", name: "Elixir of Spells", baseExp: 920, ingredients: [{ name: "Tyrant's Blood", qty: 1 }, { name: "Fire Flake Flower", qty: 5 }, { name: "Maple Sap", qty: 3 }, { name: "Powder of Darkness", qty: 2 }], spot: "Used in Potential Draught" },
+            { id: "elixir_shock", name: "Elixir of Shock", baseExp: 920, ingredients: [{ name: "Clown's Blood", qty: 1 }, { name: "Tiger Mushroom", qty: 5 }, { name: "Cedar Sap", qty: 7 }, { name: "Powder of Time", qty: 3 }], spot: "Used in Potential Draught" },
+            { id: "elixir_swiftness", name: "Elixir of Swiftness", baseExp: 920, ingredients: [{ name: "Legendary Beast's Blood", qty: 1 }, { name: "Arrow Mushroom", qty: 5 }, { name: "Birch Sap", qty: 5 }, { name: "Powder of Darkness", qty: 2 }], spot: "Used in Potential Draught" },
+
+            // --- Corruption Draught group ---
+            { id: "elixir_perforation", name: "Elixir of Perforation", baseExp: 1610, ingredients: [{ name: "Oil of Corruption", qty: 1 }, { name: "Clear Liquid Reagent", qty: 4 }, { name: "Bluffer Mushroom", qty: 5 }, { name: "Pine Sap", qty: 5 }, { name: "Trace of Nature", qty: 2 }], spot: "Used in Corruption Draught" },
+            { id: "elixir_death", name: "Elixir of Death", baseExp: 920, ingredients: [{ name: "Oil of Tranquility", qty: 1 }, { name: "Clear Liquid Reagent", qty: 6 }, { name: "Ancient Mushroom", qty: 2 }, { name: "Ash Sap", qty: 7 }, { name: "Trace of Nature", qty: 2 }], spot: "Used in Corruption Draught" },
+            { id: "elixir_draining", name: "Elixir of Draining", baseExp: 1610, ingredients: [{ name: "Oil of Fortitude", qty: 1 }, { name: "Clear Liquid Reagent", qty: 4 }, { name: "Hump Mushroom", qty: 3 }, { name: "Birch Sap", qty: 4 }, { name: "Trace of Nature", qty: 2 }], spot: "Used in Corruption Draught" },
+            { id: "grim_reaper_elixir", name: "Grim Reaper's Elixir", baseExp: 1610, ingredients: [{ name: "Oil of Fortitude", qty: 1 }, { name: "Pure Powder Reagent", qty: 4 }, { name: "Sky Mushroom", qty: 2 }, { name: "Monk's Branch", qty: 2 }, { name: "Trace of Nature", qty: 4 }], spot: "Used in Corruption Draught" },
+
+            // --- Berserk Draught group ---
+            { id: "elixir_assassination", name: "Elixir of Assassination", baseExp: 1610, ingredients: [{ name: "Oil of Regeneration", qty: 1 }, { name: "Pure Powder Reagent", qty: 5 }, { name: "Amanita Mushroom", qty: 4 }, { name: "Red Tree Lump", qty: 2 }, { name: "Trace of Nature", qty: 2 }], spot: "Used in Berserk Draught" },
+            { id: "elixir_detection", name: "Elixir of Detection", baseExp: 1610, ingredients: [{ name: "Oil of Storms", qty: 1 }, { name: "Pure Powder Reagent", qty: 6 }, { name: "Truffle Mushroom", qty: 3 }, { name: "Old Tree Bark", qty: 2 }, { name: "Trace of Nature", qty: 3 }], spot: "Used in Berserk Draught" },
+            { id: "elixir_carnage", name: "Elixir of Carnage", baseExp: 1610, ingredients: [{ name: "Oil of Corruption", qty: 1 }, { name: "Pure Powder Reagent", qty: 7 }, { name: "Tiger Mushroom", qty: 2 }, { name: "Spirit's Leaf", qty: 2 }, { name: "Trace of Nature", qty: 3 }], spot: "Used in Berserk Draught" },
+            { id: "elixir_sky", name: "Elixir of Sky", baseExp: 1610, ingredients: [{ name: "Oil of Tranquility", qty: 1 }, { name: "Pure Powder Reagent", qty: 6 }, { name: "Emperor Mushroom", qty: 5 }, { name: "Bloody Tree Knot", qty: 2 }, { name: "Trace of Nature", qty: 4 }], spot: "Used in Berserk Draught" },
+
+            // Extra, used by Party Harmony Draughts
+            { id: "elixir_demihuman", name: "Elixir of Demihuman Hunt", baseExp: 920, ingredients: [{ name: "Sinner's Blood", qty: 1 }, { name: "Arrow Mushroom", qty: 4 }, { name: "Fir Sap", qty: 4 }, { name: "Black Stone Powder", qty: 3 }], spot: "Used in [Party] Harmony Draught - Demihuman" },
+            { id: "elixir_will", name: "Elixir of Will", baseExp: 460, ingredients: [{ name: "Pure Powder Reagent", qty: 1 }, { name: "Sunrise Herb", qty: 4 }, { name: "Wolf / Flamingo / Rhino / Cheetah Blood", qty: 6 }, { name: "Purified Water", qty: 3 }], spot: "Used in Party Harmony variants" },
+            { id: "elixir_edania", name: "Elixir of Edania", baseExp: 920, ingredients: [{ name: "Sinner's Blood", qty: 2 }, { name: "Trace of Nature", qty: 4 }, { name: "Old Tree Bark", qty: 6 }, { name: "Clear Liquid Reagent", qty: 6 }, { name: "Caphras Tree Sap", qty: 6 }], spot: "Used in [Party] Harmony Draught - Edania (EXP is an estimate — not listed on public EXP tables)" }
+        ],
+
+        // Intermediate Draughts (Simple Alchemy → produce 10)
+        draughts: [
+            {
+                id: "fury_draught", name: "Fury Draught", baseExp: 0,
+                ingredients: [
+                    { name: "Elixir of Fury", qty: 30 },
+                    { name: "Elixir of Frenzy", qty: 30 },
+                    { name: "Elixir of Concentration", qty: 30 },
+                    { name: "Elixir of Destruction", qty: 30 },
+                    { name: "Spellbound Catalyst", qty: 10 }
+                ],
+                spot: "Simple Alchemy (L) — produces 10 Fury Draughts. Higher-grade elixirs work at 1:3 ratio."
+            },
+            {
+                id: "adaptation_draught", name: "Adaptation Draught", baseExp: 0,
+                ingredients: [
+                    { name: "Defense Elixir", qty: 30 },
+                    { name: "Helix Elixir", qty: 30 },
+                    { name: "Elixir of Life", qty: 30 },
+                    { name: "Elixir of Endurance", qty: 30 },
+                    { name: "Spellbound Catalyst", qty: 10 }
+                ],
+                spot: "Simple Alchemy (L) — produces 10 Adaptation Draughts. Higher-grade elixirs work at 1:3 ratio."
+            },
+            {
+                id: "potential_draught", name: "Potential Draught", baseExp: 0,
+                ingredients: [
+                    { name: "Elixir of Wind", qty: 30 },
+                    { name: "Elixir of Spells", qty: 30 },
+                    { name: "Elixir of Shock", qty: 30 },
+                    { name: "Elixir of Swiftness", qty: 30 },
+                    { name: "Spellbound Catalyst", qty: 10 }
+                ],
+                spot: "Simple Alchemy (L) — produces 10 Potential Draughts. Higher-grade elixirs work at 1:3 ratio."
+            },
+            {
+                id: "corruption_draught", name: "Corruption Draught", baseExp: 0,
+                ingredients: [
+                    { name: "Elixir of Perforation", qty: 30 },
+                    { name: "Elixir of Death", qty: 30 },
+                    { name: "Elixir of Draining", qty: 30 },
+                    { name: "Grim Reaper's Elixir", qty: 30 },
+                    { name: "Spellbound Catalyst", qty: 10 }
+                ],
+                spot: "Simple Alchemy (L) — produces 10 Corruption Draughts. Higher-grade elixirs work at 1:3 ratio."
+            },
+            {
+                id: "berserk_draught", name: "Berserk Draught", baseExp: 0,
+                ingredients: [
+                    { name: "Elixir of Assassination", qty: 30 },
+                    { name: "Elixir of Detection", qty: 30 },
+                    { name: "Elixir of Carnage", qty: 30 },
+                    { name: "Elixir of Sky", qty: 30 },
+                    { name: "Spellbound Catalyst", qty: 10 }
+                ],
+                spot: "Simple Alchemy (L) — produces 10 Berserk Draughts. Higher-grade elixirs work at 1:3 ratio."
+            }
+        ],
+
+        harmony: [
+            {
+                id: "harmony_draught", name: "Harmony Draught", baseExp: 0,
+                ingredients: [
+                    { name: "Fury Draught", qty: 10 },
+                    { name: "Adaptation Draught", qty: 10 },
+                    { name: "Potential Draught", qty: 10 },
+                    { name: "Corruption Draught", qty: 10 },
+                    { name: "Berserk Draught", qty: 10 }
+                ],
+                spot: "Simple Alchemy (L) — produces 10 Harmony Draughts"
+            },
+            {
+                id: "harmony_edania", name: "[Party] Harmony Draught - Edania", baseExp: 0,
+                ingredients: [
+                    { name: "Harmony Draught", qty: 1 },
+                    { name: "Elixir of Edania", qty: 3 },
+                    { name: "Elixir of Will", qty: 3 },
+                    { name: "Spellbound Catalyst", qty: 1 }
+                ],
+                spot: "Simple Alchemy (L) — single craft. Use Ibellab's Essence version for x10 batch."
+            },
+            {
+                id: "harmony_demihuman", name: "[Party] Harmony Draught - Demihuman", baseExp: 0,
+                ingredients: [
+                    { name: "Harmony Draught", qty: 1 },
+                    { name: "Elixir of Demihuman Hunt", qty: 3 },
+                    { name: "Elixir of Will", qty: 3 },
+                    { name: "Spellbound Catalyst", qty: 1 }
+                ],
+                spot: "Simple Alchemy (L) — single craft. Use Ibellab's Essence version for x10 batch."
+            }
+        ]
+    };
+
+    function renderCards() {
+        for (const [category, recipes] of Object.entries(recipeData)) {
+            const container = document.getElementById(category);
+            if (!container) continue;
+            container.innerHTML = "";
+
+            recipes.forEach(recipe => {
+                const card = document.createElement('div');
+                card.className = 'recipe-card';
+                const expText = recipe.baseExp > 0 ? `${recipe.baseExp.toLocaleString()} Base EXP` : 'Simple Alchemy';
+                card.innerHTML = `
+                    <div class="card-info">
+                        <div class="item-icon-wrapper">
+                            ${iconImg(recipe.name, 'item-icon')}
+                        </div>
+                        <div class="item-details">
+                            <span class="recipe-title">${recipe.name}</span>
+                            <span class="exp-badge">${expText}</span>
+                            <div class="craft-input-group">
+                                <label for="crafts-${recipe.id}">Batch Crafts:</label>
+                                <input type="number" id="crafts-${recipe.id}" value="1000" min="1" onchange="calculateAll()" oninput="calculateAll()">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="ingredients-wrapper">
+                        <div class="ingredients-grid" id="ing-list-${recipe.id}">
+                            ${recipe.ingredients.map(ing => `
+                                <div class="ing-item">
+                                    ${iconImg(ing.name, 'ing-icon')}
+                                    <div class="ing-details">
+                                        <span class="ing-name" title="${ing.name}">${ing.name}</span>
+                                        <span class="ing-qty" data-base="${ing.qty}">0</span>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                        ${recipe.spot ? `
+                            <div class="gathering-spot">
+                                <strong>Note:</strong>${recipe.spot}
+                            </div>
+                        ` : ''}
+                    </div>
+
+                    <div class="card-summary">
+                        <div class="summary-row">
+                            <span class="summary-label">Modified EXP:</span>
+                            <span class="summary-val highlight" id="total-exp-${recipe.id}">0</span>
+                        </div>
+                        <div class="summary-row">
+                            <span class="summary-label">Estimated Yields:</span>
+                            <span class="summary-val" id="total-yield-${recipe.id}">0</span>
+                        </div>
+                        <div class="summary-row">
+                            <span class="summary-label">Crafting Time:</span>
+                            <span class="summary-val" id="total-time-${recipe.id}">0m</span>
+                        </div>
+                        <div class="summary-row">
+                            <span class="summary-label">% M18 ➔ Guru 1:</span>
+                            <span class="summary-val highlight" id="guru-progress-${recipe.id}">0%</span>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+    }
+
+    function calculateAll() {
+        const expBuff = parseFloat(document.getElementById('alchemy-buffs').value) || 0;
+        const craftSpeed = parseFloat(document.getElementById('craft-time').value) || 1.0;
+        const procMult = parseFloat(document.getElementById('mastery-proc').value) || 2.5;
+
+        for (const [category, recipes] of Object.entries(recipeData)) {
+            recipes.forEach(recipe => {
+                const craftsInput = document.getElementById(`crafts-${recipe.id}`);
+                if (!craftsInput) return;
+                const crafts = parseInt(craftsInput.value) || 0;
+
+                const ingElements = document.querySelectorAll(`#ing-list-${recipe.id} .ing-qty`);
+                ingElements.forEach((el, idx) => {
+                    const baseQty = recipe.ingredients[idx].qty;
+                    el.textContent = (baseQty * crafts).toLocaleString();
+                });
+
+                const expPerCraft = recipe.baseExp * (1 + (expBuff / 100));
+                const totalExp = expPerCraft * crafts;
+                const totalYield = Math.floor(crafts * procMult);
+
+                const totalSeconds = crafts * craftSpeed;
+                let timeString;
+                if (totalSeconds >= 3600) {
+                    timeString = (totalSeconds / 3600).toFixed(1) + 'h';
+                } else {
+                    const minutes = Math.floor(totalSeconds / 60);
+                    const seconds = Math.floor(totalSeconds % 60);
+                    timeString = `${minutes}m ${seconds}s`;
+                }
+
+                const guruPercent = recipe.baseExp > 0
+                    ? ((totalExp / EXP_TO_GURU) * 100).toFixed(1)
+                    : '—';
+
+                document.getElementById(`total-exp-${recipe.id}`).textContent =
+                    recipe.baseExp > 0 ? Math.round(totalExp).toLocaleString() : 'N/A (Simple Alchemy)';
+                document.getElementById(`total-yield-${recipe.id}`).textContent = totalYield.toLocaleString();
+                document.getElementById(`total-time-${recipe.id}`).textContent = timeString;
+                document.getElementById(`guru-progress-${recipe.id}`).textContent =
+                    recipe.baseExp > 0 ? `${guruPercent}%` : '—';
+            });
+        }
+    }
+
+    function switchTab(tabId) {
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+        const btn = document.querySelector(`.tab-btn[data-tab="${tabId}"]`);
+        if (btn) btn.classList.add('active');
+        const content = document.getElementById(tabId);
+        if (content) content.classList.add('active');
+        const search = document.getElementById('recipe-search');
+        if (search) { search.value = ''; }
+        filterCards();
+    }
+
+    function filterCards() {
+        const search = document.getElementById('recipe-search');
+        const query = search ? search.value.trim().toLowerCase() : '';
+        const activeTab = document.querySelector('.tab-content.active');
+        if (!activeTab) return;
+        activeTab.querySelectorAll('.recipe-card').forEach(card => {
+            const title = card.querySelector('.recipe-title');
+            const match = !query || (title && title.textContent.toLowerCase().includes(query));
+            card.classList.toggle('hidden', !match);
+        });
+    }
+
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            switchTab(this.dataset.tab);
+        });
+    });
+
+    renderCards();
+    calculateAll();
+    filterCards();
+</script>
+</body>
+</html>

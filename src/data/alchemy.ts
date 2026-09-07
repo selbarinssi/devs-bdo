@@ -1,0 +1,555 @@
+export type Ingredient = { name: string; qty: number };
+
+export type Recipe = {
+  id: string;
+  name: string;
+  baseExp: number;
+  ingredients: Ingredient[];
+  spot: string | null;
+};
+
+export const EXP_TO_GURU = 12_500_000;
+
+export const ALCHEMY_CATEGORIES = [
+  { id: "oils", label: "Oils", hint: "1,400 EXP" },
+  { id: "bloods", label: "Bloods", hint: "800 EXP" },
+  { id: "elixirs", label: "Elixirs", hint: "for Draughts" },
+  { id: "draughts", label: "Draughts", hint: "Intermediate" },
+  { id: "harmony", label: "Harmony", hint: "Final" },
+] as const;
+
+export type AlchemyCategory = (typeof ALCHEMY_CATEGORIES)[number]["id"];
+
+export const recipeData: Record<AlchemyCategory, Recipe[]> = {
+  oils: [
+    {
+      id: "oil_fortitude",
+      name: "Oil of Fortitude",
+      baseExp: 1400,
+      ingredients: [
+        { name: "Clown's Blood", qty: 1 },
+        { name: "Monk's Branch", qty: 1 },
+        { name: "Fruit of Nature", qty: 1 },
+        { name: "Powder of Flame", qty: 1 },
+      ],
+      spot: null,
+    },
+    {
+      id: "oil_corruption",
+      name: "Oil of Corruption",
+      baseExp: 1400,
+      ingredients: [
+        { name: "Sinner's Blood", qty: 1 },
+        { name: "Spirit's Leaf", qty: 1 },
+        { name: "Fruit of Nature", qty: 1 },
+        { name: "Powder of Darkness", qty: 1 },
+      ],
+      spot: null,
+    },
+    {
+      id: "oil_tranquility",
+      name: "Oil of Tranquility",
+      baseExp: 1400,
+      ingredients: [
+        { name: "Wise Man's Blood", qty: 1 },
+        { name: "Bloody Tree Knot", qty: 1 },
+        { name: "Fruit of Nature", qty: 1 },
+        { name: "Powder of Earth", qty: 1 },
+      ],
+      spot: null,
+    },
+    {
+      id: "oil_regeneration",
+      name: "Oil of Regeneration",
+      baseExp: 1400,
+      ingredients: [
+        { name: "Legendary Beast's Blood", qty: 1 },
+        { name: "Red Tree Lump", qty: 1 },
+        { name: "Fruit of Nature", qty: 1 },
+        { name: "Powder of Rifts", qty: 1 },
+      ],
+      spot: null,
+    },
+    {
+      id: "oil_storms",
+      name: "Oil of Storms",
+      baseExp: 1400,
+      ingredients: [
+        { name: "Tyrant's Blood", qty: 1 },
+        { name: "Old Tree Bark", qty: 1 },
+        { name: "Fruit of Nature", qty: 1 },
+        { name: "Powder of Time", qty: 1 },
+      ],
+      spot:
+        "Not used directly in Harmony Draughts, but required for Elixir of Destruction, Elixir of Detection and Golden Hand Elixir.",
+    },
+  ],
+  bloods: [
+    {
+      id: "clown_blood",
+      name: "Clown's Blood",
+      baseExp: 800,
+      ingredients: [
+        { name: "Clear Liquid Reagent", qty: 1 },
+        { name: "Wolf / Flamingo / Rhino / Cheetah Blood", qty: 2 },
+        { name: "Spirit's Leaf", qty: 1 },
+        { name: "Powder of Darkness", qty: 1 },
+      ],
+      spot: "Olvia / Imp Cave (Wolf Hills) — highest density wolf gathering spot.",
+    },
+    {
+      id: "sinners_blood",
+      name: "Sinner's Blood",
+      baseExp: 800,
+      ingredients: [
+        { name: "Clear Liquid Reagent", qty: 1 },
+        { name: "Deer / Sheep / Pig / Waragon Blood", qty: 2 },
+        { name: "Bloody Tree Knot", qty: 1 },
+        { name: "Powder of Flame", qty: 1 },
+      ],
+      spot: "Lynch Ranch (Sheep) or Behr Deer Herds (south of Behr).",
+    },
+    {
+      id: "wise_mans_blood",
+      name: "Wise Man's Blood",
+      baseExp: 800,
+      ingredients: [
+        { name: "Clear Liquid Reagent", qty: 1 },
+        { name: "Fox / Weasel / Racoon Blood", qty: 2 },
+        { name: "Monk's Branch", qty: 1 },
+        { name: "Trace of Nature", qty: 1 },
+      ],
+      spot: "Eastern Border (Glish) or Fox node near Bartali Farm.",
+    },
+    {
+      id: "tyrants_blood",
+      name: "Tyrant's Blood",
+      baseExp: 800,
+      ingredients: [
+        { name: "Pure Powder Reagent", qty: 1 },
+        { name: "Troll / Bear / Ogre Blood", qty: 2 },
+        { name: "Monk's Branch", qty: 1 },
+        { name: "Trace of Nature", qty: 1 },
+      ],
+      spot: "Balenos Mountains (east of Olvia) or Mansha Forest (Bears).",
+    },
+    {
+      id: "legendary_beasts_blood",
+      name: "Legendary Beast's Blood",
+      baseExp: 800,
+      ingredients: [
+        { name: "Pure Powder Reagent", qty: 1 },
+        { name: "Worm / Lizard / Bat / Kuku / Cobra Blood", qty: 2 },
+        { name: "Spirit's Leaf", qty: 1 },
+        { name: "Trace of Nature", qty: 1 },
+      ],
+      spot: "Needed for Oil of Regeneration and several elixirs — not in the original Harmony chain.",
+    },
+  ],
+  elixirs: [
+    {
+      id: "elixir_fury",
+      name: "Elixir of Fury",
+      baseExp: 460,
+      ingredients: [
+        { name: "Ash Sap", qty: 1 },
+        { name: "Dwarf Mushroom", qty: 4 },
+        { name: "Troll / Bear / Ogre Blood", qty: 4 },
+        { name: "Purified Water", qty: 3 },
+      ],
+      spot: "Used in Fury Draught",
+    },
+    {
+      id: "elixir_frenzy",
+      name: "Elixir of Frenzy",
+      baseExp: 1610,
+      ingredients: [
+        { name: "Oil of Regeneration", qty: 1 },
+        { name: "Clear Liquid Reagent", qty: 5 },
+        { name: "Cedar Sap", qty: 5 },
+        { name: "Trace of Nature", qty: 3 },
+        { name: "Ghost Mushroom", qty: 2 },
+      ],
+      spot: "Used in Fury Draught",
+    },
+    {
+      id: "elixir_concentration",
+      name: "Elixir of Concentration",
+      baseExp: 460,
+      ingredients: [
+        { name: "Clear Liquid Reagent", qty: 1 },
+        { name: "Cloud Mushroom", qty: 3 },
+        { name: "Wild Grass", qty: 2 },
+        { name: "Troll / Bear / Ogre Blood", qty: 3 },
+      ],
+      spot: "Used in Fury Draught",
+    },
+    {
+      id: "elixir_destruction",
+      name: "Elixir of Destruction",
+      baseExp: 1610,
+      ingredients: [
+        { name: "Oil of Storms", qty: 1 },
+        { name: "Trace of Nature", qty: 3 },
+        { name: "Clear Liquid Reagent", qty: 5 },
+        { name: "Powder of Flame", qty: 5 },
+        { name: "Snowfield Cedar Sap", qty: 7 },
+      ],
+      spot: "Used in Fury Draught (EXP is an estimate — not listed on public EXP tables)",
+    },
+    {
+      id: "defense_elixir",
+      name: "Defense Elixir",
+      baseExp: 460,
+      ingredients: [
+        { name: "Clear Liquid Reagent", qty: 1 },
+        { name: "Ash Sap", qty: 6 },
+        { name: "Deer / Sheep / Pig / Waragon Blood", qty: 5 },
+        { name: "Purified Water", qty: 3 },
+      ],
+      spot: "Used in Adaptation Draught",
+    },
+    {
+      id: "helix_elixir",
+      name: "Helix Elixir",
+      baseExp: 200,
+      ingredients: [
+        { name: "Thuja Sap", qty: 6 },
+        { name: "Monk's Branch", qty: 3 },
+        { name: "Clown's Blood", qty: 2 },
+        { name: "Powder of Flame", qty: 2 },
+        { name: "Purified Water", qty: 3 },
+      ],
+      spot: "Used in Adaptation Draught",
+    },
+    {
+      id: "elixir_life",
+      name: "Elixir of Life",
+      baseExp: 460,
+      ingredients: [
+        { name: "Pure Powder Reagent", qty: 1 },
+        { name: "Silver Azalea", qty: 3 },
+        { name: "Fox / Weasel / Racoon Blood", qty: 5 },
+        { name: "HP Potion (Small)", qty: 3 },
+      ],
+      spot: "Used in Adaptation Draught",
+    },
+    {
+      id: "elixir_endurance",
+      name: "Elixir of Endurance",
+      baseExp: 460,
+      ingredients: [
+        { name: "Pure Powder Reagent", qty: 1 },
+        { name: "Dwarf Mushroom", qty: 2 },
+        { name: "Birch Sap", qty: 5 },
+        { name: "Troll / Bear / Ogre Blood", qty: 4 },
+      ],
+      spot: "Used in Adaptation Draught",
+    },
+    {
+      id: "elixir_wind",
+      name: "Elixir of Wind",
+      baseExp: 920,
+      ingredients: [
+        { name: "Wise Man's Blood", qty: 1 },
+        { name: "Fortune Teller Mushroom", qty: 5 },
+        { name: "Pine Sap", qty: 5 },
+        { name: "Powder of Darkness", qty: 2 },
+      ],
+      spot: "Used in Potential Draught",
+    },
+    {
+      id: "elixir_spells",
+      name: "Elixir of Spells",
+      baseExp: 920,
+      ingredients: [
+        { name: "Tyrant's Blood", qty: 1 },
+        { name: "Fire Flake Flower", qty: 5 },
+        { name: "Maple Sap", qty: 3 },
+        { name: "Powder of Darkness", qty: 2 },
+      ],
+      spot: "Used in Potential Draught",
+    },
+    {
+      id: "elixir_shock",
+      name: "Elixir of Shock",
+      baseExp: 920,
+      ingredients: [
+        { name: "Clown's Blood", qty: 1 },
+        { name: "Tiger Mushroom", qty: 5 },
+        { name: "Cedar Sap", qty: 7 },
+        { name: "Powder of Time", qty: 3 },
+      ],
+      spot: "Used in Potential Draught",
+    },
+    {
+      id: "elixir_swiftness",
+      name: "Elixir of Swiftness",
+      baseExp: 920,
+      ingredients: [
+        { name: "Legendary Beast's Blood", qty: 1 },
+        { name: "Arrow Mushroom", qty: 5 },
+        { name: "Birch Sap", qty: 5 },
+        { name: "Powder of Darkness", qty: 2 },
+      ],
+      spot: "Used in Potential Draught",
+    },
+    {
+      id: "elixir_perforation",
+      name: "Elixir of Perforation",
+      baseExp: 1610,
+      ingredients: [
+        { name: "Oil of Corruption", qty: 1 },
+        { name: "Clear Liquid Reagent", qty: 4 },
+        { name: "Bluffer Mushroom", qty: 5 },
+        { name: "Pine Sap", qty: 5 },
+        { name: "Trace of Nature", qty: 2 },
+      ],
+      spot: "Used in Corruption Draught",
+    },
+    {
+      id: "elixir_death",
+      name: "Elixir of Death",
+      baseExp: 920,
+      ingredients: [
+        { name: "Oil of Tranquility", qty: 1 },
+        { name: "Clear Liquid Reagent", qty: 6 },
+        { name: "Ancient Mushroom", qty: 2 },
+        { name: "Ash Sap", qty: 7 },
+        { name: "Trace of Nature", qty: 2 },
+      ],
+      spot: "Used in Corruption Draught",
+    },
+    {
+      id: "elixir_draining",
+      name: "Elixir of Draining",
+      baseExp: 1610,
+      ingredients: [
+        { name: "Oil of Fortitude", qty: 1 },
+        { name: "Clear Liquid Reagent", qty: 4 },
+        { name: "Hump Mushroom", qty: 3 },
+        { name: "Birch Sap", qty: 4 },
+        { name: "Trace of Nature", qty: 2 },
+      ],
+      spot: "Used in Corruption Draught",
+    },
+    {
+      id: "grim_reaper_elixir",
+      name: "Grim Reaper's Elixir",
+      baseExp: 1610,
+      ingredients: [
+        { name: "Oil of Fortitude", qty: 1 },
+        { name: "Pure Powder Reagent", qty: 4 },
+        { name: "Sky Mushroom", qty: 2 },
+        { name: "Monk's Branch", qty: 2 },
+        { name: "Trace of Nature", qty: 4 },
+      ],
+      spot: "Used in Corruption Draught",
+    },
+    {
+      id: "elixir_assassination",
+      name: "Elixir of Assassination",
+      baseExp: 1610,
+      ingredients: [
+        { name: "Oil of Regeneration", qty: 1 },
+        { name: "Pure Powder Reagent", qty: 5 },
+        { name: "Amanita Mushroom", qty: 4 },
+        { name: "Red Tree Lump", qty: 2 },
+        { name: "Trace of Nature", qty: 2 },
+      ],
+      spot: "Used in Berserk Draught",
+    },
+    {
+      id: "elixir_detection",
+      name: "Elixir of Detection",
+      baseExp: 1610,
+      ingredients: [
+        { name: "Oil of Storms", qty: 1 },
+        { name: "Pure Powder Reagent", qty: 6 },
+        { name: "Truffle Mushroom", qty: 3 },
+        { name: "Old Tree Bark", qty: 2 },
+        { name: "Trace of Nature", qty: 3 },
+      ],
+      spot: "Used in Berserk Draught",
+    },
+    {
+      id: "elixir_carnage",
+      name: "Elixir of Carnage",
+      baseExp: 1610,
+      ingredients: [
+        { name: "Oil of Corruption", qty: 1 },
+        { name: "Pure Powder Reagent", qty: 7 },
+        { name: "Tiger Mushroom", qty: 2 },
+        { name: "Spirit's Leaf", qty: 2 },
+        { name: "Trace of Nature", qty: 3 },
+      ],
+      spot: "Used in Berserk Draught",
+    },
+    {
+      id: "elixir_sky",
+      name: "Elixir of Sky",
+      baseExp: 1610,
+      ingredients: [
+        { name: "Oil of Tranquility", qty: 1 },
+        { name: "Pure Powder Reagent", qty: 6 },
+        { name: "Emperor Mushroom", qty: 5 },
+        { name: "Bloody Tree Knot", qty: 2 },
+        { name: "Trace of Nature", qty: 4 },
+      ],
+      spot: "Used in Berserk Draught",
+    },
+    {
+      id: "elixir_demihuman",
+      name: "Elixir of Demihuman Hunt",
+      baseExp: 920,
+      ingredients: [
+        { name: "Sinner's Blood", qty: 1 },
+        { name: "Arrow Mushroom", qty: 4 },
+        { name: "Fir Sap", qty: 4 },
+        { name: "Black Stone Powder", qty: 3 },
+      ],
+      spot: "Used in [Party] Harmony Draught - Demihuman",
+    },
+    {
+      id: "elixir_will",
+      name: "Elixir of Will",
+      baseExp: 460,
+      ingredients: [
+        { name: "Pure Powder Reagent", qty: 1 },
+        { name: "Sunrise Herb", qty: 4 },
+        { name: "Wolf / Flamingo / Rhino / Cheetah Blood", qty: 6 },
+        { name: "Purified Water", qty: 3 },
+      ],
+      spot: "Used in Party Harmony variants",
+    },
+    {
+      id: "elixir_edania",
+      name: "Elixir of Edania",
+      baseExp: 920,
+      ingredients: [
+        { name: "Sinner's Blood", qty: 2 },
+        { name: "Trace of Nature", qty: 4 },
+        { name: "Old Tree Bark", qty: 6 },
+        { name: "Clear Liquid Reagent", qty: 6 },
+        { name: "Caphras Tree Sap", qty: 6 },
+      ],
+      spot: "Used in [Party] Harmony Draught - Edania (EXP is an estimate — not listed on public EXP tables)",
+    },
+  ],
+  draughts: [
+    {
+      id: "fury_draught",
+      name: "Fury Draught",
+      baseExp: 0,
+      ingredients: [
+        { name: "Elixir of Fury", qty: 30 },
+        { name: "Elixir of Frenzy", qty: 30 },
+        { name: "Elixir of Concentration", qty: 30 },
+        { name: "Elixir of Destruction", qty: 30 },
+        { name: "Spellbound Catalyst", qty: 10 },
+      ],
+      spot: "Simple Alchemy (L) — produces 10 Fury Draughts. Higher-grade elixirs work at 1:3 ratio.",
+    },
+    {
+      id: "adaptation_draught",
+      name: "Adaptation Draught",
+      baseExp: 0,
+      ingredients: [
+        { name: "Defense Elixir", qty: 30 },
+        { name: "Helix Elixir", qty: 30 },
+        { name: "Elixir of Life", qty: 30 },
+        { name: "Elixir of Endurance", qty: 30 },
+        { name: "Spellbound Catalyst", qty: 10 },
+      ],
+      spot: "Simple Alchemy (L) — produces 10 Adaptation Draughts. Higher-grade elixirs work at 1:3 ratio.",
+    },
+    {
+      id: "potential_draught",
+      name: "Potential Draught",
+      baseExp: 0,
+      ingredients: [
+        { name: "Elixir of Wind", qty: 30 },
+        { name: "Elixir of Spells", qty: 30 },
+        { name: "Elixir of Shock", qty: 30 },
+        { name: "Elixir of Swiftness", qty: 30 },
+        { name: "Spellbound Catalyst", qty: 10 },
+      ],
+      spot: "Simple Alchemy (L) — produces 10 Potential Draughts. Higher-grade elixirs work at 1:3 ratio.",
+    },
+    {
+      id: "corruption_draught",
+      name: "Corruption Draught",
+      baseExp: 0,
+      ingredients: [
+        { name: "Elixir of Perforation", qty: 30 },
+        { name: "Elixir of Death", qty: 30 },
+        { name: "Elixir of Draining", qty: 30 },
+        { name: "Grim Reaper's Elixir", qty: 30 },
+        { name: "Spellbound Catalyst", qty: 10 },
+      ],
+      spot: "Simple Alchemy (L) — produces 10 Corruption Draughts. Higher-grade elixirs work at 1:3 ratio.",
+    },
+    {
+      id: "berserk_draught",
+      name: "Berserk Draught",
+      baseExp: 0,
+      ingredients: [
+        { name: "Elixir of Assassination", qty: 30 },
+        { name: "Elixir of Detection", qty: 30 },
+        { name: "Elixir of Carnage", qty: 30 },
+        { name: "Elixir of Sky", qty: 30 },
+        { name: "Spellbound Catalyst", qty: 10 },
+      ],
+      spot: "Simple Alchemy (L) — produces 10 Berserk Draughts. Higher-grade elixirs work at 1:3 ratio.",
+    },
+  ],
+  harmony: [
+    {
+      id: "harmony_draught",
+      name: "Harmony Draught",
+      baseExp: 0,
+      ingredients: [
+        { name: "Fury Draught", qty: 10 },
+        { name: "Adaptation Draught", qty: 10 },
+        { name: "Potential Draught", qty: 10 },
+        { name: "Corruption Draught", qty: 10 },
+        { name: "Berserk Draught", qty: 10 },
+      ],
+      spot: "Simple Alchemy (L) — produces 10 Harmony Draughts",
+    },
+    {
+      id: "harmony_edania",
+      name: "[Party] Harmony Draught - Edania",
+      baseExp: 0,
+      ingredients: [
+        { name: "Harmony Draught", qty: 1 },
+        { name: "Elixir of Edania", qty: 3 },
+        { name: "Elixir of Will", qty: 3 },
+        { name: "Spellbound Catalyst", qty: 1 },
+      ],
+      spot: "Simple Alchemy (L) — single craft. Use Ibellab's Essence version for x10 batch.",
+    },
+    {
+      id: "harmony_demihuman",
+      name: "[Party] Harmony Draught - Demihuman",
+      baseExp: 0,
+      ingredients: [
+        { name: "Harmony Draught", qty: 1 },
+        { name: "Elixir of Demihuman Hunt", qty: 3 },
+        { name: "Elixir of Will", qty: 3 },
+        { name: "Spellbound Catalyst", qty: 1 },
+      ],
+      spot: "Simple Alchemy (L) — single craft. Use Ibellab's Essence version for x10 batch.",
+    },
+  ],
+};
+
+export const ALCHEMY_CHANGELOG = [
+  "All 4 Oils had at least one wrong ingredient (e.g. Oil of Fortitude was missing Monk's Branch/Powder of Flame); added the 5th oil, Oil of Storms, which several elixirs require.",
+  "Clown's Blood had two wrong ingredients; added Legendary Beast's Blood, which was missing entirely but is needed for Oil of Regeneration and two elixirs.",
+  "Most of the 21 elixir recipes had incorrect or placeholder ingredients — all rewritten against current live recipe data.",
+  "EXP values were off for every tier (Oils were 1,200 → actually 1,400; Bloods were 700 → actually 800; most elixir EXP values were also corrected).",
+  "The Draught and Harmony Draught recipes (Fury/Adaptation/Potential/Corruption/Berserk → Harmony, plus the Party variants) were already correct and are unchanged.",
+  'Several old "Trace of X" materials (Trace of Ascension, Trace of Savagery, Trace of Origin, Trace of Despair, Trace of Death, Trace of the Earth) were consolidated into "Trace of Nature" in a past game update — updated throughout.',
+  "A couple of Fury-group EXP values (Elixir of Destruction, Elixir of Edania) aren't on public EXP tables — flagged as estimates in their card notes.",
+];
