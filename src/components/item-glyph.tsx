@@ -32,6 +32,50 @@ function toIconSlug(name: string): string {
     .replace(/_+/g, "_"); // collapse
 }
 
+/**
+ * Explicit aliases for ship materials whose icon filenames are abbreviated
+ * and don't match the full item display name.
+ */
+const ICON_ALIASES: Record<string, string> = {
+  // Blue / green gear sets
+  "+10 epheria caravel blue gear set": "blue_gear",
+  "+10 epheria galleass blue gear set": "blue_gear",
+  "+10 caravel green gear set": "green_gear",
+  "+10 galleass green gear set": "green_gear",
+
+  // Materials (short filenames)
+  "ruddy manganese nodule": "manganese",
+  "enhanced island tree coated plywood": "plywood",
+  "seaweed stalk": "seaweed",
+  "great ocean dark iron": "dark_iron",
+  "pure pearl crystal": "pearl_crystal",
+  "moon scale plywood": "moon_scale",
+  "tide-dyed standardized timber square": "tide_timber",
+  "bright reef piece": "bright_reef",
+  "cox pirates' artifact (combat)": "artifact_combat",
+  "cox pirates artifact (combat)": "artifact_combat",
+  "cox pirates' artifact (parley beginner)": "artifact_parley_beginner",
+  "cox pirates artifact (parley beginner)": "artifact_parley_beginner",
+  "cox pirates' artifact (parley expert)": "artifact_parley_expert",
+  "cox pirates artifact (parley expert)": "artifact_parley_expert",
+  "luminous cobalt ingot": "cobalt",
+  "tidal black stones": "tidal_stone",
+  "moon vein flax fabric": "flax_fabric",
+  "deep tide-dyed standardized timber square": "deep_tide",
+  "brilliant rock salt ingot": "rock_salt",
+  "brilliant pearl shard": "brilliant_pearl",
+  "tear of the ocean": "tear_ocean",
+
+  // Final ships (no dedicated icon — fall through to letter)
+};
+
+function resolveIconSlug(name: string): string {
+  const key = name.toLowerCase().replace(/['’]/g, "'");
+  const alias = ICON_ALIASES[key] ?? ICON_ALIASES[key.replace(/'/g, "")];
+  if (alias) return alias;
+  return toIconSlug(name);
+}
+
 function LetterFallback({
   name,
   size,
@@ -77,7 +121,7 @@ export function ItemGlyph({
   size?: number;
   className?: string;
 }) {
-  const slug = toIconSlug(name);
+  const slug = resolveIconSlug(name);
   // Prefer .webp (most icons), fall back to .png
   const candidates = [`/icons/${slug}.webp`, `/icons/${slug}.png`];
   const [srcIndex, setSrcIndex] = useState(0);
