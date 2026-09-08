@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ShipsRouteImport } from './routes/ships'
 import { Route as VoyageRouteImport } from './routes/voyage'
+import { Route as RoutinesRouteImport } from './routes/routines'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -28,35 +29,44 @@ const VoyageRoute = VoyageRouteImport.update({
   path: '/voyage',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RoutinesRoute = RoutinesRouteImport.update({
+  id: '/routines',
+  path: '/routines',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/ships': typeof ShipsRoute
   '/voyage': typeof VoyageRoute
+  '/routines': typeof RoutinesRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/ships': typeof ShipsRoute
   '/voyage': typeof VoyageRoute
+  '/routines': typeof RoutinesRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/ships': typeof ShipsRoute
   '/voyage': typeof VoyageRoute
+  '/routines': typeof RoutinesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/ships' | '/voyage'
+  fullPaths: '/' | '/ships' | '/voyage' | '/routines'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/ships' | '/voyage'
-  id: '__root__' | '/' | '/ships' | '/voyage'
+  to: '/' | '/ships' | '/voyage' | '/routines'
+  id: '__root__' | '/' | '/ships' | '/voyage' | '/routines'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ShipsRoute: typeof ShipsRoute
   VoyageRoute: typeof VoyageRoute
+  RoutinesRoute: typeof RoutinesRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -82,6 +92,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof VoyageRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/routines': {
+      id: '/routines'
+      path: '/routines'
+      fullPath: '/routines'
+      preLoaderRoute: typeof RoutinesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -89,6 +106,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ShipsRoute: ShipsRoute,
   VoyageRoute: VoyageRoute,
+  RoutinesRoute: RoutinesRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
