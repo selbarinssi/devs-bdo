@@ -33,6 +33,20 @@ function formatTime(totalSeconds: number): string {
   return `${minutes}m ${seconds}s`;
 }
 
+/**
+ * Standard alchemy uses mastery proc.
+ * Simple Alchemy (draughts / harmony, baseExp 0) has fixed output:
+ *  - Party Harmony variants → 1 per craft
+ *  - Draughts & base Harmony → 10 per craft
+ */
+function estimatedYield(recipe: Recipe, crafts: number, proc: number): number {
+  if (recipe.baseExp === 0) {
+    const per = /\[Party\]/.test(recipe.name) ? 1 : 10;
+    return crafts * per;
+  }
+  return Math.floor(crafts * proc);
+}
+
 function RecipeCard({
   recipe,
   crafts,
@@ -46,7 +60,7 @@ function RecipeCard({
   proc: number;
   onCrafts: (n: number) => void;
 }) {
-  const totalYield = Math.floor(crafts * proc);
+  const totalYield = estimatedYield(recipe, crafts, proc);
   const totalSeconds = crafts * craftTime;
 
   return (
