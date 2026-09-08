@@ -3,7 +3,7 @@ import { AuthProvider } from "@/lib/auth/provider";
 import { PreviewHostBridge } from "@/components/preview-host-bridge";
 import appCss from "../styles.css?url";
 
-const APP_NAME = "The Alchemist";
+const APP_NAME = "Dev's Hub";
 
 export const Route = createRootRoute({
   head: () => ({
@@ -14,7 +14,7 @@ export const Route = createRootRoute({
       {
         name: "description",
         content:
-          "Black Desert Online companion — Harmony Draught pipeline, daily Sailies voyage log, and Carrack upgrade tracker.",
+          "Black Desert Online companion — Harmony Draught pipeline, daily Sailies voyage log, Carrack upgrade tracker, and routines.",
       },
       { name: "theme-color", content: "#20595C" },
     ],

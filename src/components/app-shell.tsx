@@ -1,11 +1,12 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Anchor, FlaskConical, Ship } from "lucide-react";
+import { Anchor, FlaskConical, ListChecks, Ship } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV = [
   { to: "/", label: "Alchemy", hint: "Harmony pipeline", icon: FlaskConical, exact: true },
   { to: "/voyage", label: "Voyage", hint: "Sailies & barter", icon: Anchor, exact: false },
   { to: "/ships", label: "Carrack", hint: "Upgrade tracker", icon: Ship, exact: false },
+  { to: "/routines", label: "Routines", hint: "Daily & weekly", icon: ListChecks, exact: false },
 ] as const;
 
 export function AppShell({
@@ -30,13 +31,13 @@ export function AppShell({
             Dev&apos;s Hub
           </h1>
           <p className="mt-2 text-center text-xs tracking-[0.18em] text-stone uppercase">
-            Alchemy · Sailies · Carrack
+            Alchemy · Sailies · Carrack · Routines
           </p>
         </div>
       </header>
 
       <div className="mx-auto max-w-[1400px] px-4 py-5 sm:px-6 sm:py-6">
-        <nav aria-label="Tools" className="mb-6 grid grid-cols-3 gap-2 sm:gap-3">
+        <nav aria-label="Tools" className="mb-6 grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
           {NAV.map((item) => {
             const active = item.exact ? pathname === item.to : pathname.startsWith(item.to);
             const Icon = item.icon;
