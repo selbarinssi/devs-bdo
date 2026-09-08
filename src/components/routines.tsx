@@ -78,6 +78,40 @@ function uid() {
   return `r_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
 }
 
+function ProgressBlock({
+  label,
+  done,
+  total,
+}: {
+  label: string;
+  done: number;
+  total: number;
+}) {
+  const pct = total ? Math.round((done / total) * 100) : 0;
+  return (
+    <div className="flex flex-col gap-1.5">
+      <div className="flex items-baseline justify-between gap-3">
+        <p className="text-sm font-medium text-ink">
+          {label}
+          {total === 0 ? (
+            <span className="font-normal text-muted"> · none</span>
+          ) : done === total ? (
+            <span className="font-normal text-muted"> · complete</span>
+          ) : (
+            <span className="font-normal text-muted">
+              {" "}· {done} of {total}
+            </span>
+          )}
+        </p>
+        <p className="shrink-0 font-semibold tabular-nums text-teal">
+          {done}/{total}
+        </p>
+      </div>
+      <Progress value={pct} />
+    </div>
+  );
+}
+
 export function Routines() {
   const { value, setValue } = useLocalStorage<RoutinesState>(STORAGE_KEY, DEFAULT_STATE);
   const [title, setTitle] = useState("");
@@ -92,17 +126,22 @@ export function Routines() {
 
   const tasks = value.tasks;
 
+  const dailyTasks = useMemo(() => tasks.filter((t) => t.type === "daily"), [tasks]);
+  const weeklyTasks = useMemo(() => tasks.filter((t) => t.type === "weekly"), [tasks]);
+
+  const dailyDone = dailyTasks.filter((t) => t.done).length;
+  const weeklyDone = weeklyTasks.filter((t) => t.done).length;
+
   const sorted = useMemo(
     () =>
       [...tasks].sort((a, b) => {
+        // Dailies before weeklies, then incomplete first, then priority
+        if (a.type !== b.type) return a.type === "daily" ? -1 : 1;
         if (a.done !== b.done) return a.done ? 1 : -1;
         return PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority];
       }),
     [tasks],
   );
-
-  const doneCount = tasks.filter((t) => t.done).length;
-  const pct = tasks.length ? Math.round((doneCount / tasks.length) * 100) : 0;
 
   const addTask = () => {
     const t = title.trim();
@@ -139,20 +178,9 @@ export function Routines() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <div className="sticky top-2 z-20 mb-4 rounded-xl border border-stone bg-paper/95 p-4 shadow-[var(--shadow-border)] backdrop-blur-md">
-        <div className="mb-2 flex items-baseline justify-between gap-3">
-          <p className="text-sm font-medium text-ink">
-            {tasks.length === 0
-              ? "No routines yet"
-              : doneCount === tasks.length
-                ? "All routines complete"
-                : `${doneCount} of ${tasks.length} done`}
-          </p>
-          <p className="shrink-0 font-semibold tabular-nums text-teal">
-            {doneCount}/{tasks.length}
-          </p>
-        </div>
-        <Progress value={pct} />
+      <div className="sticky top-2 z-20 mb-4 flex flex-col gap-4 rounded-xl border border-stone bg-paper/95 p-4 shadow-[var(--shadow-border)] backdrop-blur-md">
+        <ProgressBlock label="Daily" done={dailyDone} total={dailyTasks.length} />
+        <ProgressBlock label="Weekly" done={weeklyDone} total={weeklyTasks.length} />
       </div>
 
       <div className="mb-5 rounded-xl border border-stone bg-paper p-4 shadow-[var(--shadow-border)] sm:p-5">

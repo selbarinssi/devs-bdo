@@ -3,10 +3,10 @@ import { Anchor, FlaskConical, ListChecks, Ship } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV = [
+  { to: "/routines", label: "Routines", hint: "Daily & weekly", icon: ListChecks, exact: false },
   { to: "/", label: "Alchemy", hint: "Harmony pipeline", icon: FlaskConical, exact: true },
   { to: "/voyage", label: "Voyage", hint: "Sailies & barter", icon: Anchor, exact: false },
   { to: "/ships", label: "Carrack", hint: "Upgrade tracker", icon: Ship, exact: false },
-  { to: "/routines", label: "Routines", hint: "Daily & weekly", icon: ListChecks, exact: false },
 ] as const;
 
 export function AppShell({
@@ -31,7 +31,7 @@ export function AppShell({
             Dev&apos;s Hub
           </h1>
           <p className="mt-2 text-center text-xs tracking-[0.18em] text-stone uppercase">
-            Alchemy · Sailies · Carrack · Routines
+            Routines · Alchemy · Sailies · Carrack
           </p>
         </div>
       </header>
