@@ -1,12 +1,10 @@
-import { ChevronDown, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import { useMemo, useState } from "react";
 import { ItemGlyph } from "@/components/item-glyph";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   ALCHEMY_CATEGORIES,
-  ALCHEMY_CHANGELOG,
-  EXP_TO_GURU,
   recipeData,
   type AlchemyCategory,
   type Recipe,
@@ -14,17 +12,15 @@ import {
 import { useLocalStorage } from "@/lib/storage";
 import { cn, formatNumber } from "@/lib/utils";
 
-const STORAGE_KEY = "bdo_alchemy_planner_v1";
+const STORAGE_KEY = "bdo_alchemy_planner_v2";
 
 type AlchemyState = {
-  buffs: number;
   craftTime: number;
   proc: number;
   crafts: Record<string, number>;
 };
 
 const DEFAULT_STATE: AlchemyState = {
-  buffs: 150,
   craftTime: 1.0,
   proc: 2.8,
   crafts: {},
@@ -40,38 +36,27 @@ function formatTime(totalSeconds: number): string {
 function RecipeCard({
   recipe,
   crafts,
-  buffs,
   craftTime,
   proc,
   onCrafts,
 }: {
   recipe: Recipe;
   crafts: number;
-  buffs: number;
   craftTime: number;
   proc: number;
   onCrafts: (n: number) => void;
 }) {
-  const expPerCraft = recipe.baseExp * (1 + buffs / 100);
-  const totalExp = expPerCraft * crafts;
   const totalYield = Math.floor(crafts * proc);
   const totalSeconds = crafts * craftTime;
-  const guruPercent =
-    recipe.baseExp > 0 ? ((totalExp / EXP_TO_GURU) * 100).toFixed(1) : null;
 
   return (
-    <article className="grid gap-5 rounded-xl border border-stone bg-paper p-4 shadow-[var(--shadow-border)] transition-[border-color,box-shadow] duration-150 hover:border-teal hover:shadow-[var(--shadow-border-hover)] sm:p-5 lg:grid-cols-[minmax(0,280px)_1fr_minmax(0,280px)] lg:items-center">
+    <article className="grid gap-5 rounded-xl border border-stone bg-paper p-4 shadow-[var(--shadow-border)] transition-[border-color,box-shadow] duration-150 hover:border-teal hover:shadow-[var(--shadow-border-hover)] sm:p-5 lg:grid-cols-[minmax(0,280px)_1fr_minmax(0,200px)] lg:items-center">
       <div className="flex items-center gap-4">
         <div className="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-[10px] border-2 border-teal bg-ivory shadow-[0_0_10px_rgba(32,89,92,0.18)]">
           <ItemGlyph name={recipe.name} size={44} />
         </div>
         <div className="min-w-0">
           <h3 className="text-[1.05rem] font-bold leading-snug text-ink">{recipe.name}</h3>
-          <span className="mt-1 inline-block rounded-md border border-teal bg-teal/10 px-2 py-0.5 text-[0.72rem] font-bold text-teal">
-            {recipe.baseExp > 0
-              ? `${formatNumber(recipe.baseExp)} Base EXP`
-              : "Simple Alchemy"}
-          </span>
           <div className="mt-2 flex items-center gap-2">
             <label htmlFor={`crafts-${recipe.id}`} className="text-xs font-semibold text-muted">
               Batch crafts
@@ -117,24 +102,12 @@ function RecipeCard({
 
       <dl className="flex flex-col gap-1.5 rounded-[10px] border border-stone bg-ivory p-3 sm:p-4">
         <div className="flex justify-between gap-3 text-[0.85rem]">
-          <dt className="text-muted">Modified EXP</dt>
-          <dd className="font-bold tabular-nums text-ink">
-            {recipe.baseExp > 0 ? formatNumber(Math.round(totalExp)) : "N/A"}
-          </dd>
-        </div>
-        <div className="flex justify-between gap-3 text-[0.85rem]">
           <dt className="text-muted">Estimated yields</dt>
           <dd className="font-bold tabular-nums text-teal">{formatNumber(totalYield)}</dd>
         </div>
         <div className="flex justify-between gap-3 text-[0.85rem]">
           <dt className="text-muted">Crafting time</dt>
           <dd className="font-bold tabular-nums text-teal">{formatTime(totalSeconds)}</dd>
-        </div>
-        <div className="flex justify-between gap-3 text-[0.85rem]">
-          <dt className="text-muted">% M18 → Guru 1</dt>
-          <dd className="font-bold tabular-nums text-ink">
-            {guruPercent ? `${guruPercent}%` : "—"}
-          </dd>
         </div>
       </dl>
     </article>
@@ -143,9 +116,8 @@ function RecipeCard({
 
 export function AlchemyPlanner() {
   const { value, setValue } = useLocalStorage<AlchemyState>(STORAGE_KEY, DEFAULT_STATE);
-  const [tab, setTab] = useState<AlchemyCategory>("oils");
+  const [tab, setTab] = useState<AlchemyCategory>("bloods");
   const [query, setQuery] = useState("");
-  const [notesOpen, setNotesOpen] = useState(false);
 
   const recipes = recipeData[tab];
   const filtered = useMemo(() => {
@@ -159,39 +131,7 @@ export function AlchemyPlanner() {
 
   return (
     <div className="flex flex-col gap-4">
-      <details
-        className="rounded-[10px] border border-stone bg-paper px-4 py-3.5 text-sm text-muted shadow-[var(--shadow-border)]"
-        open={notesOpen}
-        onToggle={(e) => setNotesOpen((e.target as HTMLDetailsElement).open)}
-      >
-        <summary className="flex cursor-pointer list-none items-center gap-2 font-bold text-teal [&::-webkit-details-marker]:hidden">
-          <ChevronDown
-            className={cn(
-              "size-4 shrink-0 transition-transform duration-150",
-              notesOpen ? "rotate-0" : "-rotate-90",
-            )}
-          />
-          What was corrected in this recipe set
-        </summary>
-        <ul className="mt-3 ml-1 flex list-disc flex-col gap-1.5 pl-5">
-          {ALCHEMY_CHANGELOG.map((line) => (
-            <li key={line}>{line}</li>
-          ))}
-        </ul>
-      </details>
-
-      <div className="grid gap-4 rounded-xl border border-stone bg-paper p-4 shadow-[var(--shadow-border)] sm:grid-cols-3 sm:px-6 sm:py-5">
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="alchemy-buffs">Total Life EXP Buffs (%)</Label>
-          <Input
-            id="alchemy-buffs"
-            type="number"
-            min={0}
-            max={500}
-            value={value.buffs}
-            onChange={(e) => patch({ buffs: Math.max(0, parseFloat(e.target.value) || 0) })}
-          />
-        </div>
+      <div className="grid gap-4 rounded-xl border border-stone bg-paper p-4 shadow-[var(--shadow-border)] sm:grid-cols-2 sm:px-6 sm:py-5">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="craft-time">Crafting Speed (Seconds)</Label>
           <Input
@@ -273,7 +213,6 @@ export function AlchemyPlanner() {
               key={recipe.id}
               recipe={recipe}
               crafts={value.crafts[recipe.id] ?? 1000}
-              buffs={value.buffs}
               craftTime={value.craftTime}
               proc={value.proc}
               onCrafts={(n) =>

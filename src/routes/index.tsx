@@ -6,11 +6,7 @@ export const Route = createFileRoute("/")({ component: Home });
 
 function Home() {
   return (
-    <AppShell
-      eyebrow="Harmony Draught pipeline"
-      title="Alchemy planner"
-      subtitle="Batch-craft oils, bloods, elixirs and draughts. Set your EXP buffs, proc rate and batch size to see materials, yield and time to Guru."
-    >
+    <AppShell eyebrow="Harmony Draught pipeline" title="Alchemy planner">
       <AlchemyPlanner />
     </AppShell>
   );

@@ -12,12 +12,10 @@ export function AppShell({
   children,
   eyebrow,
   title,
-  subtitle,
 }: {
   children: React.ReactNode;
   eyebrow?: string;
   title: string;
-  subtitle: string;
 }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
@@ -29,7 +27,7 @@ export function AppShell({
             Black Desert Online
           </p>
           <h1 className="mt-2 text-center font-medium uppercase tracking-[0.28em] text-balance text-[1.65rem] text-ivory sm:text-[2.1rem] sm:tracking-[0.42em]">
-            The Alchemist
+            Dev&apos;s Hub
           </h1>
           <p className="mt-2 text-center text-xs tracking-[0.18em] text-stone uppercase">
             Alchemy · Sailies · Carrack
@@ -74,7 +72,6 @@ export function AppShell({
             <p className="mb-1 text-xs font-bold uppercase tracking-wider text-teal">{eyebrow}</p>
           ) : null}
           <h2 className="text-xl font-semibold text-ink sm:text-2xl">{title}</h2>
-          <p className="mt-1 max-w-3xl text-sm text-muted">{subtitle}</p>
         </div>
 
         {children}

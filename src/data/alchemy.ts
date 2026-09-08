@@ -8,11 +8,9 @@ export type Recipe = {
   spot: string | null;
 };
 
-export const EXP_TO_GURU = 12_500_000;
-
 export const ALCHEMY_CATEGORIES = [
-  { id: "oils", label: "Oils", hint: "1,400 EXP" },
-  { id: "bloods", label: "Bloods", hint: "800 EXP" },
+  { id: "bloods", label: "Bloods", hint: "base mats" },
+  { id: "oils", label: "Oils", hint: "mid tier" },
   { id: "elixirs", label: "Elixirs", hint: "for Draughts" },
   { id: "draughts", label: "Draughts", hint: "Intermediate" },
   { id: "harmony", label: "Harmony", hint: "Final" },
@@ -195,7 +193,7 @@ export const recipeData: Record<AlchemyCategory, Recipe[]> = {
         { name: "Powder of Flame", qty: 5 },
         { name: "Snowfield Cedar Sap", qty: 7 },
       ],
-      spot: "Used in Fury Draught (EXP is an estimate — not listed on public EXP tables)",
+      spot: "Used in Fury Draught",
     },
     {
       id: "defense_elixir",
@@ -433,7 +431,7 @@ export const recipeData: Record<AlchemyCategory, Recipe[]> = {
         { name: "Clear Liquid Reagent", qty: 6 },
         { name: "Caphras Tree Sap", qty: 6 },
       ],
-      spot: "Used in [Party] Harmony Draught - Edania (EXP is an estimate — not listed on public EXP tables)",
+      spot: "Used in [Party] Harmony Draught - Edania",
     },
   ],
   draughts: [
@@ -543,13 +541,3 @@ export const recipeData: Record<AlchemyCategory, Recipe[]> = {
     },
   ],
 };
-
-export const ALCHEMY_CHANGELOG = [
-  "All 4 Oils had at least one wrong ingredient (e.g. Oil of Fortitude was missing Monk's Branch/Powder of Flame); added the 5th oil, Oil of Storms, which several elixirs require.",
-  "Clown's Blood had two wrong ingredients; added Legendary Beast's Blood, which was missing entirely but is needed for Oil of Regeneration and two elixirs.",
-  "Most of the 21 elixir recipes had incorrect or placeholder ingredients — all rewritten against current live recipe data.",
-  "EXP values were off for every tier (Oils were 1,200 → actually 1,400; Bloods were 700 → actually 800; most elixir EXP values were also corrected).",
-  "The Draught and Harmony Draught recipes (Fury/Adaptation/Potential/Corruption/Berserk → Harmony, plus the Party variants) were already correct and are unchanged.",
-  'Several old "Trace of X" materials (Trace of Ascension, Trace of Savagery, Trace of Origin, Trace of Despair, Trace of Death, Trace of the Earth) were consolidated into "Trace of Nature" in a past game update — updated throughout.',
-  "A couple of Fury-group EXP values (Elixir of Destruction, Elixir of Edania) aren't on public EXP tables — flagged as estimates in their card notes.",
-];
