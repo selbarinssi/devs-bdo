@@ -13,6 +13,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   LIFESKILL_TYPES,
+  MONSTER_TYPES,
+  TERRITORIES,
+  type SpotMode,
+} from "@/data/grind-meta";
+import {
   createLoot,
   createSession,
   createSpot,
@@ -39,51 +44,42 @@ function formatSilver(n: number): string {
 const CHRONO_KEY = "bdo_grind_chrono_v1";
 
 type ChronoState = {
-  running: boolean;
-  startedAt: number | null;
-  elapsedMs: number;
+  selectedId: string | null;
   character: string;
-  mode: "grind" | "lifeskill";
-  lifeskillType: string;
+  minutes: string;
+  qty: Record<string, string>;
+  timerOn: boolean;
+  elapsed: number;
+  anchorMs: number | null;
 };
 
-function loadChrono(): ChronoState {
+function readChrono(): ChronoState | null {
+  if (typeof window === "undefined") return null;
   try {
     const raw = localStorage.getItem(CHRONO_KEY);
-    if (!raw) return { running: false, startedAt: null, elapsedMs: 0, character: "", mode: "grind", lifeskillType: "Cooking" };
-    const p = JSON.parse(raw) as ChronoState;
-    return {
-      running: !!p.running,
-      startedAt: p.startedAt ?? null,
-      elapsedMs: typeof p.elapsedMs === "number" ? p.elapsedMs : 0,
-      character: p.character ?? "",
-      mode: p.mode === "lifeskill" ? "lifeskill" : "grind",
-      lifeskillType: p.lifeskillType ?? "Cooking",
-    };
+    if (!raw) return null;
+    return JSON.parse(raw) as ChronoState;
   } catch {
-    return { running: false, startedAt: null, elapsedMs: 0, character: "", mode: "grind", lifeskillType: "Cooking" };
+    return null;
   }
 }
 
-function saveChrono(s: ChronoState) {
+function writeChrono(s: ChronoState) {
+  if (typeof window === "undefined") return;
   try {
     localStorage.setItem(CHRONO_KEY, JSON.stringify(s));
-  } catch {}
+  } catch {
+    /* ignore */
+  }
 }
 
 function clearChrono() {
+  if (typeof window === "undefined") return;
   try {
     localStorage.removeItem(CHRONO_KEY);
-  } catch {}
-}
-
-function formatElapsed(ms: number): string {
-  const totalSec = Math.floor(ms / 1000);
-  const h = Math.floor(totalSec / 3600);
-  const m = Math.floor((totalSec % 3600) / 60);
-  const s = totalSec % 60;
-  if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-  return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  } catch {
+    /* ignore */
+  }
 }
 
 export function GrindTracker() {
@@ -96,83 +92,66 @@ export function GrindTracker() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  // Spot form
+  const [addingSpot, setAddingSpot] = useState(false);
   const [spotName, setSpotName] = useState("");
-  const [spotAp, setSpotAp] = useState("");
-  const [spotDp, setSpotDp] = useState("");
-  const [spotNotes, setSpotNotes] = useState("");
+  const [mode, setMode] = useState<SpotMode>("pve");
+  const [monsters, setMonsters] = useState<string>(MONSTER_TYPES[0]);
+  const [territory, setTerritory] = useState<string>(TERRITORIES[0]);
+  const [spotFile, setSpotFile] = useState<File | null>(null);
 
-  // Chrono — restored from localStorage so it survives route/tab switches
-  const [chrono, setChrono] = useState<ChronoState>(() => ({
-    running: false,
-    startedAt: null,
-    elapsedMs: 0,
-    character: "",
-    mode: "grind",
-    lifeskillType: "Cooking",
-  }));
-  const [tick, setTick] = useState(0);
+  const [editingSpotId, setEditingSpotId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editMode, setEditMode] = useState<SpotMode>("pve");
+  const [editMonsters, setEditMonsters] = useState("");
+  const [editTerritory, setEditTerritory] = useState("");
+  const [editSpotFile, setEditSpotFile] = useState<File | null>(null);
+
+  const [lootName, setLootName] = useState("");
+  const [lootKind, setLootKind] = useState<"market" | "npc">("market");
+  const [lootPrice, setLootPrice] = useState("");
+  const [lootFile, setLootFile] = useState<File | null>(null);
+  const [addingLoot, setAddingLoot] = useState(false);
+
+  const [character, setCharacter] = useState("");
+  const [qty, setQty] = useState<Record<string, string>>({});
+  const [minutes, setMinutes] = useState("60");
+  const [timerOn, setTimerOn] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
+  const timerStart = useRef<number | null>(null);
+
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editChar, setEditChar] = useState("");
+  const [editMinutes, setEditMinutes] = useState("");
+  const [editTotal, setEditTotal] = useState("");
+
   const [editingLootId, setEditingLootId] = useState<string | null>(null);
   const [editLootName, setEditLootName] = useState("");
+  const [editLootKind, setEditLootKind] = useState<"market" | "npc">("market");
   const [editLootPrice, setEditLootPrice] = useState("");
-  const [editLootQty, setEditLootQty] = useState("");
-  const [editLootIcon, setEditLootIcon] = useState<File | null>(null);
+  const [editLootFile, setEditLootFile] = useState<File | null>(null);
+  const [chronoHydrated, setChronoHydrated] = useState(false);
 
-  // Loot form
-  const [lootName, setLootName] = useState("");
-  const [lootPrice, setLootPrice] = useState("");
-  const [lootQty, setLootQty] = useState("1");
-  const [lootIcon, setLootIcon] = useState<File | null>(null);
-
-  // Session form extras
-  const [sessionNotes, setSessionNotes] = useState("");
-  const [sessionSilver, setSessionSilver] = useState("");
-
-  const fileRef = useRef<HTMLInputElement>(null);
-  const editFileRef = useRef<HTMLInputElement>(null);
-
-  // Restore chrono from localStorage once on the client (survives route switches)
-  useEffect(() => {
-    setChrono(loadChrono());
-  }, []);
-
-  // Persist chrono whenever it changes
-  useEffect(() => {
-    saveChrono(chrono);
-  }, [chrono]);
-
-  // Tick while running
-  useEffect(() => {
-    if (!chrono.running || !chrono.startedAt) return;
-    const id = window.setInterval(() => setTick((t) => t + 1), 250);
-    return () => clearInterval(id);
-  }, [chrono.running, chrono.startedAt]);
-
-  const displayMs = useMemo(() => {
-    if (chrono.running && chrono.startedAt) {
-      return chrono.elapsedMs + (Date.now() - chrono.startedAt);
-    }
-    return chrono.elapsedMs;
-  }, [chrono.running, chrono.startedAt, chrono.elapsedMs, tick]);
-
-  const hours = displayMs / 3_600_000;
+  const selected = spots.find((s) => s.id === selectedId) ?? null;
+  const typeOptions = mode === "lifeskill" ? LIFESKILL_TYPES : MONSTER_TYPES;
+  const editTypeOptions = editMode === "lifeskill" ? LIFESKILL_TYPES : MONSTER_TYPES;
 
   const refresh = useCallback(async () => {
-    if (!configured) return;
-    setLoading(true);
+    if (!configured) {
+      setLoading(false);
+      return;
+    }
     setError(null);
     try {
       const [s, sess] = await Promise.all([listSpots(), listSessions(100)]);
       setSpots(s);
       setSessions(sess);
-      if (selectedId) {
-        const l = await listLoots(selectedId);
-        setLoots(l);
-      } else if (s.length && !selectedId) {
+      if (selectedId && !s.some((x) => x.id === selectedId)) {
+        setSelectedId(s[0]?.id ?? null);
+      } else if (!selectedId && s[0]) {
         setSelectedId(s[0].id);
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load");
+      setError(e instanceof Error ? e.message : "Failed to load data");
     } finally {
       setLoading(false);
     }
@@ -187,388 +166,481 @@ export function GrindTracker() {
       setLoots([]);
       return;
     }
-    void (async () => {
-      try {
-        setLoots(await listLoots(selectedId));
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "Failed to load loots");
-      }
-    })();
+    void listLoots(selectedId)
+      .then(setLoots)
+      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load loots"));
   }, [selectedId, configured]);
 
-  const selected = spots.find((s) => s.id === selectedId) ?? null;
+  useEffect(() => {
+    if (!timerOn) return;
+    const id = window.setInterval(() => {
+      if (timerStart.current != null) {
+        setElapsed(Math.floor((Date.now() - timerStart.current) / 1000));
+      }
+    }, 200);
+    return () => clearInterval(id);
+  }, [timerOn]);
 
-  const totalLootValue = useMemo(
-    () => loots.reduce((sum, l) => sum + (l.price ?? 0) * (l.quantity ?? 0), 0),
-    [loots],
+  // Restore chrono from localStorage once on the client (survives route switches)
+  useEffect(() => {
+    const s = readChrono();
+    if (s) {
+      if (s.selectedId) setSelectedId(s.selectedId);
+      if (s.character) setCharacter(s.character);
+      if (s.minutes) setMinutes(s.minutes);
+      if (s.qty) setQty(s.qty);
+      if (s.timerOn && s.anchorMs) {
+        timerStart.current = s.anchorMs;
+        setTimerOn(true);
+        setElapsed(Math.max(0, Math.floor((Date.now() - s.anchorMs) / 1000)));
+      } else if (s.elapsed) {
+        timerStart.current = null;
+        setElapsed(s.elapsed);
+        setTimerOn(false);
+      }
+    }
+    setChronoHydrated(true);
+  }, []);
+
+  // Persist chrono while active / when inputs change
+  useEffect(() => {
+    if (!chronoHydrated) return;
+    writeChrono({
+      selectedId,
+      character,
+      minutes,
+      qty,
+      timerOn,
+      elapsed,
+      anchorMs: timerStart.current,
+    });
+  }, [selectedId, character, minutes, qty, timerOn, elapsed, chronoHydrated]);
+
+  const spotSessions = useMemo(
+    () => (selectedId ? sessions.filter((s) => s.spot_id === selectedId) : []),
+    [sessions, selectedId],
   );
 
-  const liveSilverPerHour = useMemo(() => {
-    if (hours <= 0) return 0;
-    return totalLootValue / hours;
-  }, [totalLootValue, hours]);
+  const avgSph = useMemo(() => {
+    if (!spotSessions.length) return 0;
+    return spotSessions.reduce((a, s) => a + Number(s.silver_per_hour), 0) / spotSessions.length;
+  }, [spotSessions]);
 
-  async function handleCreateSpot() {
-    if (!spotName.trim() || busy) return;
-    setBusy(true);
-    setError(null);
-    try {
-      const spot = await createSpot({
-        name: spotName.trim(),
-        ap: spotAp ? Number(spotAp) : null,
-        dp: spotDp ? Number(spotDp) : null,
-        notes: spotNotes.trim() || null,
-      });
-      setSpots((prev) => [spot, ...prev]);
-      setSelectedId(spot.id);
-      setSpotName("");
-      setSpotAp("");
-      setSpotDp("");
-      setSpotNotes("");
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Create spot failed");
-    } finally {
-      setBusy(false);
+  const sessionTotals = useMemo(() => {
+    let total = 0;
+    for (const l of loots) {
+      const q = parseFloat(qty[l.id] || "0") || 0;
+      total += q * Number(l.unit_price);
     }
+    const mins =
+      timerOn && elapsed > 0 ? elapsed / 60 : Math.max(0.01, parseFloat(minutes) || 0);
+    const sph = mins > 0 ? total / (mins / 60) : 0;
+    return { total, mins, sph };
+  }, [loots, qty, minutes, timerOn, elapsed]);
+
+  if (!configured) {
+    return (
+      <div className="glass p-5 text-sm text-muted-foreground">
+        Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY, then redeploy.
+      </div>
+    );
   }
 
-  async function handleDeleteSpot(id: string) {
-    if (busy) return;
-    setBusy(true);
-    setError(null);
-    try {
-      await deleteSpot(id);
-      setSpots((prev) => prev.filter((s) => s.id !== id));
-      if (selectedId === id) setSelectedId(null);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Delete failed");
-    } finally {
-      setBusy(false);
-    }
+  if (loading) {
+    return (
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <Loader2 className="size-4 animate-spin" /> Loading…
+      </div>
+    );
   }
 
-  async function handleAddLoot() {
-    if (!selectedId || !lootName.trim() || busy) return;
+  const onCreateSpot = async () => {
+    if (!spotName.trim()) return;
     setBusy(true);
     setError(null);
     try {
       let icon_url: string | null = null;
-      if (lootIcon) icon_url = await uploadLootIcon(lootIcon);
-      else icon_url = await findIconByLootName(lootName.trim());
-      const row = await createLoot({
-        spot_id: selectedId,
-        name: lootName.trim(),
-        price: lootPrice ? Number(lootPrice) : 0,
-        quantity: lootQty ? Number(lootQty) : 1,
+      if (spotFile) icon_url = await uploadLootIcon(spotFile);
+      const row = await createSpot({
+        name: spotName.trim(),
+        monsters,
+        territory,
         icon_url,
+        mode,
       });
-      setLoots((prev) => [...prev, row]);
-      setLootName("");
-      setLootPrice("");
-      setLootQty("1");
-      setLootIcon(null);
-      if (fileRef.current) fileRef.current.value = "";
+      setSpotName("");
+      setSpotFile(null);
+      setAddingSpot(false);
+      await refresh();
+      setSelectedId(row.id);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Add loot failed");
+      const msg = e instanceof Error ? e.message : "Create spot failed";
+      if (msg.toLowerCase().includes("mode")) {
+        try {
+          let icon_url: string | null = null;
+          if (spotFile) icon_url = await uploadLootIcon(spotFile);
+          const row = await createSpot({
+            name: spotName.trim(),
+            monsters,
+            territory,
+            icon_url,
+          });
+          setSpotName("");
+          setSpotFile(null);
+          setAddingSpot(false);
+          await refresh();
+          setSelectedId(row.id);
+          setError("Spot created. Run SQL to enable mode column for lifeskills.");
+          return;
+        } catch (e2) {
+          setError(e2 instanceof Error ? e2.message : "Create spot failed");
+        }
+      } else {
+        setError(msg);
+      }
     } finally {
       setBusy(false);
     }
-  }
+  };
 
-  async function handleDeleteLoot(id: string) {
-    if (busy) return;
+  const beginEditSpot = (s: SpotRow) => {
+    setEditingSpotId(s.id);
+    setEditName(s.name);
+    setEditMode((s.mode as SpotMode) || "pve");
+    setEditMonsters(s.monsters || MONSTER_TYPES[0]);
+    setEditTerritory(s.territory || TERRITORIES[0]);
+    setEditSpotFile(null);
+    setAddingSpot(false);
+  };
+
+  const saveSpotEdit = async () => {
+    if (!editingSpotId) return;
     setBusy(true);
     setError(null);
     try {
-      await deleteLoot(id);
-      setLoots((prev) => prev.filter((l) => l.id !== id));
+      const existing = spots.find((x) => x.id === editingSpotId);
+      let icon_url = existing?.icon_url ?? null;
+      if (editSpotFile) icon_url = await uploadLootIcon(editSpotFile);
+      try {
+        await updateSpot(editingSpotId, {
+          name: editName.trim() || existing?.name || "Spot",
+          monsters: editMonsters,
+          territory: editTerritory,
+          icon_url,
+          mode: editMode,
+        });
+      } catch {
+        await updateSpot(editingSpotId, {
+          name: editName.trim() || existing?.name || "Spot",
+          monsters: editMonsters,
+          territory: editTerritory,
+          icon_url,
+        });
+      }
+      setEditingSpotId(null);
+      await refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Delete loot failed");
+      setError(e instanceof Error ? e.message : "Update spot failed");
     } finally {
       setBusy(false);
     }
-  }
+  };
 
-  function startEditLoot(l: LootRow) {
+  const onCreateLoot = async () => {
+    if (!selectedId || !lootName.trim()) return;
+    setBusy(true);
+    setError(null);
+    try {
+      let icon_url: string | null = null;
+      if (lootFile) icon_url = await uploadLootIcon(lootFile);
+      else icon_url = await findIconByLootName(lootName.trim());
+      await createLoot({
+        spot_id: selectedId,
+        name: lootName.trim(),
+        kind: lootKind,
+        unit_price: Math.max(0, Math.round(parseFloat(lootPrice) || 0)),
+        icon_url,
+      });
+      setLootName("");
+      setLootPrice("");
+      setLootFile(null);
+      setAddingLoot(false);
+      setLoots(await listLoots(selectedId));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Create loot failed");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const onSaveSession = async () => {
+    if (!selectedId) return;
+    const mins = sessionTotals.mins;
+    if (mins <= 0) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const lines = loots
+        .map((l) => {
+          const quantity = parseFloat(qty[l.id] || "0") || 0;
+          const unit_price = Number(l.unit_price);
+          return {
+            loot_id: l.id,
+            loot_name: l.name,
+            unit_price,
+            quantity,
+            line_value: Math.round(quantity * unit_price),
+          };
+        })
+        .filter((l) => l.quantity > 0);
+
+      await createSession({
+        spot_id: selectedId,
+        character_name: character.trim() || "Unknown",
+        minutes: Math.round(mins * 100) / 100,
+        total_value: Math.round(sessionTotals.total),
+        silver_per_hour: Math.round(sessionTotals.sph),
+        lines,
+      });
+      setQty({});
+      setTimerOn(false);
+      timerStart.current = null;
+      setElapsed(0);
+      clearChrono();
+      await refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Save session failed");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const toggleTimer = () => {
+    if (timerOn) {
+      setTimerOn(false);
+      if (timerStart.current != null) {
+        setElapsed(Math.floor((Date.now() - timerStart.current) / 1000));
+      }
+      timerStart.current = null;
+      setMinutes(String(Math.max(1, Math.round(elapsed / 60))));
+    } else {
+      timerStart.current = Date.now() - elapsed * 1000;
+      setTimerOn(true);
+    }
+  };
+
+  const resetTimer = () => {
+    setTimerOn(false);
+    timerStart.current = null;
+    setElapsed(0);
+    clearChrono();
+  };
+
+  const hh = String(Math.floor(elapsed / 3600)).padStart(2, "0");
+  const mm = String(Math.floor((elapsed % 3600) / 60)).padStart(2, "0");
+  const ss = String(elapsed % 60).padStart(2, "0");
+
+  const beginEditSession = (s: (typeof sessions)[0]) => {
+    setEditingId(s.id);
+    setEditChar(s.character_name);
+    setEditMinutes(String(s.minutes));
+    setEditTotal(String(s.total_value));
+  };
+
+  const saveSessionEdit = async () => {
+    if (!editingId) return;
+    setBusy(true);
+    try {
+      const mins = Math.max(0.01, parseFloat(editMinutes) || 0);
+      const total = Math.max(0, Math.round(parseFloat(editTotal) || 0));
+      await updateSession(editingId, {
+        character_name: editChar.trim() || "Unknown",
+        minutes: mins,
+        total_value: total,
+        silver_per_hour: Math.round(total / (mins / 60)),
+      });
+      setEditingId(null);
+      await refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Update failed");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const beginEditLoot = (l: LootRow) => {
     setEditingLootId(l.id);
     setEditLootName(l.name);
-    setEditLootPrice(String(l.price ?? 0));
-    setEditLootQty(String(l.quantity ?? 1));
-    setEditLootIcon(null);
-  }
+    setEditLootKind(l.kind);
+    setEditLootPrice(String(l.unit_price));
+    setEditLootFile(null);
+  };
 
-  function cancelEditLoot() {
-    setEditingLootId(null);
-    setEditLootName("");
-    setEditLootPrice("");
-    setEditLootQty("");
-    setEditLootIcon(null);
-  }
-
-  async function handleSaveLoot() {
+  const saveLootEdit = async () => {
     if (!editingLootId || !selectedId) return;
     setBusy(true);
     setError(null);
     try {
       const existing = loots.find((x) => x.id === editingLootId);
       let icon_url = existing?.icon_url ?? null;
-      if (editLootIcon) icon_url = await uploadLootIcon(editLootIcon);
+      if (editLootFile) icon_url = await uploadLootIcon(editLootFile);
       else if (!icon_url) icon_url = await findIconByLootName(editLootName.trim());
       await updateLoot(editingLootId, {
-        name: editLootName.trim(),
-        price: editLootPrice ? Number(editLootPrice) : 0,
-        quantity: editLootQty ? Number(editLootQty) : 1,
+        name: editLootName.trim() || existing?.name || "Item",
+        kind: editLootKind,
+        unit_price: Math.max(0, Math.round(parseFloat(editLootPrice) || 0)),
         icon_url,
       });
+      setEditingLootId(null);
       setLoots(await listLoots(selectedId));
-      cancelEditLoot();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Update loot failed");
     } finally {
       setBusy(false);
     }
-  }
-
-  function startTimer() {
-    setChrono((c) => ({
-      ...c,
-      running: true,
-      startedAt: Date.now(),
-    }));
-  }
-
-  function pauseTimer() {
-    setChrono((c) => {
-      if (!c.running || !c.startedAt) return c;
-      return {
-        ...c,
-        running: false,
-        elapsedMs: c.elapsedMs + (Date.now() - c.startedAt),
-        startedAt: null,
-      };
-    });
-  }
-
-  function resetTimer() {
-    setChrono((c) => ({
-      ...c,
-      running: false,
-      startedAt: null,
-      elapsedMs: 0,
-    }));
-    clearChrono();
-  }
-
-  async function handleSaveSession() {
-    if (!selectedId || busy) return;
-    const durationMin = Math.max(1, Math.round(displayMs / 60_000));
-    setBusy(true);
-    setError(null);
-    try {
-      await createSession({
-        spot_id: selectedId,
-        character: chrono.character.trim() || null,
-        duration_min: durationMin,
-        silver: sessionSilver ? Number(sessionSilver) : totalLootValue,
-        notes: sessionNotes.trim() || null,
-        mode: chrono.mode,
-        lifeskill_type: chrono.mode === "lifeskill" ? chrono.lifeskillType : null,
-      });
-      setSessions(await listSessions(100));
-      setSessionNotes("");
-      setSessionSilver("");
-      resetTimer();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Save session failed");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  if (!configured) {
-    return (
-      <div className="glass p-6 text-sm text-muted-foreground">
-        Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.
-      </div>
-    );
-  }
+  };
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-4">
       {error && (
-        <div className="glass border-rose-500/40 bg-rose-500/10 px-3 py-2 text-sm text-rose-200">{error}</div>
+        <div className="glass border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-200">{error}</div>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-[240px_1fr]">
-        {/* Spots sidebar */}
-        <div className="space-y-3">
-          <section className="glass p-3">
-            <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-cyan-300/90">Spots</h2>
-            {loading && spots.length === 0 ? (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Loader2 className="size-4 animate-spin" /> Loading…
-              </div>
-            ) : (
-              <ul className="max-h-[40vh] space-y-1 overflow-y-auto">
-                {spots.map((s) => (
-                  <li key={s.id}>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedId(s.id)}
-                      className={cn(
-                        "flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-sm transition",
-                        selectedId === s.id
-                          ? "bg-cyan-500/20 text-cyan-100 ring-1 ring-cyan-400/40"
-                          : "hover:bg-white/5 text-foreground/90",
-                      )}
+      <div className="grid gap-4 lg:grid-cols-[260px_minmax(0,1fr)]">
+        {/* Spots */}
+        <section className="glass p-3">
+          <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-cyan-300/90">Spots</h2>
+          <ul className="mb-2 flex max-h-[20rem] flex-col gap-1 overflow-y-auto">
+            {spots.map((s) => (
+              <li key={s.id}>
+                {editingSpotId === s.id ? (
+                  <div className="space-y-1.5 rounded-lg bg-white/5 p-2 ring-1 ring-cyan-400/30">
+                    <Input value={editName} onChange={(e) => setEditName(e.target.value)} className="h-8 text-sm" />
+                    <div className="grid grid-cols-2 gap-1">
+                      <button type="button" className={cn("h-7 rounded-lg text-[0.65rem] font-bold", editMode === "pve" ? "bg-cyan-400/20 text-cyan-300" : "text-muted-foreground")} onClick={() => { setEditMode("pve"); setEditMonsters(MONSTER_TYPES[0]); }}>PvE</button>
+                      <button type="button" className={cn("h-7 rounded-lg text-[0.65rem] font-bold", editMode === "lifeskill" ? "bg-violet-400/20 text-violet-300" : "text-muted-foreground")} onClick={() => { setEditMode("lifeskill"); setEditMonsters(LIFESKILL_TYPES[0]); }}>Lifeskill</button>
+                    </div>
+                    <select className="field-select h-8 text-xs" value={editMonsters} onChange={(e) => setEditMonsters(e.target.value)}>{editTypeOptions.map((t) => <option key={t} value={t}>{t}</option>)}</select>
+                    <select className="field-select h-8 text-xs" value={editTerritory} onChange={(e) => setEditTerritory(e.target.value)}>{TERRITORIES.map((t) => <option key={t} value={t}>{t}</option>)}</select>
+                    <label className="flex h-8 cursor-pointer items-center gap-1 rounded-md border border-dashed border-white/15 px-2 text-[10px] text-muted-foreground">
+                      <Upload className="size-3" /> Icon
+                      <input type="file" accept="image/*" className="hidden" onChange={(e) => setEditSpotFile(e.target.files?.[0] ?? null)} />
+                    </label>
+                    <div className="flex gap-1">
+                      <button type="button" disabled={busy} onClick={() => void saveSpotEdit()} className="flex-1 rounded-md bg-emerald-500/20 py-1 text-xs text-emerald-200 ring-1 ring-emerald-400/40">Save</button>
+                      <button type="button" onClick={() => setEditingSpotId(null)} className="rounded-md px-2 text-xs text-muted-foreground">Cancel</button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedId(s.id)}
+                    className={cn(
+                      "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm transition",
+                      selectedId === s.id ? "bg-cyan-500/20 text-cyan-100 ring-1 ring-cyan-400/40" : "hover:bg-white/5",
+                    )}
+                  >
+                    {s.icon_url ? <img src={s.icon_url} alt="" className="size-6 shrink-0 rounded object-contain" /> : <span className="flex size-6 shrink-0 items-center justify-center rounded bg-white/5 text-[10px]">?</span>}
+                    <span className="min-w-0 flex-1 truncate">{s.name}</span>
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      className="text-muted-foreground hover:text-cyan-300"
+                      onClick={(e) => { e.stopPropagation(); beginEditSpot(s); }}
+                      onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); beginEditSpot(s); } }}
                     >
-                      <span className="truncate">{s.name}</span>
-                      <span
-                        role="button"
-                        tabIndex={0}
-                        className="ml-1 shrink-0 text-muted-foreground hover:text-rose-400"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          void handleDeleteSpot(s.id);
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            e.stopPropagation();
-                            void handleDeleteSpot(s.id);
-                          }
-                        }}
-                      >
-                        <Trash2 className="size-3.5" />
-                      </span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
+                      <Pencil className="size-3.5" />
+                    </span>
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      className="text-muted-foreground hover:text-rose-400"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        void (async () => {
+                          await deleteSpot(s.id);
+                          if (selectedId === s.id) setSelectedId(null);
+                          await refresh();
+                        })();
+                      }}
+                    >
+                      <Trash2 className="size-3.5" />
+                    </span>
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
 
-          <section className="glass p-3">
-            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-violet-300/90">New spot</h3>
-            <div className="space-y-2">
+          {addingSpot ? (
+            <div className="space-y-1.5 rounded-lg bg-white/5 p-2 ring-1 ring-violet-400/30">
               <Input placeholder="Spot name" value={spotName} onChange={(e) => setSpotName(e.target.value)} className="h-8 text-sm" />
-              <div className="grid grid-cols-2 gap-2">
-                <Input placeholder="AP" type="number" value={spotAp} onChange={(e) => setSpotAp(e.target.value)} className="h-8 text-sm" />
-                <Input placeholder="DP" type="number" value={spotDp} onChange={(e) => setSpotDp(e.target.value)} className="h-8 text-sm" />
+              <div className="grid grid-cols-2 gap-1">
+                <button type="button" className={cn("h-7 rounded-lg text-[0.65rem] font-bold", mode === "pve" ? "bg-cyan-400/20 text-cyan-300" : "text-muted-foreground")} onClick={() => { setMode("pve"); setMonsters(MONSTER_TYPES[0]); }}>PvE</button>
+                <button type="button" className={cn("h-7 rounded-lg text-[0.65rem] font-bold", mode === "lifeskill" ? "bg-violet-400/20 text-violet-300" : "text-muted-foreground")} onClick={() => { setMode("lifeskill"); setMonsters(LIFESKILL_TYPES[0]); }}>Lifeskill</button>
               </div>
-              <Input placeholder="Notes" value={spotNotes} onChange={(e) => setSpotNotes(e.target.value)} className="h-8 text-sm" />
-              <button
-                type="button"
-                disabled={busy || !spotName.trim()}
-                onClick={() => void handleCreateSpot()}
-                className="flex w-full items-center justify-center gap-1.5 rounded-md bg-cyan-500/20 px-2 py-1.5 text-sm text-cyan-100 ring-1 ring-cyan-400/40 hover:bg-cyan-500/30 disabled:opacity-50"
-              >
-                <Plus className="size-3.5" /> Add
-              </button>
+              <select className="field-select h-8 text-xs" value={monsters} onChange={(e) => setMonsters(e.target.value)}>{typeOptions.map((t) => <option key={t} value={t}>{t}</option>)}</select>
+              <select className="field-select h-8 text-xs" value={territory} onChange={(e) => setTerritory(e.target.value)}>{TERRITORIES.map((t) => <option key={t} value={t}>{t}</option>)}</select>
+              <label className="flex h-8 cursor-pointer items-center gap-1 rounded-md border border-dashed border-white/15 px-2 text-[10px] text-muted-foreground">
+                <Upload className="size-3" /> Icon
+                <input type="file" accept="image/*" className="hidden" onChange={(e) => setSpotFile(e.target.files?.[0] ?? null)} />
+              </label>
+              <div className="flex gap-1">
+                <button type="button" disabled={busy || !spotName.trim()} onClick={() => void onCreateSpot()} className="flex-1 rounded-md bg-cyan-500/20 py-1 text-xs text-cyan-100 ring-1 ring-cyan-400/40">Add</button>
+                <button type="button" onClick={() => setAddingSpot(false)} className="rounded-md px-2 text-xs text-muted-foreground">Cancel</button>
+              </div>
             </div>
-          </section>
-        </div>
+          ) : (
+            <button type="button" onClick={() => setAddingSpot(true)} className="flex w-full items-center justify-center gap-1 rounded-md bg-white/5 py-1.5 text-xs text-muted-foreground hover:bg-white/10">
+              <Plus className="size-3.5" /> Add spot
+            </button>
+          )}
+        </section>
 
-        {/* Main panel */}
+        {/* Main */}
         <div className="space-y-4">
-          {selected && (
+          {selected ? (
             <>
-              {/* Compact chrono + metrics */}
-              <section className="glass p-3">
+              {/* Chrono + live metrics */}
+              <section className="glass-strong p-3">
                 <div className="flex flex-wrap items-center gap-3">
                   <div className="flex items-center gap-2">
                     <Timer className="size-4 text-cyan-400" />
-                    <span className="font-mono text-lg tabular-nums text-cyan-100">{formatElapsed(displayMs)}</span>
+                    <span className="font-mono text-xl tabular-nums tracking-tight text-cyan-100">{hh}:{mm}:{ss}</span>
                   </div>
                   <div className="flex gap-1">
-                    {!chrono.running ? (
-                      <button type="button" onClick={startTimer} className="rounded-md bg-emerald-500/20 px-2.5 py-1 text-xs text-emerald-200 ring-1 ring-emerald-400/40 hover:bg-emerald-500/30">
-                        Start
-                      </button>
-                    ) : (
-                      <button type="button" onClick={pauseTimer} className="rounded-md bg-amber-500/20 px-2.5 py-1 text-xs text-amber-200 ring-1 ring-amber-400/40 hover:bg-amber-500/30">
-                        Pause
-                      </button>
-                    )}
-                    <button type="button" onClick={resetTimer} className="rounded-md bg-white/5 px-2.5 py-1 text-xs text-muted-foreground hover:bg-white/10">
-                      Reset
+                    <button type="button" onClick={toggleTimer} className={cn("rounded-md px-2.5 py-1 text-xs ring-1", timerOn ? "bg-amber-500/20 text-amber-200 ring-amber-400/40" : "bg-emerald-500/20 text-emerald-200 ring-emerald-400/40")}>
+                      {timerOn ? "Pause" : "Start"}
                     </button>
+                    <button type="button" onClick={resetTimer} className="rounded-md bg-white/5 px-2.5 py-1 text-xs text-muted-foreground hover:bg-white/10">Reset</button>
                   </div>
                   <div className="ml-auto flex flex-wrap items-center gap-2 text-xs">
                     <span className="metric-pill">
-                      <span className="text-muted-foreground">Silver</span>
-                      <span className="font-mono text-cyan-200">{formatSilver(totalLootValue)}</span>
+                      <span className="text-muted-foreground">Total</span>
+                      <span className="font-mono text-cyan-200">{formatSilver(sessionTotals.total)}</span>
                     </span>
                     <span className="metric-pill">
                       <span className="text-muted-foreground">/h</span>
-                      <span className="font-mono text-emerald-300">{formatSilver(liveSilverPerHour)}</span>
+                      <span className="font-mono text-emerald-300">{formatSilver(sessionTotals.sph)}</span>
                     </span>
+                    {avgSph > 0 && (
+                      <span className="metric-pill">
+                        <span className="text-muted-foreground">Avg</span>
+                        <span className="font-mono text-violet-200">{formatSilver(avgSph)}</span>
+                      </span>
+                    )}
                   </div>
                 </div>
                 <div className="mt-2 flex flex-wrap items-end gap-2">
                   <div className="min-w-[120px] flex-1">
                     <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Character</Label>
-                    <Input
-                      value={chrono.character}
-                      onChange={(e) => setChrono((c) => ({ ...c, character: e.target.value }))}
-                      placeholder="Name"
-                      className="h-8 text-sm"
-                    />
+                    <Input value={character} onChange={(e) => setCharacter(e.target.value)} placeholder="Name" className="h-8 text-sm" />
                   </div>
-                  <div className="flex gap-1 rounded-md bg-black/20 p-0.5 ring-1 ring-white/10">
-                    <button
-                      type="button"
-                      onClick={() => setChrono((c) => ({ ...c, mode: "grind" }))}
-                      className={cn(
-                        "rounded px-2.5 py-1 text-xs transition",
-                        chrono.mode === "grind" ? "bg-cyan-500/30 text-cyan-100" : "text-muted-foreground hover:text-foreground",
-                      )}
-                    >
-                      Grind
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setChrono((c) => ({ ...c, mode: "lifeskill" }))}
-                      className={cn(
-                        "rounded px-2.5 py-1 text-xs transition",
-                        chrono.mode === "lifeskill" ? "bg-violet-500/30 text-violet-100" : "text-muted-foreground hover:text-foreground",
-                      )}
-                    >
-                      Lifeskill
-                    </button>
+                  <div className="w-24">
+                    <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Minutes</Label>
+                    <Input type="number" value={minutes} onChange={(e) => setMinutes(e.target.value)} disabled={timerOn} className="h-8 text-sm" />
                   </div>
-                  {chrono.mode === "lifeskill" && (
-                    <select
-                      value={chrono.lifeskillType}
-                      onChange={(e) => setChrono((c) => ({ ...c, lifeskillType: e.target.value }))}
-                      className="h-8 rounded-md border border-white/10 bg-black/30 px-2 text-sm text-foreground"
-                    >
-                      {LIFESKILL_TYPES.map((t) => (
-                        <option key={t} value={t}>
-                          {t}
-                        </option>
-                      ))}
-                    </select>
-                  )}
-                  <div className="min-w-[100px]">
-                    <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Session silver</Label>
-                    <Input
-                      type="number"
-                      value={sessionSilver}
-                      onChange={(e) => setSessionSilver(e.target.value)}
-                      placeholder={String(Math.round(totalLootValue))}
-                      className="h-8 text-sm"
-                    />
-                  </div>
-                  <div className="min-w-[140px] flex-1">
-                    <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Notes</Label>
-                    <Input value={sessionNotes} onChange={(e) => setSessionNotes(e.target.value)} placeholder="Optional" className="h-8 text-sm" />
-                  </div>
-                  <button
-                    type="button"
-                    disabled={busy || displayMs < 1000}
-                    onClick={() => void handleSaveSession()}
-                    className="h-8 rounded-md bg-emerald-500/20 px-3 text-xs text-emerald-100 ring-1 ring-emerald-400/40 hover:bg-emerald-500/30 disabled:opacity-50"
-                  >
+                  <button type="button" disabled={busy || sessionTotals.mins <= 0} onClick={() => void onSaveSession()} className="h-8 rounded-md bg-emerald-500/20 px-3 text-xs text-emerald-100 ring-1 ring-emerald-400/40 hover:bg-emerald-500/30 disabled:opacity-50">
                     Save session
                   </button>
                 </div>
@@ -576,71 +648,75 @@ export function GrindTracker() {
 
               {/* Loot table */}
               <section className="glass p-3">
-                <div className="mb-2 flex items-center justify-between">
+                <div className="mb-2 flex items-center justify-between gap-2">
                   <h2 className="text-xs font-semibold uppercase tracking-wider text-cyan-300/90">Loot — {selected.name}</h2>
-                </div>
-                <div className="mb-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-6">
-                  <Input placeholder="Name" value={lootName} onChange={(e) => setLootName(e.target.value)} className="h-8 text-sm lg:col-span-2" />
-                  <Input placeholder="Price" type="number" value={lootPrice} onChange={(e) => setLootPrice(e.target.value)} className="h-8 text-sm" />
-                  <Input placeholder="Qty" type="number" value={lootQty} onChange={(e) => setLootQty(e.target.value)} className="h-8 text-sm" />
-                  <label className="flex h-8 cursor-pointer items-center gap-1.5 rounded-md border border-dashed border-white/15 px-2 text-xs text-muted-foreground hover:border-cyan-400/40">
-                    <Upload className="size-3.5" />
-                    {lootIcon ? lootIcon.name.slice(0, 12) : "Icon"}
-                    <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => setLootIcon(e.target.files?.[0] ?? null)} />
-                  </label>
-                  <button
-                    type="button"
-                    disabled={busy || !lootName.trim()}
-                    onClick={() => void handleAddLoot()}
-                    className="flex h-8 items-center justify-center gap-1 rounded-md bg-cyan-500/20 text-xs text-cyan-100 ring-1 ring-cyan-400/40 hover:bg-cyan-500/30 disabled:opacity-50"
-                  >
-                    <Plus className="size-3.5" /> Add
-                  </button>
+                  {!addingLoot && (
+                    <button type="button" onClick={() => setAddingLoot(true)} className="flex items-center gap-1 rounded-md bg-cyan-500/15 px-2 py-1 text-[10px] text-cyan-200 ring-1 ring-cyan-400/30">
+                      <Plus className="size-3" /> Item
+                    </button>
+                  )}
                 </div>
 
+                {addingLoot && (
+                  <div className="mb-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-6">
+                    <Input placeholder="Name" value={lootName} onChange={(e) => setLootName(e.target.value)} className="h-8 text-sm lg:col-span-2" />
+                    <select className="field-select h-8 text-xs" value={lootKind} onChange={(e) => setLootKind(e.target.value as "market" | "npc")}>
+                      <option value="market">Market</option>
+                      <option value="npc">NPC</option>
+                    </select>
+                    <Input placeholder="Unit price" type="number" value={lootPrice} onChange={(e) => setLootPrice(e.target.value)} className="h-8 text-sm" />
+                    <label className="flex h-8 cursor-pointer items-center gap-1.5 rounded-md border border-dashed border-white/15 px-2 text-xs text-muted-foreground hover:border-cyan-400/40">
+                      <Upload className="size-3.5" />
+                      {lootFile ? lootFile.name.slice(0, 10) : "Icon"}
+                      <input type="file" accept="image/*" className="hidden" onChange={(e) => setLootFile(e.target.files?.[0] ?? null)} />
+                    </label>
+                    <div className="flex gap-1">
+                      <button type="button" disabled={busy || !lootName.trim()} onClick={() => void onCreateLoot()} className="flex flex-1 items-center justify-center gap-1 rounded-md bg-cyan-500/20 text-xs text-cyan-100 ring-1 ring-cyan-400/40 disabled:opacity-50">
+                        <Plus className="size-3.5" /> Add
+                      </button>
+                      <button type="button" onClick={() => setAddingLoot(false)} className="rounded-md px-2 text-xs text-muted-foreground"><X className="size-3.5" /></button>
+                    </div>
+                  </div>
+                )}
+
                 <div className="overflow-x-auto">
-                  <table className="w-full min-w-[640px] text-left text-sm">
+                  <table className="w-full min-w-[680px] text-left text-sm">
                     <thead>
                       <tr className="border-b border-white/10 text-[10px] uppercase tracking-wider text-muted-foreground">
                         <th className="pb-1.5 pr-2 font-medium">Item</th>
+                        <th className="pb-1.5 pr-2 font-medium">Kind</th>
                         <th className="pb-1.5 pr-2 font-medium">Price</th>
                         <th className="pb-1.5 pr-2 font-medium">Qty</th>
-                        <th className="pb-1.5 pr-2 font-medium">Total</th>
+                        <th className="pb-1.5 pr-2 font-medium">Line</th>
                         <th className="pb-1.5 pr-2 font-medium min-w-[5.5rem]">/h</th>
-                        <th className="pb-1.5 font-medium w-16" />
+                        <th className="pb-1.5 w-16 font-medium" />
                       </tr>
                     </thead>
                     <tbody>
                       {loots.map((l) => {
-                        const total = (l.price ?? 0) * (l.quantity ?? 0);
-                        const perH = hours > 0 ? total / hours : 0;
+                        const q = parseFloat(qty[l.id] || "0") || 0;
+                        const line = q * Number(l.unit_price);
+                        const perH = sessionTotals.mins > 0 ? line / (sessionTotals.mins / 60) : 0;
                         return (
                           <tr key={l.id} className="border-b border-white/5">
                             {editingLootId === l.id ? (
-                              <>
-                                <td className="py-1.5 pr-2" colSpan={4}>
-                                  <div className="flex flex-wrap items-center gap-1.5">
-                                    {l.icon_url && (
-                                      <img src={l.icon_url} alt="" className="size-6 rounded object-contain" />
-                                    )}
-                                    <Input value={editLootName} onChange={(e) => setEditLootName(e.target.value)} className="h-7 w-32 text-xs" />
-                                    <Input type="number" value={editLootPrice} onChange={(e) => setEditLootPrice(e.target.value)} className="h-7 w-24 text-xs" />
-                                    <Input type="number" value={editLootQty} onChange={(e) => setEditLootQty(e.target.value)} className="h-7 w-16 text-xs" />
-                                    <label className="flex h-7 cursor-pointer items-center gap-1 rounded border border-dashed border-white/15 px-1.5 text-[10px] text-muted-foreground">
-                                      <Upload className="size-3" />
-                                      <input ref={editFileRef} type="file" accept="image/*" className="hidden" onChange={(e) => setEditLootIcon(e.target.files?.[0] ?? null)} />
-                                    </label>
-                                    <button type="button" onClick={() => void handleSaveLoot()} className="h-7 rounded bg-emerald-500/20 px-2 text-xs text-emerald-200 ring-1 ring-emerald-400/40">
-                                      Save
-                                    </button>
-                                    <button type="button" onClick={cancelEditLoot} className="h-7 rounded px-1.5 text-muted-foreground hover:text-foreground">
-                                      <X className="size-3.5" />
-                                    </button>
-                                  </div>
-                                </td>
-                                <td className="py-1.5" />
-                                <td className="py-1.5" />
-                              </>
+                              <td className="py-1.5" colSpan={7}>
+                                <div className="flex flex-wrap items-center gap-1.5">
+                                  {l.icon_url && <img src={l.icon_url} alt="" className="size-6 rounded object-contain" />}
+                                  <Input value={editLootName} onChange={(e) => setEditLootName(e.target.value)} className="h-7 w-28 text-xs" />
+                                  <select className="field-select h-7 text-xs" value={editLootKind} onChange={(e) => setEditLootKind(e.target.value as "market" | "npc")}>
+                                    <option value="market">Market</option>
+                                    <option value="npc">NPC</option>
+                                  </select>
+                                  <Input type="number" value={editLootPrice} onChange={(e) => setEditLootPrice(e.target.value)} className="h-7 w-24 text-xs" />
+                                  <label className="flex h-7 cursor-pointer items-center gap-1 rounded border border-dashed border-white/15 px-1.5 text-[10px] text-muted-foreground">
+                                    <Upload className="size-3" />
+                                    <input type="file" accept="image/*" className="hidden" onChange={(e) => setEditLootFile(e.target.files?.[0] ?? null)} />
+                                  </label>
+                                  <button type="button" onClick={() => void saveLootEdit()} className="h-7 rounded bg-emerald-500/20 px-2 text-xs text-emerald-200 ring-1 ring-emerald-400/40">Save</button>
+                                  <button type="button" onClick={() => setEditingLootId(null)} className="h-7 rounded px-1.5 text-muted-foreground"><X className="size-3.5" /></button>
+                                </div>
+                              </td>
                             ) : (
                               <>
                                 <td className="py-1.5 pr-2">
@@ -653,18 +729,23 @@ export function GrindTracker() {
                                     <span className="truncate">{l.name}</span>
                                   </div>
                                 </td>
-                                <td className="py-1.5 pr-2 font-mono text-xs tabular-nums">{formatSilver(l.price ?? 0)}</td>
-                                <td className="py-1.5 pr-2 font-mono text-xs tabular-nums">{l.quantity ?? 0}</td>
-                                <td className="py-1.5 pr-2 font-mono text-xs tabular-nums text-cyan-200/90">{formatSilver(total)}</td>
+                                <td className="py-1.5 pr-2 text-xs text-muted-foreground">{l.kind}</td>
+                                <td className="py-1.5 pr-2 font-mono text-xs tabular-nums">{formatSilver(l.unit_price)}</td>
+                                <td className="py-1.5 pr-2">
+                                  <Input
+                                    type="number"
+                                    value={qty[l.id] ?? ""}
+                                    onChange={(e) => setQty((prev) => ({ ...prev, [l.id]: e.target.value }))}
+                                    placeholder="0"
+                                    className="h-7 w-20 text-xs"
+                                  />
+                                </td>
+                                <td className="py-1.5 pr-2 font-mono text-xs tabular-nums text-cyan-200/90">{formatSilver(line)}</td>
                                 <td className="py-1.5 pr-2 font-mono text-xs tabular-nums text-emerald-300/90 min-w-[5.5rem]">{formatSilver(perH)}</td>
                                 <td className="py-1.5">
                                   <div className="flex gap-1">
-                                    <button type="button" className="text-muted-foreground hover:text-cyan-300" onClick={() => startEditLoot(l)}>
-                                      <Pencil className="size-3.5" />
-                                    </button>
-                                    <button type="button" className="text-muted-foreground hover:text-rose-400" onClick={() => void handleDeleteLoot(l.id)}>
-                                      <Trash2 className="size-3.5" />
-                                    </button>
+                                    <button type="button" className="text-muted-foreground hover:text-cyan-300" onClick={() => beginEditLoot(l)}><Pencil className="size-3.5" /></button>
+                                    <button type="button" className="text-muted-foreground hover:text-rose-400" onClick={() => void (async () => { await deleteLoot(l.id); setLoots(await listLoots(selectedId!)); })()}><Trash2 className="size-3.5" /></button>
                                   </div>
                                 </td>
                               </>
@@ -680,49 +761,47 @@ export function GrindTracker() {
                 </div>
               </section>
 
-              {/* Recent sessions */}
+              {/* Sessions history */}
               <section className="glass p-3">
-                <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-violet-300/90">Recent sessions</h2>
-                {sessions.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No sessions saved yet.</p>
+                <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-violet-300/90">Sessions @ {selected.name}</h2>
+                {spotSessions.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No sessions yet.</p>
                 ) : (
                   <ul className="max-h-[28vh] space-y-1.5 overflow-y-auto">
-                    {sessions.slice(0, 30).map((s) => (
+                    {spotSessions.map((s) => (
                       <li key={s.id} className="flex items-center justify-between gap-2 rounded-md bg-white/[0.03] px-2 py-1.5 text-sm">
-                        <div className="min-w-0 flex-1">
-                          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                            <span className="font-medium text-foreground/90">{s.spot_name ?? "—"}</span>
-                            {s.character && <span className="text-xs text-muted-foreground">{s.character}</span>}
-                            {s.mode === "lifeskill" && s.lifeskill_type && (
-                              <span className="rounded bg-violet-500/20 px-1.5 py-0.5 text-[10px] text-violet-200">{s.lifeskill_type}</span>
-                            )}
+                        {editingId === s.id ? (
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <Input value={editChar} onChange={(e) => setEditChar(e.target.value)} className="h-7 w-28 text-xs" />
+                            <Input type="number" value={editMinutes} onChange={(e) => setEditMinutes(e.target.value)} className="h-7 w-20 text-xs" />
+                            <Input type="number" value={editTotal} onChange={(e) => setEditTotal(e.target.value)} className="h-7 w-28 text-xs" />
+                            <button type="button" onClick={() => void saveSessionEdit()} className="h-7 rounded bg-emerald-500/20 px-2 text-xs text-emerald-200">Save</button>
+                            <button type="button" onClick={() => setEditingId(null)} className="h-7 px-1 text-muted-foreground"><X className="size-3.5" /></button>
                           </div>
-                          <div className="text-xs text-muted-foreground">
-                            {s.duration_min} min · {formatSilver(s.silver ?? 0)} silver
-                            {s.notes ? ` · ${s.notes}` : ""}
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          className="shrink-0 text-muted-foreground hover:text-rose-400"
-                          onClick={() => {
-                            void (async () => {
-                              await deleteSession(s.id);
-                              setSessions(await listSessions(100));
-                            })();
-                          }}
-                        >
-                          <Trash2 className="size-3.5" />
-                        </button>
+                        ) : (
+                          <>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex flex-wrap items-center gap-x-2">
+                                <span className="font-medium">{s.character_name}</span>
+                                <span className="text-xs text-muted-foreground">{s.minutes} min</span>
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                {formatSilver(s.total_value)} · {formatSilver(s.silver_per_hour)}/h
+                              </div>
+                            </div>
+                            <div className="flex gap-1">
+                              <button type="button" className="text-muted-foreground hover:text-cyan-300" onClick={() => beginEditSession(s)}><Pencil className="size-3.5" /></button>
+                              <button type="button" className="text-muted-foreground hover:text-rose-400" onClick={() => void (async () => { await deleteSession(s.id); await refresh(); })()}><Trash2 className="size-3.5" /></button>
+                            </div>
+                          </>
+                        )}
                       </li>
                     ))}
                   </ul>
                 )}
               </section>
             </>
-          )}
-
-          {!selected && !loading && (
+          ) : (
             <div className="glass p-8 text-center text-sm text-muted-foreground">
               Select or create a grind spot to start tracking.
             </div>
