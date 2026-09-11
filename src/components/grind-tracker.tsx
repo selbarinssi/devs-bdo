@@ -181,14 +181,12 @@ export function GrindTracker() {
     return () => clearInterval(id);
   }, [timerOn]);
 
-  // Restore last spot once
   useEffect(() => {
     const store = readStore();
     if (store.lastSpotId) setSelectedId(store.lastSpotId);
     setChronoHydrated(true);
   }, []);
 
-  // Load draft when spot changes
   useEffect(() => {
     if (!chronoHydrated || !selectedId) return;
     const store = readStore();
@@ -207,7 +205,6 @@ export function GrindTracker() {
     }
   }, [selectedId, chronoHydrated]);
 
-  // Persist current spot only
   useEffect(() => {
     if (!chronoHydrated || !selectedId) return;
     const store = readStore();
@@ -608,33 +605,32 @@ export function GrindTracker() {
           {selected ? (
             <>
               <section className="glass-strong p-3">
-                <div className="flex flex-wrap items-end gap-4 sm:gap-6">
-                  <div className="min-w-[7.5rem]">
-                    <p className="mb-0.5 text-[0.6rem] font-bold uppercase tracking-[0.18em] text-muted-foreground">Timer</p>
-                    <div className="flex items-center gap-2">
-                      <Timer className="size-4 shrink-0 text-cyan-400" />
-                      <span className={cn("font-mono text-2xl font-semibold tabular-nums tracking-tight sm:text-3xl", timerOn ? "neon-text text-cyan-100" : "text-cyan-100")}>
-                        {hh}:{mm}:{ss}
-                      </span>
-                    </div>
-                    <div className="mt-2 flex gap-1.5">
-                      <button type="button" onClick={toggleTimer} className={cn("rounded-md px-2.5 py-1 text-xs ring-1", timerOn ? "bg-amber-500/20 text-amber-200 ring-amber-400/40" : "bg-emerald-500/20 text-emerald-200 ring-emerald-400/40")}>
-                        {timerOn ? "Pause" : "Start"}
-                      </button>
-                      <button type="button" onClick={resetTimer} className="rounded-md bg-white/5 px-2.5 py-1 text-xs text-muted-foreground hover:bg-white/10">Reset</button>
-                    </div>
+                <div className="flex flex-wrap items-baseline gap-x-6 gap-y-2">
+                  <div className="flex items-baseline gap-2">
+                    <Timer className="size-4 shrink-0 translate-y-[-1px] text-cyan-400" />
+                    <span className={cn("font-mono text-2xl font-semibold tabular-nums tracking-tight sm:text-3xl", timerOn ? "neon-text text-cyan-100" : "text-cyan-100")}>
+                      {hh}:{mm}:{ss}
+                    </span>
                   </div>
-                  <div className="min-w-[6.5rem]">
-                    <p className="mb-0.5 text-[0.6rem] font-bold uppercase tracking-[0.18em] text-muted-foreground">Total ⚙</p>
-                    <p className="font-mono text-2xl font-semibold tabular-nums tracking-tight text-cyan-200 sm:text-3xl">{formatSilver(sessionTotals.total)}</p>
-                  </div>
-                  <div className="min-w-[6.5rem]">
-                    <p className="mb-0.5 text-[0.6rem] font-bold uppercase tracking-[0.18em] text-muted-foreground">Silver /h</p>
-                    <p className="font-mono text-2xl font-semibold tabular-nums tracking-tight neon-emerald text-emerald-300 sm:text-3xl">{formatSilver(sessionTotals.sph)}</p>
+                  <div className="ml-auto flex flex-wrap items-baseline gap-x-6 gap-y-1">
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-[0.6rem] font-bold uppercase tracking-[0.18em] text-muted-foreground">Total</span>
+                      <span className="font-mono text-2xl font-semibold tabular-nums tracking-tight text-cyan-200 sm:text-3xl">{formatSilver(sessionTotals.total)}</span>
+                    </div>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-[0.6rem] font-bold uppercase tracking-[0.18em] text-muted-foreground">/h</span>
+                      <span className="font-mono text-2xl font-semibold tabular-nums tracking-tight neon-emerald text-emerald-300 sm:text-3xl">{formatSilver(sessionTotals.sph)}</span>
+                    </div>
                     {avgSph > 0 && (
-                      <p className="mt-0.5 text-[0.65rem] tabular-nums text-muted-foreground">avg {formatSilver(avgSph)}/h</p>
+                      <span className="text-[0.65rem] tabular-nums text-muted-foreground">avg {formatSilver(avgSph)}/h</span>
                     )}
                   </div>
+                </div>
+                <div className="mt-2 flex gap-1.5">
+                  <button type="button" onClick={toggleTimer} className={cn("rounded-md px-2.5 py-1 text-xs ring-1", timerOn ? "bg-amber-500/20 text-amber-200 ring-amber-400/40" : "bg-emerald-500/20 text-emerald-200 ring-emerald-400/40")}>
+                    {timerOn ? "Pause" : "Start"}
+                  </button>
+                  <button type="button" onClick={resetTimer} className="rounded-md bg-white/5 px-2.5 py-1 text-xs text-muted-foreground hover:bg-white/10">Reset</button>
                 </div>
                 <div className="mt-3 flex flex-wrap items-end gap-2 border-t border-white/10 pt-3">
                   <div className="min-w-[120px] flex-1">
