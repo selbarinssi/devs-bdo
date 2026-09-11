@@ -95,8 +95,11 @@ export function GrindTracker() {
       const [s, sess] = await Promise.all([listSpots(), listSessions(100)]);
       setSpots(s);
       setSessions(sess);
-      if (selectedId && !s.some((x) => x.id === selectedId)) setSelectedId(s[0]?.id ?? null);
-      else if (!selectedId && s[0]) setSelectedId(s[0].id);
+      if (selectedId && !s.some((x) => x.id === selectedId)) {
+        setSelectedId(s[0]?.id ?? null);
+      } else if (!selectedId && s[0]) {
+        setSelectedId(s[0].id);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load data");
     } finally {
@@ -121,7 +124,9 @@ export function GrindTracker() {
   useEffect(() => {
     if (!timerOn) return;
     const id = window.setInterval(() => {
-      if (timerStart.current != null) setElapsed(Math.floor((Date.now() - timerStart.current) / 1000));
+      if (timerStart.current != null) {
+        setElapsed(Math.floor((Date.now() - timerStart.current) / 1000));
+      }
     }, 200);
     return () => clearInterval(id);
   }, [timerOn]);
@@ -142,14 +147,20 @@ export function GrindTracker() {
       const q = parseFloat(qty[l.id] || "0") || 0;
       total += q * Number(l.unit_price);
     }
-    const mins = timerOn && elapsed > 0 ? elapsed / 60 : Math.max(0.01, parseFloat(minutes) || 0);
+    const mins =
+      timerOn && elapsed > 0 ? elapsed / 60 : Math.max(0.01, parseFloat(minutes) || 0);
     const sph = mins > 0 ? total / (mins / 60) : 0;
     return { total, mins, sph };
   }, [loots, qty, minutes, timerOn, elapsed]);
 
   if (!configured) {
-    return <div className="glass p-5 text-sm text-muted-foreground">Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY, then redeploy.</div>;
+    return (
+      <div className="glass p-5 text-sm text-muted-foreground">
+        Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY, then redeploy.
+      </div>
+    );
   }
+
   if (loading) {
     return (
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -165,27 +176,43 @@ export function GrindTracker() {
     try {
       let icon_url: string | null = null;
       if (spotFile) icon_url = await uploadLootIcon(spotFile);
-      try {
-        const row = await createSpot({ name: spotName.trim(), monsters, territory, icon_url, mode });
-        setSpotName("");
-        setSpotFile(null);
-        setAddingSpot(false);
-        await refresh();
-        setSelectedId(row.id);
-      } catch (e) {
-        const msg = e instanceof Error ? e.message : "";
-        if (msg.toLowerCase().includes("mode")) {
-          const row = await createSpot({ name: spotName.trim(), monsters, territory, icon_url });
+      const row = await createSpot({
+        name: spotName.trim(),
+        monsters,
+        territory,
+        icon_url,
+        mode,
+      });
+      setSpotName("");
+      setSpotFile(null);
+      setAddingSpot(false);
+      await refresh();
+      setSelectedId(row.id);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Create spot failed";
+      if (msg.toLowerCase().includes("mode")) {
+        try {
+          let icon_url: string | null = null;
+          if (spotFile) icon_url = await uploadLootIcon(spotFile);
+          const row = await createSpot({
+            name: spotName.trim(),
+            monsters,
+            territory,
+            icon_url,
+          });
           setSpotName("");
           setSpotFile(null);
           setAddingSpot(false);
           await refresh();
           setSelectedId(row.id);
-          setError("Spot created. Run SQL to add mode column for lifeskills.");
-        } else throw e;
+          setError("Spot created. Run SQL to enable mode column for lifeskills.");
+          return;
+        } catch (e2) {
+          setError(e2 instanceof Error ? e2.message : "Create spot failed");
+        }
+      } else {
+        setError(msg);
       }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Create spot failed");
     } finally {
       setBusy(false);
     }
@@ -280,6 +307,7 @@ export function GrindTracker() {
           };
         })
         .filter((l) => l.quantity > 0);
+
       await createSession({
         spot_id: selectedId,
         character_name: character.trim() || "Unknown",
@@ -354,7 +382,9 @@ export function GrindTracker() {
   return (
     <div className="flex flex-col gap-4">
       {error ? (
-        <p className="glass rounded-xl border border-rose-400/30 px-4 py-2.5 text-sm text-rose-300">{error}</p>
+        <p className="glass rounded-xl border border-rose-400/30 px-4 py-2.5 text-sm text-rose-300">
+          {error}
+        </p>
       ) : null}
 
       <div className="grid gap-4 lg:grid-cols-[260px_minmax(0,1fr)]">
@@ -423,93 +453,126 @@ export function GrindTracker() {
             <div className="glass px-6 py-14 text-center text-sm text-muted-foreground">Select or create a spot</div>
           ) : (
             <>
-              <section className="glass-strong p-3 sm:p-4">
-                <div className="mb-3 flex flex-wrap items-center gap-3">
-                  {selected.icon_url ? <img src={selected.icon_url} alt="" className="size-11 rounded-xl object-contain ring-1 ring-white/10" /> : <span className="size-11 rounded-xl bg-white/5 ring-1 ring-white/10" />}
+              <section className="glass-strong overflow-hidden">
+                <div className="flex items-center gap-3 border-b border-white/10 px-3 py-2.5 sm:px-4">
+                  {selected.icon_url ? (
+                    <img src={selected.icon_url} alt="" className="size-10 rounded-xl object-contain ring-1 ring-white/10" />
+                  ) : (
+                    <span className="size-10 rounded-xl bg-white/5 ring-1 ring-white/10" />
+                  )}
                   <div className="min-w-0 flex-1">
-                    <h3 className="truncate text-base font-semibold">{selected.name}</h3>
-                    <p className="truncate text-xs text-muted-foreground">
-                      {selected.mode === "lifeskill" ? "Lifeskill" : "PvE"} · {selected.monsters} · {selected.territory}
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="truncate text-base font-semibold tracking-tight">{selected.name}</h3>
+                      <span className={cn(
+                        "metric-pill",
+                        selected.mode === "lifeskill"
+                          ? "bg-violet-400/15 text-violet-300 ring-1 ring-violet-400/25"
+                          : "bg-cyan-400/15 text-cyan-300 ring-1 ring-cyan-400/25",
+                      )}>
+                        {selected.mode === "lifeskill" ? "Lifeskill" : "PvE"}
+                      </span>
+                    </div>
+                    <p className="truncate text-[0.7rem] text-muted-foreground">
+                      {selected.monsters} · {selected.territory}
                       {spotSessions.length ? ` · avg ${formatSilver(avgSph)} ⚙/h` : ""}
                     </p>
                   </div>
                 </div>
 
-                <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <Label className="text-[0.6rem] text-muted-foreground">Character</Label>
-                      <Input value={character} onChange={(e) => setCharacter(e.target.value)} placeholder="Name" className="h-8 text-sm" />
-                    </div>
-                    <div>
-                      <Label className="text-[0.6rem] text-muted-foreground">Min</Label>
-                      <Input type="number" min={1} value={minutes} disabled={timerOn} onChange={(e) => setMinutes(e.target.value)} className="h-8 text-sm" />
+                <div className="grid gap-0 sm:grid-cols-[1fr_auto]">
+                  <div className="flex flex-col justify-center gap-2 border-b border-white/10 px-3 py-3 sm:border-b-0 sm:border-r sm:px-4">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <Label className="text-[0.55rem] uppercase tracking-wider text-muted-foreground">Character</Label>
+                        <Input value={character} onChange={(e) => setCharacter(e.target.value)} placeholder="Name" className="h-8 text-sm" />
+                      </div>
+                      <div>
+                        <Label className="text-[0.55rem] uppercase tracking-wider text-muted-foreground">Minutes</Label>
+                        <Input type="number" min={1} value={minutes} disabled={timerOn} onChange={(e) => setMinutes(e.target.value)} className="h-8 text-sm" />
+                      </div>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-4 rounded-2xl border border-cyan-400/15 bg-black/25 px-4 py-2">
-                    <div className="text-center">
-                      <p className="text-[0.55rem] font-bold uppercase tracking-[0.2em] text-muted-foreground">Timer</p>
-                      <p className={cn("font-mono text-2xl font-semibold tabular-nums tracking-wider", timerOn ? "neon-text" : "text-foreground")}>
+                  <div className="flex items-stretch gap-0">
+                    <div className="flex flex-1 flex-col items-center justify-center px-5 py-3">
+                      <p className="text-[0.5rem] font-bold uppercase tracking-[0.22em] text-muted-foreground">Chrono</p>
+                      <p className={cn(
+                        "mt-0.5 font-mono text-[1.65rem] font-semibold leading-none tabular-nums tracking-wider",
+                        timerOn ? "neon-text" : "text-foreground",
+                      )}>
                         {hh}:{mm}:{ss}
                       </p>
-                      <div className="mt-1 flex justify-center gap-1">
-                        <button type="button" onClick={toggleTimer} className={cn("rounded-full px-2.5 py-0.5 text-[0.65rem] font-bold", timerOn ? "bg-rose-500/20 text-rose-300" : "bg-cyan-400 text-slate-950")}>
-                          {timerOn ? <span className="inline-flex items-center gap-1"><Square className="size-2.5 fill-current" />Stop</span> : <span className="inline-flex items-center gap-1"><Timer className="size-3" />Start</span>}
+                      <div className="mt-2 flex gap-1.5">
+                        <button
+                          type="button"
+                          onClick={toggleTimer}
+                          className={cn(
+                            "rounded-full px-3 py-1 text-[0.65rem] font-bold transition-all",
+                            timerOn
+                              ? "bg-rose-500/20 text-rose-300 ring-1 ring-rose-400/30"
+                              : "bg-cyan-400 text-slate-950 shadow-[0_0_18px_rgba(34,211,238,0.45)]",
+                          )}
+                        >
+                          {timerOn ? (
+                            <span className="inline-flex items-center gap-1"><Square className="size-2.5 fill-current" />Stop</span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1"><Timer className="size-3" />Start</span>
+                          )}
                         </button>
-                        <button type="button" onClick={resetTimer} className="rounded-full px-2 py-0.5 text-[0.65rem] text-muted-foreground ring-1 ring-white/10">
+                        <button type="button" onClick={resetTimer} className="rounded-full px-2.5 py-1 text-[0.65rem] text-muted-foreground ring-1 ring-white/10 hover:text-foreground">
                           Reset
                         </button>
                       </div>
                     </div>
-                    <div className="h-12 w-px bg-white/10" />
-                    <div className="text-right">
-                      <p className="text-[0.55rem] font-bold uppercase tracking-[0.15em] text-muted-foreground">Live ⚙/h</p>
-                      <p className="text-xl font-semibold tabular-nums neon-violet">{formatSilver(sessionTotals.sph)}</p>
+                    <div className="w-px bg-white/10" />
+                    <div className="flex min-w-[7.5rem] flex-col items-end justify-center px-4 py-3">
+                      <p className="text-[0.5rem] font-bold uppercase tracking-[0.18em] text-muted-foreground">Live ⚙/h</p>
+                      <p className="mt-0.5 text-xl font-semibold tabular-nums neon-emerald">{formatSilver(sessionTotals.sph)}</p>
                       <p className="text-[0.65rem] tabular-nums text-muted-foreground">{formatSilver(sessionTotals.total)} total</p>
                     </div>
                   </div>
                 </div>
 
-                <div className="mt-3 space-y-1">
-                  {loots.map((l) => {
-                    const q = parseFloat(qty[l.id] || "0") || 0;
-                    const line = q * Number(l.unit_price);
-                    const lineSph = sessionTotals.mins > 0 ? line / (sessionTotals.mins / 60) : 0;
-                    return (
-                      <div key={l.id} className="flex items-center gap-2 rounded-xl border border-white/5 bg-black/20 px-2.5 py-1.5">
-                        {l.icon_url ? (
-                          <img src={l.icon_url} alt="" className="size-7 rounded object-contain" />
-                        ) : (
-                          <span className="size-7 rounded bg-white/5" />
-                        )}
-                        <span className="min-w-0 flex-1 truncate text-sm">{l.name}</span>
-                        <span className="hidden text-[0.65rem] tabular-nums text-muted-foreground sm:inline">
-                          {formatSilver(Number(l.unit_price))} ⚙
-                        </span>
-                        <Input
-                          type="number"
-                          min={0}
-                          placeholder="0"
-                          value={qty[l.id] ?? ""}
-                          onChange={(e) => setQty((prev) => ({ ...prev, [l.id]: e.target.value }))}
-                          className="h-7 w-16 text-right text-sm"
-                        />
-                        <span className="w-20 text-right text-xs font-semibold tabular-nums text-violet-300">
-                          {q > 0 ? `${formatSilver(lineSph)}/h` : "—"}
-                        </span>
-                      </div>
-                    );
-                  })}
-                  {loots.length === 0 ? (
-                    <p className="py-2 text-center text-xs text-muted-foreground">Add loot rows below</p>
-                  ) : null}
-                </div>
-
-                <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <button type="button" disabled={busy || loots.length === 0} onClick={() => void onSaveSession()} className="btn-primary">
-                    Save session
-                  </button>
+                <div className="border-t border-white/10 px-2 py-2 sm:px-3">
+                  <div className="space-y-1">
+                    {loots.map((l) => {
+                      const q = parseFloat(qty[l.id] || "0") || 0;
+                      const line = q * Number(l.unit_price);
+                      const lineSph = sessionTotals.mins > 0 ? line / (sessionTotals.mins / 60) : 0;
+                      return (
+                        <div key={l.id} className="flex items-center gap-2 rounded-xl border border-white/5 bg-black/20 px-2 py-1.5">
+                          {l.icon_url ? (
+                            <img src={l.icon_url} alt="" className="size-6 shrink-0 rounded object-contain" />
+                          ) : (
+                            <span className="size-6 shrink-0 rounded bg-white/5 ring-1 ring-white/10" />
+                          )}
+                          <span className="min-w-0 flex-1 truncate text-sm">{l.name}</span>
+                          <span className="hidden text-[0.6rem] tabular-nums text-muted-foreground sm:inline">
+                            {formatSilver(Number(l.unit_price))}
+                          </span>
+                          <Input
+                            type="number"
+                            min={0}
+                            placeholder="0"
+                            value={qty[l.id] ?? ""}
+                            onChange={(e) => setQty((prev) => ({ ...prev, [l.id]: e.target.value }))}
+                            className="h-7 w-14 text-right text-sm"
+                          />
+                          <span className="w-[4.5rem] text-right text-xs font-semibold tabular-nums text-emerald-300">
+                            {q > 0 ? `${formatSilver(lineSph)}/h` : "—"}
+                          </span>
+                        </div>
+                      );
+                    })}
+                    {loots.length === 0 ? (
+                      <p className="py-3 text-center text-xs text-muted-foreground">Add loot in the table below</p>
+                    ) : null}
+                  </div>
+                  <div className="mt-2 flex justify-end">
+                    <button type="button" disabled={busy || loots.length === 0} onClick={() => void onSaveSession()} className="btn-primary">
+                      Save session
+                    </button>
+                  </div>
                 </div>
               </section>
 
@@ -603,7 +666,7 @@ export function GrindTracker() {
                               </p>
                             </div>
                             <div className="flex items-center gap-1.5">
-                              <span className="rounded-full bg-violet-400/15 px-2 py-0.5 text-xs font-semibold tabular-nums text-violet-300">
+                              <span className="rounded-full bg-emerald-400/15 px-2 py-0.5 text-xs font-semibold tabular-nums text-emerald-300">
                                 {formatSilver(Number(s.silver_per_hour))}/h
                               </span>
                               <button type="button" className="text-muted-foreground hover:text-cyan-300" onClick={() => startEdit(s)}>
