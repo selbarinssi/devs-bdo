@@ -537,48 +537,40 @@ export function GrindTracker() {
                       <input type="file" accept="image/*" className="hidden" onChange={(e) => setEditSpotFile(e.target.files?.[0] ?? null)} />
                     </label>
                     <div className="flex gap-1">
-                      <button type="button" disabled={busy} onClick={() => void saveSpotEdit()} className="flex-1 rounded-md bg-emerald-500/20 py-1 text-xs text-emerald-200 ring-1 ring-emerald-400/40">Save</button>
-                      <button type="button" onClick={() => setEditingSpotId(null)} className="rounded-md px-2 text-xs text-muted-foreground">Cancel</button>
+                      <button type="button" onClick={saveSpotEdit} disabled={busy} className="btn-primary h-7 flex-1 text-[0.65rem]">Save</button>
+                      <button type="button" onClick={() => setEditingSpotId(null)} className="btn-ghost h-7 px-2 text-[0.65rem]">Cancel</button>
                     </div>
                   </div>
                 ) : (
-                  <button
-                    type="button"
-                    onClick={() => setSelectedId(s.id)}
-                    className={cn(
-                      "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm transition",
-                      selectedId === s.id ? "bg-cyan-500/20 text-cyan-100 ring-1 ring-cyan-400/40" : "hover:bg-white/5",
-                    )}
-                  >
-                    {s.icon_url ? <img src={s.icon_url} alt="" className="size-6 shrink-0 rounded object-contain" /> : <span className="flex size-6 shrink-0 items-center justify-center rounded bg-white/5 text-[10px]">?</span>}
-                    <span className="min-w-0 flex-1 truncate">{s.name}</span>
-                    <span role="button" tabIndex={0} className="text-muted-foreground hover:text-cyan-300" onClick={(e) => { e.stopPropagation(); beginEditSpot(s); }}>
-                      <Pencil className="size-3.5" />
-                    </span>
-                    <span
-                      role="button"
-                      tabIndex={0}
-                      className="text-muted-foreground hover:text-rose-400"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        void (async () => {
-                          await deleteSpot(s.id);
-                          if (selectedId === s.id) setSelectedId(null);
-                          await refresh();
-                        })();
-                      }}
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedId(s.id)}
+                      className={cn(
+                        "flex min-h-11 flex-1 items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm transition-[background-color,color]",
+                        selectedId === s.id ? "bg-cyan-400/15 text-cyan-200" : "text-foreground hover:bg-white/5",
+                      )}
                     >
-                      <Trash2 className="size-3.5" />
-                    </span>
-                  </button>
+                      {s.icon_url ? (
+                        <img src={s.icon_url} alt="" className="size-6 shrink-0 rounded object-contain" />
+                      ) : (
+                        <span className="flex size-6 shrink-0 items-center justify-center rounded bg-white/5 text-[0.6rem] font-bold text-cyan-300">
+                          {s.name[0]?.toUpperCase()}
+                        </span>
+                      )}
+                      <span className="min-w-0 truncate font-medium">{s.name}</span>
+                    </button>
+                    <button type="button" aria-label={`Edit ${s.name}`} onClick={() => beginEditSpot(s)} className="flex size-9 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-white/5 hover:text-cyan-300">
+                      <Pencil className="size-3.5" strokeWidth={1.75} />
+                    </button>
+                  </div>
                 )}
               </li>
             ))}
           </ul>
-
           {addingSpot ? (
-            <div className="space-y-1.5 rounded-lg bg-white/5 p-2 ring-1 ring-violet-400/30">
-              <Input placeholder="Spot name" value={spotName} onChange={(e) => setSpotName(e.target.value)} className="h-8 text-sm" />
+            <div className="space-y-1.5 rounded-lg bg-white/5 p-2 ring-1 ring-cyan-400/30">
+              <Input value={spotName} onChange={(e) => setSpotName(e.target.value)} placeholder="Spot name" className="h-8 text-sm" />
               <div className="grid grid-cols-2 gap-1">
                 <button type="button" className={cn("h-7 rounded-lg text-[0.65rem] font-bold", mode === "pve" ? "bg-cyan-400/20 text-cyan-300" : "text-muted-foreground")} onClick={() => { setMode("pve"); setMonsters(MONSTER_TYPES[0]); }}>PvE</button>
                 <button type="button" className={cn("h-7 rounded-lg text-[0.65rem] font-bold", mode === "lifeskill" ? "bg-violet-400/20 text-violet-300" : "text-muted-foreground")} onClick={() => { setMode("lifeskill"); setMonsters(LIFESKILL_TYPES[0]); }}>Lifeskill</button>
@@ -590,222 +582,223 @@ export function GrindTracker() {
                 <input type="file" accept="image/*" className="hidden" onChange={(e) => setSpotFile(e.target.files?.[0] ?? null)} />
               </label>
               <div className="flex gap-1">
-                <button type="button" disabled={busy || !spotName.trim()} onClick={() => void onCreateSpot()} className="flex-1 rounded-md bg-cyan-500/20 py-1 text-xs text-cyan-100 ring-1 ring-cyan-400/40">Add</button>
-                <button type="button" onClick={() => setAddingSpot(false)} className="rounded-md px-2 text-xs text-muted-foreground">Cancel</button>
+                <button type="button" onClick={onCreateSpot} disabled={busy} className="btn-primary h-7 flex-1 text-[0.65rem]">Create</button>
+                <button type="button" onClick={() => setAddingSpot(false)} className="btn-ghost h-7 px-2 text-[0.65rem]">Cancel</button>
               </div>
             </div>
           ) : (
-            <button type="button" onClick={() => setAddingSpot(true)} className="flex w-full items-center justify-center gap-1 rounded-md bg-white/5 py-1.5 text-xs text-muted-foreground hover:bg-white/10">
-              <Plus className="size-3.5" /> Add spot
+            <button type="button" onClick={() => setAddingSpot(true)} className="btn-ghost h-9 w-full text-xs">
+              <Plus className="size-3.5" strokeWidth={2.25} /> Add spot
             </button>
           )}
         </section>
 
-        <div className="space-y-4">
-          {selected ? (
-            <>
-              <section className="glass-strong p-3">
-                <div className="flex flex-wrap items-baseline gap-x-6 gap-y-2">
-                  <div className="flex items-baseline gap-2">
-                    <Timer className="size-4 shrink-0 translate-y-[-1px] text-cyan-400" />
-                    <span className={cn("font-mono text-2xl font-semibold tabular-nums tracking-tight sm:text-3xl", timerOn ? "neon-text text-cyan-100" : "text-cyan-100")}>
-                      {hh}:{mm}:{ss}
+        <section className="min-w-0">
+          {!selected ? (
+            <div className="glass px-4 py-12 text-center text-sm text-muted-foreground">Select or create a spot.</div>
+          ) : (
+            <div className="flex flex-col gap-4">
+              <div className="glass p-3 sm:p-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  {selected.icon_url ? (
+                    <img src={selected.icon_url} alt="" className="size-8 shrink-0 rounded object-contain" />
+                  ) : (
+                    <span className="flex size-8 shrink-0 items-center justify-center rounded bg-white/5 text-xs font-bold text-cyan-300">
+                      {selected.name[0]?.toUpperCase()}
                     </span>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <h3 className="truncate text-sm font-semibold text-foreground sm:text-base">{selected.name}</h3>
+                    <p className="truncate text-[0.7rem] text-muted-foreground">
+                      {selected.mode === "lifeskill" ? "Lifeskill" : "PvE"} · {selected.monsters} · {selected.territory}
+                    </p>
                   </div>
-                  <div className="ml-auto flex flex-wrap items-baseline gap-x-6 gap-y-1">
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-[0.6rem] font-bold uppercase tracking-[0.18em] text-muted-foreground">Total</span>
-                      <span className="font-mono text-2xl font-semibold tabular-nums tracking-tight text-cyan-200 sm:text-3xl">{formatSilver(sessionTotals.total)}</span>
-                    </div>
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-[0.6rem] font-bold uppercase tracking-[0.18em] text-muted-foreground">/h</span>
-                      <span className="font-mono text-2xl font-semibold tabular-nums tracking-tight neon-emerald text-emerald-300 sm:text-3xl">{formatSilver(sessionTotals.sph)}</span>
-                    </div>
-                    {avgSph > 0 && (
-                      <span className="text-[0.65rem] tabular-nums text-muted-foreground">avg {formatSilver(avgSph)}/h</span>
-                    )}
-                  </div>
+                  {avgSph > 0 && (
+                    <span className="metric-pill bg-emerald-400/10 text-emerald-300">
+                      avg {formatSilver(avgSph)}/h
+                    </span>
+                  )}
                 </div>
-                <div className="mt-2 flex gap-1.5">
-                  <button type="button" onClick={toggleTimer} className={cn("rounded-md px-2.5 py-1 text-xs ring-1", timerOn ? "bg-amber-500/20 text-amber-200 ring-amber-400/40" : "bg-emerald-500/20 text-emerald-200 ring-emerald-400/40")}>
-                    {timerOn ? "Pause" : "Start"}
-                  </button>
-                  <button type="button" onClick={resetTimer} className="rounded-md bg-white/5 px-2.5 py-1 text-xs text-muted-foreground hover:bg-white/10">Reset</button>
-                </div>
-                <div className="mt-3 flex flex-wrap items-end gap-2 border-t border-white/10 pt-3">
-                  <div className="min-w-[120px] flex-1">
-                    <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Character</Label>
-                    <Input value={character} onChange={(e) => setCharacter(e.target.value)} placeholder="Name" className="h-8 text-sm" />
-                  </div>
-                  <div className="w-24">
-                    <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Minutes</Label>
-                    <Input type="number" value={minutes} onChange={(e) => setMinutes(e.target.value)} disabled={timerOn} className="h-8 text-sm" />
-                  </div>
-                  <button type="button" disabled={busy || sessionTotals.mins <= 0} onClick={() => void onSaveSession()} className="h-8 rounded-md bg-emerald-500/20 px-3 text-xs text-emerald-100 ring-1 ring-emerald-400/40 hover:bg-emerald-500/30 disabled:opacity-50">
-                    Save session
-                  </button>
-                </div>
-              </section>
+              </div>
 
-              <section className="glass p-3">
-                <div className="mb-2 flex items-center justify-between gap-2">
-                  <h2 className="text-xs font-semibold uppercase tracking-wider text-cyan-300/90">Loot — {selected.name}</h2>
-                  {!addingLoot && (
-                    <button type="button" onClick={() => setAddingLoot(true)} className="flex items-center gap-1 rounded-md bg-cyan-500/15 px-2 py-1 text-[10px] text-cyan-200 ring-1 ring-cyan-400/30">
-                      <Plus className="size-3" /> Item
+              <div className="glass p-3 sm:p-4">
+                <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
+                  <div className="flex items-baseline gap-3">
+                    <div>
+                      <p className="text-[0.6rem] font-bold uppercase tracking-wider text-muted-foreground">Timer</p>
+                      <p className="font-mono text-2xl font-bold tabular-nums text-foreground sm:text-3xl">
+                        {hh}:{mm}:{ss}
+                      </p>
+                    </div>
+                    <div className="hidden h-8 w-px bg-white/10 sm:block" />
+                    <div className="hidden sm:block">
+                      <p className="text-[0.6rem] font-bold uppercase tracking-wider text-muted-foreground">Total</p>
+                      <p className="font-mono text-2xl font-bold tabular-nums text-cyan-300 sm:text-3xl">
+                        {formatSilver(sessionTotals.total)}
+                      </p>
+                    </div>
+                    <div className="hidden sm:block">
+                      <p className="text-[0.6rem] font-bold uppercase tracking-wider text-muted-foreground">/h</p>
+                      <p className="font-mono text-2xl font-bold tabular-nums text-emerald-300 sm:text-3xl">
+                        {formatSilver(sessionTotals.sph)}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex gap-1.5">
+                    <button type="button" onClick={toggleTimer} className={cn("btn-primary h-9 px-3 text-xs", timerOn && "opacity-90")}>
+                      {timerOn ? <><Square className="size-3" /> Stop</> : <><Timer className="size-3" /> Start</>}
                     </button>
-                  )}
-                </div>
-
-                {addingLoot && (
-                  <div className="mb-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-6">
-                    <Input placeholder="Name" value={lootName} onChange={(e) => setLootName(e.target.value)} className="h-8 text-sm lg:col-span-2" />
-                    <select className="field-select h-8 text-xs" value={lootKind} onChange={(e) => setLootKind(e.target.value as "market" | "npc")}>
-                      <option value="market">Market</option>
-                      <option value="npc">NPC</option>
-                    </select>
-                    <Input placeholder="Unit price" type="number" value={lootPrice} onChange={(e) => setLootPrice(e.target.value)} className="h-8 text-sm" />
-                    <label className="flex h-8 cursor-pointer items-center gap-1.5 rounded-md border border-dashed border-white/15 px-2 text-xs text-muted-foreground hover:border-cyan-400/40">
-                      <Upload className="size-3.5" />
-                      {lootFile ? lootFile.name.slice(0, 10) : "Icon"}
-                      <input type="file" accept="image/*" className="hidden" onChange={(e) => setLootFile(e.target.files?.[0] ?? null)} />
-                    </label>
-                    <div className="flex gap-1">
-                      <button type="button" disabled={busy || !lootName.trim()} onClick={() => void onCreateLoot()} className="flex flex-1 items-center justify-center gap-1 rounded-md bg-cyan-500/20 text-xs text-cyan-100 ring-1 ring-cyan-400/40 disabled:opacity-50">
-                        <Plus className="size-3.5" /> Add
-                      </button>
-                      <button type="button" onClick={() => setAddingLoot(false)} className="rounded-md px-2 text-xs text-muted-foreground"><X className="size-3.5" /></button>
-                    </div>
+                    <button type="button" onClick={resetTimer} className="btn-ghost h-9 px-2.5 text-xs">Reset</button>
                   </div>
-                )}
-
-                <div className="overflow-x-auto">
-                  <table className="w-full min-w-[680px] text-left text-sm">
-                    <thead>
-                      <tr className="border-b border-white/10 text-[10px] uppercase tracking-wider text-muted-foreground">
-                        <th className="pb-1.5 pr-2 font-medium">Item</th>
-                        <th className="pb-1.5 pr-2 font-medium">Kind</th>
-                        <th className="pb-1.5 pr-2 font-medium">Price</th>
-                        <th className="pb-1.5 pr-2 font-medium">Qty</th>
-                        <th className="pb-1.5 pr-2 font-medium">Line</th>
-                        <th className="pb-1.5 pr-2 font-medium min-w-[5.5rem]">/h</th>
-                        <th className="pb-1.5 w-16 font-medium" />
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {loots.map((l) => {
-                        const q = parseFloat(qty[l.id] || "0") || 0;
-                        const line = q * Number(l.unit_price);
-                        const perH = sessionTotals.mins > 0 ? line / (sessionTotals.mins / 60) : 0;
-                        return (
-                          <tr key={l.id} className="border-b border-white/5">
-                            {editingLootId === l.id ? (
-                              <td className="py-1.5" colSpan={7}>
-                                <div className="flex flex-wrap items-center gap-1.5">
-                                  {l.icon_url && <img src={l.icon_url} alt="" className="size-6 rounded object-contain" />}
-                                  <Input value={editLootName} onChange={(e) => setEditLootName(e.target.value)} className="h-7 w-28 text-xs" />
-                                  <select className="field-select h-7 text-xs" value={editLootKind} onChange={(e) => setEditLootKind(e.target.value as "market" | "npc")}>
-                                    <option value="market">Market</option>
-                                    <option value="npc">NPC</option>
-                                  </select>
-                                  <Input type="number" value={editLootPrice} onChange={(e) => setEditLootPrice(e.target.value)} className="h-7 w-24 text-xs" />
-                                  <label className="flex h-7 cursor-pointer items-center gap-1 rounded border border-dashed border-white/15 px-1.5 text-[10px] text-muted-foreground">
-                                    <Upload className="size-3" />
-                                    <input type="file" accept="image/*" className="hidden" onChange={(e) => setEditLootFile(e.target.files?.[0] ?? null)} />
-                                  </label>
-                                  <button type="button" onClick={() => void saveLootEdit()} className="h-7 rounded bg-emerald-500/20 px-2 text-xs text-emerald-200 ring-1 ring-emerald-400/40">Save</button>
-                                  <button type="button" onClick={() => setEditingLootId(null)} className="h-7 rounded px-1.5 text-muted-foreground"><X className="size-3.5" /></button>
-                                </div>
-                              </td>
-                            ) : (
-                              <>
-                                <td className="py-1.5 pr-2">
-                                  <div className="flex items-center gap-2">
-                                    {l.icon_url ? (
-                                      <img src={l.icon_url} alt="" className="size-6 shrink-0 rounded object-contain" />
-                                    ) : (
-                                      <span className="flex size-6 shrink-0 items-center justify-center rounded bg-white/5 text-[10px] text-muted-foreground">?</span>
-                                    )}
-                                    <span className="truncate">{l.name}</span>
-                                  </div>
-                                </td>
-                                <td className="py-1.5 pr-2 text-xs text-muted-foreground">{l.kind}</td>
-                                <td className="py-1.5 pr-2 font-mono text-xs tabular-nums">{formatSilver(l.unit_price)}</td>
-                                <td className="py-1.5 pr-2">
-                                  <Input
-                                    type="number"
-                                    value={qty[l.id] ?? ""}
-                                    onChange={(e) => setQty((prev) => ({ ...prev, [l.id]: e.target.value }))}
-                                    placeholder="0"
-                                    className="h-7 w-20 text-xs"
-                                  />
-                                </td>
-                                <td className="py-1.5 pr-2 font-mono text-xs tabular-nums text-cyan-200/90">{formatSilver(line)}</td>
-                                <td className="py-1.5 pr-2 font-mono text-xs tabular-nums text-emerald-300/90 min-w-[5.5rem]">{formatSilver(perH)}</td>
-                                <td className="py-1.5">
-                                  <div className="flex gap-1">
-                                    <button type="button" className="text-muted-foreground hover:text-cyan-300" onClick={() => beginEditLoot(l)}><Pencil className="size-3.5" /></button>
-                                    <button type="button" className="text-muted-foreground hover:text-rose-400" onClick={() => void (async () => { await deleteLoot(l.id); setLoots(await listLoots(selectedId!)); })()}><Trash2 className="size-3.5" /></button>
-                                  </div>
-                                </td>
-                              </>
-                            )}
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                  {loots.length === 0 && (
-                    <p className="py-4 text-center text-sm text-muted-foreground">No loot yet — add items above.</p>
-                  )}
                 </div>
-              </section>
+                <div className="flex items-center gap-2 sm:hidden">
+                  <span className="text-[0.7rem] text-muted-foreground">Total</span>
+                  <span className="font-mono text-sm font-bold tabular-nums text-cyan-300">{formatSilver(sessionTotals.total)}</span>
+                  <span className="ml-auto text-[0.7rem] text-muted-foreground">/h</span>
+                  <span className="font-mono text-sm font-bold tabular-nums text-emerald-300">{formatSilver(sessionTotals.sph)}</span>
+                </div>
 
-              <section className="glass p-3">
-                <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-violet-300/90">Sessions @ {selected.name}</h2>
+                <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-[1fr_auto]">
+                  <div className="flex flex-col gap-1">
+                    <Label className="text-[0.65rem]">Character</Label>
+                    <Input value={character} onChange={(e) => setCharacter(e.target.value)} placeholder="Name" className="h-9 text-sm" />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <Label className="text-[0.65rem]">Minutes</Label>
+                    <Input type="number" min={1} value={minutes} onChange={(e) => setMinutes(e.target.value)} className="h-9 w-20 text-sm" />
+                  </div>
+                </div>
+
+                <div className="mt-3">
+                  <div className="mb-1.5 flex items-center justify-between">
+                    <p className="text-[0.65rem] font-bold uppercase tracking-wider text-muted-foreground">Loot</p>
+                    <button type="button" onClick={() => setAddingLoot((v) => !v)} className="btn-ghost h-7 px-2 text-[0.65rem]">
+                      <Plus className="size-3" /> Add
+                    </button>
+                  </div>
+                  {addingLoot && (
+                    <div className="mb-2 grid grid-cols-2 gap-1.5 rounded-lg bg-white/5 p-2 sm:grid-cols-4">
+                      <Input value={lootName} onChange={(e) => setLootName(e.target.value)} placeholder="Item" className="h-8 text-xs" />
+                      <select className="field-select h-8 text-xs" value={lootKind} onChange={(e) => setLootKind(e.target.value as "market" | "npc")}>
+                        <option value="market">Market</option>
+                        <option value="npc">NPC</option>
+                      </select>
+                      <Input type="number" value={lootPrice} onChange={(e) => setLootPrice(e.target.value)} placeholder="Price" className="h-8 text-xs" />
+                      <div className="flex gap-1">
+                        <label className="flex h-8 flex-1 cursor-pointer items-center justify-center gap-1 rounded-md border border-dashed border-white/15 text-[10px] text-muted-foreground">
+                          <Upload className="size-3" />
+                          <input type="file" accept="image/*" className="hidden" onChange={(e) => setLootFile(e.target.files?.[0] ?? null)} />
+                        </label>
+                        <button type="button" onClick={onCreateLoot} disabled={busy} className="btn-primary h-8 px-2 text-[0.65rem]">Add</button>
+                      </div>
+                    </div>
+                  )}
+                  <ul className="flex flex-col gap-1">
+                    {loots.map((l) => {
+                      const q = parseFloat(qty[l.id] || "0") || 0;
+                      const lineVal = q * Number(l.unit_price);
+                      const lineSph = sessionTotals.mins > 0 ? lineVal / (sessionTotals.mins / 60) : 0;
+                      const editing = editingLootId === l.id;
+                      return (
+                        <li key={l.id} className="rounded-lg bg-white/[0.03] px-2 py-1.5">
+                          {editing ? (
+                            <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+                              <Input value={editLootName} onChange={(e) => setEditLootName(e.target.value)} className="h-8 text-xs" />
+                              <select className="field-select h-8 text-xs" value={editLootKind} onChange={(e) => setEditLootKind(e.target.value as "market" | "npc")}>
+                                <option value="market">Market</option>
+                                <option value="npc">NPC</option>
+                              </select>
+                              <Input type="number" value={editLootPrice} onChange={(e) => setEditLootPrice(e.target.value)} className="h-8 text-xs" />
+                              <div className="flex gap-1">
+                                <button type="button" onClick={saveLootEdit} disabled={busy} className="btn-primary h-8 flex-1 text-[0.65rem]">Save</button>
+                                <button type="button" onClick={() => setEditingLootId(null)} className="btn-ghost h-8 px-2 text-[0.65rem]"><X className="size-3" /></button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              {l.icon_url ? (
+                                <img src={l.icon_url} alt="" className="size-7 shrink-0 rounded object-contain" />
+                              ) : (
+                                <span className="flex size-7 shrink-0 items-center justify-center rounded bg-white/5 text-[0.55rem] font-bold text-cyan-300">
+                                  {l.name[0]?.toUpperCase()}
+                                </span>
+                              )}
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate text-xs font-medium text-foreground">{l.name}</p>
+                                <p className="text-[0.65rem] text-muted-foreground">{formatSilver(Number(l.unit_price))} · {l.kind}</p>
+                              </div>
+                              <Input
+                                type="number"
+                                min={0}
+                                value={qty[l.id] || ""}
+                                onChange={(e) => setQty((prev) => ({ ...prev, [l.id]: e.target.value }))}
+                                placeholder="0"
+                                className="h-8 w-16 text-right text-xs"
+                              />
+                              <span className="w-16 text-right font-mono text-[0.7rem] tabular-nums text-emerald-300">
+                                {formatSilver(lineSph)}
+                              </span>
+                              <button type="button" aria-label={`Edit ${l.name}`} onClick={() => beginEditLoot(l)} className="flex size-7 shrink-0 items-center justify-center rounded text-muted-foreground hover:text-cyan-300">
+                                <Pencil className="size-3" strokeWidth={1.75} />
+                              </button>
+                            </div>
+                          )}
+                        </li>
+                      );
+                    })}
+                    {loots.length === 0 && (
+                      <li className="px-2 py-4 text-center text-xs text-muted-foreground">No loot yet. Add items above.</li>
+                    )}
+                  </ul>
+                </div>
+
+                <button type="button" onClick={onSaveSession} disabled={busy || sessionTotals.total <= 0} className="btn-primary mt-3 h-10 w-full text-sm">
+                  Save session
+                </button>
+              </div>
+
+              <div className="glass p-3 sm:p-4">
+                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-cyan-300/90">Sessions</h3>
                 {spotSessions.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No sessions yet.</p>
+                  <p className="py-6 text-center text-xs text-muted-foreground">No sessions for this spot yet.</p>
                 ) : (
-                  <ul className="max-h-[28vh] space-y-1.5 overflow-y-auto">
+                  <ul className="flex flex-col gap-1.5">
                     {spotSessions.map((s) => (
-                      <li key={s.id} className="flex items-center justify-between gap-2 rounded-md bg-white/[0.03] px-2 py-1.5 text-sm">
+                      <li key={s.id} className="rounded-lg bg-white/[0.03] px-2.5 py-2">
                         {editingId === s.id ? (
-                          <div className="flex flex-wrap items-center gap-1.5">
-                            <Input value={editChar} onChange={(e) => setEditChar(e.target.value)} className="h-7 w-28 text-xs" />
-                            <Input type="number" value={editMinutes} onChange={(e) => setEditMinutes(e.target.value)} className="h-7 w-20 text-xs" />
-                            <Input type="number" value={editTotal} onChange={(e) => setEditTotal(e.target.value)} className="h-7 w-28 text-xs" />
-                            <button type="button" onClick={() => void saveSessionEdit()} className="h-7 rounded bg-emerald-500/20 px-2 text-xs text-emerald-200">Save</button>
-                            <button type="button" onClick={() => setEditingId(null)} className="h-7 px-1 text-muted-foreground"><X className="size-3.5" /></button>
+                          <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+                            <Input value={editChar} onChange={(e) => setEditChar(e.target.value)} placeholder="Char" className="h-8 text-xs" />
+                            <Input type="number" value={editMinutes} onChange={(e) => setEditMinutes(e.target.value)} className="h-8 text-xs" />
+                            <Input type="number" value={editTotal} onChange={(e) => setEditTotal(e.target.value)} className="h-8 text-xs" />
+                            <div className="flex gap-1">
+                              <button type="button" onClick={saveSessionEdit} disabled={busy} className="btn-primary h-8 flex-1 text-[0.65rem]">Save</button>
+                              <button type="button" onClick={() => setEditingId(null)} className="btn-ghost h-8 px-2 text-[0.65rem]"><X className="size-3" /></button>
+                            </div>
                           </div>
                         ) : (
-                          <>
+                          <div className="flex items-center gap-2">
                             <div className="min-w-0 flex-1">
-                              <div className="flex flex-wrap items-center gap-x-2">
-                                <span className="font-medium">{s.character_name}</span>
-                                <span className="text-xs text-muted-foreground">{s.minutes} min</span>
-                              </div>
-                              <div className="text-xs text-muted-foreground">
-                                {formatSilver(s.total_value)} · {formatSilver(s.silver_per_hour)}/h
-                              </div>
+                              <p className="truncate text-xs font-medium text-foreground">{s.character_name}</p>
+                              <p className="text-[0.65rem] text-muted-foreground">{s.minutes} min</p>
                             </div>
-                            <div className="flex gap-1">
-                              <button type="button" className="text-muted-foreground hover:text-cyan-300" onClick={() => beginEditSession(s)}><Pencil className="size-3.5" /></button>
-                              <button type="button" className="text-muted-foreground hover:text-rose-400" onClick={() => void (async () => { await deleteSession(s.id); await refresh(); })()}><Trash2 className="size-3.5" /></button>
-                            </div>
-                          </>
+                            <span className="font-mono text-xs font-bold tabular-nums text-cyan-300">{formatSilver(Number(s.total_value))}</span>
+                            <span className="font-mono text-xs font-bold tabular-nums text-emerald-300">{formatSilver(Number(s.silver_per_hour))}/h</span>
+                            <button type="button" aria-label="Edit session" onClick={() => beginEditSession(s)} className="flex size-7 shrink-0 items-center justify-center rounded text-muted-foreground hover:text-cyan-300">
+                              <Pencil className="size-3" strokeWidth={1.75} />
+                            </button>
+                            <button type="button" aria-label="Delete session" onClick={async () => { if (confirm("Delete this session?")) { await deleteSession(s.id); await refresh(); } }} className="flex size-7 shrink-0 items-center justify-center rounded text-muted-foreground hover:text-rose-400">
+                              <Trash2 className="size-3" strokeWidth={1.75} />
+                            </button>
+                          </div>
                         )}
                       </li>
                     ))}
                   </ul>
                 )}
-              </section>
-            </>
-          ) : (
-            <div className="glass p-8 text-center text-sm text-muted-foreground">
-              Select or create a grind spot to start tracking.
+              </div>
             </div>
           )}
-        </div>
+        </section>
       </div>
     </div>
   );

@@ -33,12 +33,6 @@ function formatTime(totalSeconds: number): string {
   return `${minutes}m ${seconds}s`;
 }
 
-/**
- * Standard alchemy uses mastery proc.
- * Simple Alchemy (draughts / harmony, baseExp 0) has fixed output:
- *  - Party Harmony variants → 1 per craft
- *  - Draughts & base Harmony → 10 per craft
- */
 function estimatedYield(recipe: Recipe, crafts: number, proc: number): number {
   if (recipe.baseExp === 0) {
     const per = /\[Party\]/.test(recipe.name) ? 1 : 10;
@@ -64,16 +58,16 @@ function RecipeCard({
   const totalSeconds = crafts * craftTime;
 
   return (
-    <article className="grid gap-5 rounded-xl border border-stone bg-paper p-4 shadow-[var(--shadow-border)] transition-[border-color,box-shadow] duration-150 hover:border-teal hover:shadow-[var(--shadow-border-hover)] sm:p-5 lg:grid-cols-[minmax(0,280px)_1fr_minmax(0,200px)] lg:items-center">
-      <div className="flex items-center gap-4">
-        <div className="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-[10px] border-2 border-teal bg-ivory shadow-[0_0_10px_rgba(32,89,92,0.18)]">
-          <ItemGlyph name={recipe.name} size={44} />
+    <article className="grid gap-3 rounded-xl border border-white/10 bg-[rgba(12,18,32,0.55)] p-3 shadow-[var(--shadow-border)] transition-[border-color,box-shadow] duration-150 hover:border-cyan-400/40 hover:shadow-[var(--shadow-border-hover)] sm:gap-5 sm:p-4 lg:grid-cols-[minmax(0,280px)_1fr_minmax(0,200px)] lg:items-center">
+      <div className="flex items-center gap-3">
+        <div className="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-[10px] border border-cyan-400/30 bg-[rgba(8,14,26,0.6)] sm:size-16">
+          <ItemGlyph name={recipe.name} size={36} />
         </div>
         <div className="min-w-0">
-          <h3 className="text-[1.05rem] font-bold leading-snug text-ink">{recipe.name}</h3>
-          <div className="mt-2 flex items-center gap-2">
-            <label htmlFor={`crafts-${recipe.id}`} className="text-xs font-semibold text-muted">
-              Batch crafts
+          <h3 className="text-[0.95rem] font-bold leading-snug text-foreground sm:text-[1.05rem]">{recipe.name}</h3>
+          <div className="mt-1.5 flex items-center gap-2">
+            <label htmlFor={`crafts-${recipe.id}`} className="text-[0.7rem] font-semibold text-muted-foreground">
+              Batch
             </label>
             <Input
               id={`crafts-${recipe.id}`}
@@ -81,25 +75,25 @@ function RecipeCard({
               min={1}
               value={crafts}
               onChange={(e) => onCrafts(Math.max(1, parseInt(e.target.value, 10) || 1))}
-              className="h-9 w-[5.5rem] bg-ivory text-right font-bold tabular-nums"
+              className="h-8 w-[4.5rem] bg-[rgba(8,14,26,0.7)] text-right text-sm font-bold tabular-nums"
             />
           </div>
         </div>
       </div>
 
       <div className="flex flex-col gap-2">
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
           {recipe.ingredients.map((ing) => (
             <div
               key={ing.name}
-              className="flex items-center gap-2 rounded-lg border border-stone bg-ivory px-2.5 py-1.5"
+              className="flex items-center gap-2 rounded-lg border border-white/10 bg-[rgba(8,14,26,0.5)] px-2 py-1"
             >
-              <ItemGlyph name={ing.name} size={28} />
+              <ItemGlyph name={ing.name} size={24} />
               <div className="min-w-0">
-                <p className="truncate text-[0.82rem] text-ink" title={ing.name}>
+                <p className="truncate text-[0.78rem] text-foreground" title={ing.name}>
                   {ing.name}
                 </p>
-                <p className="text-[0.82rem] font-bold tabular-nums text-teal">
+                <p className="text-[0.78rem] font-bold tabular-nums text-cyan-300">
                   {formatNumber(ing.qty * crafts)}
                 </p>
               </div>
@@ -107,21 +101,21 @@ function RecipeCard({
           ))}
         </div>
         {recipe.spot ? (
-          <p className="rounded-r-md border-l-[3px] border-teal bg-teal/10 px-3 py-2 text-[0.8rem] text-ink">
-            <strong className="mr-1.5 text-teal">Note:</strong>
+          <p className="rounded-r-md border-l-[3px] border-cyan-400/50 bg-cyan-400/10 px-3 py-1.5 text-[0.78rem] text-foreground">
+            <strong className="mr-1.5 text-cyan-300">Note:</strong>
             {recipe.spot}
           </p>
         ) : null}
       </div>
 
-      <dl className="flex flex-col gap-1.5 rounded-[10px] border border-stone bg-ivory p-3 sm:p-4">
-        <div className="flex justify-between gap-3 text-[0.85rem]">
-          <dt className="text-muted">Estimated yields</dt>
-          <dd className="font-bold tabular-nums text-teal">{formatNumber(totalYield)}</dd>
+      <dl className="flex flex-col gap-1.5 rounded-[10px] border border-white/10 bg-[rgba(8,14,26,0.5)] p-3">
+        <div className="flex justify-between gap-3 text-[0.82rem]">
+          <dt className="text-muted-foreground">Yields</dt>
+          <dd className="font-bold tabular-nums text-cyan-300">{formatNumber(totalYield)}</dd>
         </div>
-        <div className="flex justify-between gap-3 text-[0.85rem]">
-          <dt className="text-muted">Crafting time</dt>
-          <dd className="font-bold tabular-nums text-teal">{formatTime(totalSeconds)}</dd>
+        <div className="flex justify-between gap-3 text-[0.82rem]">
+          <dt className="text-muted-foreground">Time</dt>
+          <dd className="font-bold tabular-nums text-cyan-300">{formatTime(totalSeconds)}</dd>
         </div>
       </dl>
     </article>
@@ -145,9 +139,9 @@ export function AlchemyPlanner() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="grid gap-4 rounded-xl border border-stone bg-paper p-4 shadow-[var(--shadow-border)] sm:grid-cols-2 sm:px-6 sm:py-5">
+      <div className="grid gap-3 rounded-xl border border-white/10 bg-[rgba(12,18,32,0.55)] p-3 shadow-[var(--shadow-border)] sm:grid-cols-2 sm:gap-4 sm:p-4">
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="craft-time">Crafting Speed (Seconds)</Label>
+          <Label htmlFor="craft-time" className="text-[0.7rem]">Crafting Speed (Seconds)</Label>
           <Input
             id="craft-time"
             type="number"
@@ -158,15 +152,16 @@ export function AlchemyPlanner() {
             onChange={(e) =>
               patch({ craftTime: Math.max(0.5, parseFloat(e.target.value) || 1) })
             }
+            className="h-9"
           />
         </div>
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="mastery-proc">Average Proc Multiplier</Label>
+          <Label htmlFor="mastery-proc" className="text-[0.7rem]">Average Proc Multiplier</Label>
           <select
             id="mastery-proc"
             value={String(value.proc)}
             onChange={(e) => patch({ proc: parseFloat(e.target.value) })}
-            className="field-select"
+            className="field-select h-9"
           >
             <option value="2.5">2.5× (Master standard)</option>
             <option value="2.8">2.8× (High Master)</option>
@@ -189,14 +184,14 @@ export function AlchemyPlanner() {
                 setQuery("");
               }}
               className={cn(
-                "flex min-h-12 min-w-[7.5rem] flex-1 items-center justify-center gap-2 rounded-[10px] border px-3 py-3 font-bold transition-[background-color,color,border-color,box-shadow] duration-150",
+                "flex min-h-11 min-w-[6.5rem] flex-1 items-center justify-center gap-1.5 rounded-[10px] border px-2.5 py-2.5 text-sm font-bold transition-[background-color,color,border-color,box-shadow] duration-150",
                 active
-                  ? "border-teal bg-teal text-ivory shadow-[0_4px_14px_rgba(32,89,92,0.30)]"
-                  : "border-stone bg-paper text-muted hover:border-teal hover:text-ink",
+                  ? "border-cyan-400 bg-cyan-400/20 text-cyan-200 shadow-[0_0_16px_rgba(34,211,238,0.25)]"
+                  : "border-white/10 bg-[rgba(12,18,32,0.4)] text-muted-foreground hover:border-cyan-400/40 hover:text-foreground",
               )}
             >
               <span>{cat.label}</span>
-              <small className={cn("hidden font-medium italic sm:inline", active ? "text-ivory/75" : "text-muted")}>
+              <small className={cn("hidden font-medium italic sm:inline", active ? "text-cyan-200/70" : "text-muted-foreground")}>
                 ({cat.hint})
               </small>
             </button>
@@ -205,21 +200,21 @@ export function AlchemyPlanner() {
       </div>
 
       <div className="relative">
-        <Search className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted" />
+        <Search className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Filter recipes on this tab by name…"
-          className="bg-paper pl-10"
+          className="bg-[rgba(12,18,32,0.55)] pl-10"
           aria-label="Filter recipes"
         />
       </div>
 
-      <div className="flex flex-col gap-4" role="tabpanel">
+      <div className="flex flex-col gap-3" role="tabpanel">
         {filtered.length === 0 ? (
-          <p className="rounded-xl border border-stone bg-paper px-4 py-10 text-center text-sm text-muted">
-            No recipes match “{query}”.
+          <p className="rounded-xl border border-white/10 bg-[rgba(12,18,32,0.4)] px-4 py-10 text-center text-sm text-muted-foreground">
+            No recipes match "{query}".
           </p>
         ) : (
           filtered.map((recipe) => (

@@ -76,13 +76,13 @@ function ToggleSwitch({
       onClick={() => onChange(!checked)}
       className={cn(
         "relative h-7 w-12 shrink-0 rounded-full border transition-[background-color,border-color] duration-150",
-        checked ? "border-emerald-400 bg-emerald-400/25" : "border-stone bg-ivory",
+        checked ? "border-emerald-400 bg-emerald-400/25" : "border-white/15 bg-[rgba(8,14,26,0.6)]",
       )}
     >
       <span
         className={cn(
           "absolute top-0.5 left-0.5 size-5 rounded-full transition-transform duration-150",
-          checked ? "translate-x-5 bg-emerald-400" : "bg-muted",
+          checked ? "translate-x-5 bg-emerald-400" : "bg-slate-500",
         )}
       />
     </button>
@@ -104,7 +104,7 @@ function Stepper({
         type="button"
         aria-label={`Decrease ${node.name}`}
         onClick={() => onOwned(owned - 1)}
-        className="flex size-9 items-center justify-center rounded-md border border-stone bg-ivory text-ink transition-[border-color,color] duration-150 hover:border-emerald-400 hover:text-emerald-300"
+        className="flex size-9 items-center justify-center rounded-md border border-white/15 bg-[rgba(8,14,26,0.6)] text-foreground transition-[border-color,color] duration-150 hover:border-emerald-400 hover:text-emerald-300"
       >
         <Minus className="size-3.5" strokeWidth={2.25} />
       </button>
@@ -115,14 +115,14 @@ function Stepper({
         value={owned}
         aria-label={`${node.name} owned`}
         onChange={(e) => onOwned(parseInt(e.target.value, 10) || 0)}
-        className="h-9 w-16 rounded-md border border-stone bg-ivory text-center font-serif text-sm font-semibold tabular-nums text-ink outline-none focus-visible:border-emerald-400 focus-visible:ring-2 focus-visible:ring-emerald-400/20"
+        className="h-9 w-16 rounded-md border border-white/15 bg-[rgba(8,14,26,0.7)] text-center font-serif text-sm font-semibold tabular-nums text-foreground outline-none focus-visible:border-emerald-400 focus-visible:ring-2 focus-visible:ring-emerald-400/20"
       />
-      <span className="whitespace-nowrap text-xs text-muted">/ {formatNumber(node.req)}</span>
+      <span className="whitespace-nowrap text-xs text-muted-foreground">/ {formatNumber(node.req)}</span>
       <button
         type="button"
         aria-label={`Increase ${node.name}`}
         onClick={() => onOwned(owned + 1)}
-        className="flex size-9 items-center justify-center rounded-md border border-stone bg-ivory text-ink transition-[border-color,color] duration-150 hover:border-emerald-400 hover:text-emerald-300"
+        className="flex size-9 items-center justify-center rounded-md border border-white/15 bg-[rgba(8,14,26,0.6)] text-foreground transition-[border-color,color] duration-150 hover:border-emerald-400 hover:text-emerald-300"
       >
         <Plus className="size-3.5" strokeWidth={2.25} />
       </button>
@@ -140,7 +140,7 @@ function StatusBadge({ owned, req }: { owned: number; req: number }) {
         "min-w-[4.25rem] rounded-full border px-2.5 py-1 text-center text-[0.7rem] font-bold",
         done && "border-emerald-400 bg-emerald-400/15 text-emerald-300",
         inProgress && "border-emerald-400/40 bg-emerald-400/10 text-emerald-300",
-        !done && !inProgress && "border-stone bg-ivory text-muted",
+        !done && !inProgress && "border-white/15 bg-[rgba(8,14,26,0.5)] text-muted-foreground",
       )}
     >
       {done ? "Done" : req === 1 ? "Pending" : `Need ${formatNumber(needed)}`}
@@ -168,11 +168,11 @@ function NodeRow({
     <div
       className={cn(
         hasChildren
-          ? "my-2 rounded-[10px] border bg-ivory p-3"
-          : "border-b border-stone py-2.5 last:border-b-0",
+          ? "my-2 rounded-[10px] border bg-[rgba(12,18,32,0.5)] p-3"
+          : "border-b border-white/10 py-2.5 last:border-b-0",
         hasChildren && done && "border-emerald-400/60 bg-emerald-400/10 shadow-[0_0_18px_rgba(52,211,153,0.18)]",
         hasChildren && inProgress && "border-emerald-400/40",
-        hasChildren && !done && !inProgress && "border-stone",
+        hasChildren && !done && !inProgress && "border-white/10",
         !hasChildren && done && "bg-emerald-400/15",
         !hasChildren && inProgress && "bg-cyan-400/5",
       )}
@@ -195,12 +195,12 @@ function NodeRow({
               />
             </button>
           ) : (
-            <span className="w-4 shrink-0 text-center text-muted" aria-hidden>
+            <span className="w-4 shrink-0 text-center text-muted-foreground" aria-hidden>
               ·
             </span>
           )}
           <ItemGlyph name={node.name} size={30} />
-          <span className={cn("text-sm text-ink", hasChildren ? "font-semibold" : "font-medium")}>
+          <span className={cn("text-sm", hasChildren ? "font-semibold text-foreground" : "font-medium text-foreground")}>
             {node.name}
           </span>
           <button
@@ -208,7 +208,7 @@ function NodeRow({
             aria-label={`How to obtain ${node.name}`}
             aria-expanded={showHow}
             onClick={() => setShowHow((v) => !v)}
-            className="flex size-7 shrink-0 items-center justify-center rounded-full border border-stone text-muted transition-[border-color,color] duration-150 hover:border-emerald-400 hover:text-emerald-300"
+            className="flex size-7 shrink-0 items-center justify-center rounded-full border border-white/15 text-muted-foreground transition-[border-color,color] duration-150 hover:border-emerald-400 hover:text-emerald-300"
           >
             <Info className="size-3.5" strokeWidth={2} />
           </button>
@@ -227,13 +227,13 @@ function NodeRow({
         </div>
       </div>
       {showHow ? (
-        <p className="mt-2 rounded-md bg-paper px-2.5 py-2 text-[0.82rem] text-muted">
+        <p className="mt-2 rounded-md bg-[rgba(8,14,26,0.6)] px-2.5 py-2 text-[0.82rem] text-muted-foreground">
           <strong className="font-semibold text-emerald-300">How to get it: </strong>
           {node.how}
         </p>
       ) : null}
       {hasChildren && open ? (
-        <div className="mt-3 ml-2 border-l-2 border-stone pl-4">
+        <div className="mt-3 ml-2 border-l-2 border-white/10 pl-4">
           {node.children!.map((child) => (
             <NodeRow key={child.id} node={child} counts={counts} onOwned={onOwned} />
           ))}
@@ -305,9 +305,9 @@ export function ShipTracker() {
 
   return (
     <div className="mx-auto max-w-4xl">
-      <div className="mb-5 grid gap-4 rounded-xl border border-stone bg-paper p-4 shadow-[var(--shadow-border)] sm:grid-cols-2 sm:p-5">
+      <div className="mb-5 grid gap-4 rounded-xl border border-white/10 bg-[rgba(12,18,32,0.55)] p-4 shadow-[var(--shadow-border)] sm:grid-cols-2 sm:p-5">
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="current-ship" className="text-xs font-bold uppercase tracking-wider text-emerald-300">
+          <label htmlFor="current-ship" className="text-xs font-bold uppercase tracking-wider text-cyan-300">
             Current base ship
           </label>
           <select
@@ -327,7 +327,7 @@ export function ShipTracker() {
           </select>
         </div>
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="target-ship" className="text-xs font-bold uppercase tracking-wider text-emerald-300">
+          <label htmlFor="target-ship" className="text-xs font-bold uppercase tracking-wider text-cyan-300">
             Target upgrade
           </label>
           <select
@@ -350,17 +350,17 @@ export function ShipTracker() {
       </div>
 
       {!activeTree ? (
-        <div className="rounded-xl border border-stone bg-paper px-6 py-16 text-center shadow-[var(--shadow-border)]">
-          <Ship className="mx-auto mb-3 size-10 text-emerald-300" strokeWidth={1.5} aria-hidden />
-          <p className="text-sm text-muted">
+        <div className="rounded-xl border border-white/10 bg-[rgba(12,18,32,0.4)] px-6 py-16 text-center shadow-[var(--shadow-border)]">
+          <Ship className="mx-auto mb-3 size-10 text-cyan-300" strokeWidth={1.5} aria-hidden />
+          <p className="text-sm text-muted-foreground">
             Select a base ship and target upgrade above to begin tracking.
           </p>
         </div>
       ) : (
         <>
-          <div className="mb-5 rounded-xl border border-stone bg-paper p-4 shadow-[var(--shadow-border)] sm:p-5">
+          <div className="mb-5 rounded-xl border border-white/10 bg-[rgba(12,18,32,0.55)] p-4 shadow-[var(--shadow-border)] sm:p-5">
             <div className="mb-2.5 flex items-baseline justify-between gap-3">
-              <span className="text-sm font-medium text-muted">Overall upgrade completion</span>
+              <span className="text-sm font-medium text-muted-foreground">Overall upgrade completion</span>
               <span className="font-semibold tabular-nums text-emerald-300">
                 {progress.pct}% ({formatNumber(progress.owned)} / {formatNumber(progress.req)})
               </span>
@@ -369,33 +369,33 @@ export function ShipTracker() {
           </div>
 
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <h3 className="text-lg font-semibold text-ink">Crafting tree for {activeTree.name}</h3>
+            <h3 className="text-lg font-semibold text-foreground">Crafting tree for {activeTree.name}</h3>
             <button
               type="button"
               onClick={() => setConfirmReset(true)}
-              className="inline-flex min-h-11 items-center rounded-md border border-danger/40 px-3.5 text-sm font-semibold text-danger transition-[background-color,color] duration-150 hover:bg-danger hover:text-ivory"
+              className="inline-flex min-h-11 items-center rounded-md border border-rose-400/40 px-3.5 text-sm font-semibold text-rose-400 transition-[background-color,color] duration-150 hover:bg-rose-500 hover:text-white"
             >
               Reset this ship
             </button>
           </div>
 
           {confirmReset ? (
-            <div className="mb-5 rounded-xl border border-danger/30 bg-paper p-4 shadow-[var(--shadow-border)]">
-              <p className="text-sm text-ink">
+            <div className="mb-5 rounded-xl border border-rose-400/30 bg-[rgba(12,18,32,0.5)] p-4 shadow-[var(--shadow-border)]">
+              <p className="text-sm text-foreground">
                 Reset owned stock only for {activeTree.name}?
               </p>
               <div className="mt-3 flex gap-2">
                 <button
                   type="button"
                   onClick={reset}
-                  className="inline-flex h-11 items-center rounded-md bg-danger px-4 text-sm font-semibold text-ivory"
+                  className="inline-flex h-11 items-center rounded-md bg-rose-500 px-4 text-sm font-semibold text-white"
                 >
                   Reset
                 </button>
                 <button
                   type="button"
                   onClick={() => setConfirmReset(false)}
-                  className="inline-flex h-11 items-center rounded-md border border-stone bg-paper px-4 text-sm font-semibold text-ink"
+                  className="inline-flex h-11 items-center rounded-md border border-white/15 bg-[rgba(8,14,26,0.6)] px-4 text-sm font-semibold text-foreground"
                 >
                   Cancel
                 </button>
@@ -405,37 +405,37 @@ export function ShipTracker() {
 
           <div
             className={cn(
-              "mb-4 rounded-xl border bg-paper p-4 shadow-[var(--shadow-border)] sm:p-5",
-              finalDone ? "border-emerald-400 bg-emerald-400/10 shadow-[0_0_18px_rgba(52,211,153,0.18)]" : "border-stone",
+              "mb-4 rounded-xl border bg-[rgba(12,18,32,0.55)] p-4 shadow-[var(--shadow-border)] sm:p-5",
+              finalDone ? "border-emerald-400 bg-emerald-400/10 shadow-[0_0_18px_rgba(52,211,153,0.18)]" : "border-white/10",
             )}
           >
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex min-w-0 items-center gap-3">
                 <ItemGlyph name={activeTree.name} size={40} />
                 <div>
-                  <p className="text-[0.72rem] font-semibold uppercase tracking-wider text-emerald-300">
+                  <p className="text-[0.72rem] font-semibold uppercase tracking-wider text-cyan-300">
                     Final step
                   </p>
-                  <p className="font-semibold text-ink">{activeTree.name}</p>
+                  <p className="font-semibold text-foreground">{activeTree.name}</p>
                 </div>
               </div>
               <StatusBadge owned={finalOwned} req={activeTree.req} />
             </div>
-            <p className="mt-3 text-sm text-muted">{activeTree.how}</p>
+            <p className="mt-3 text-sm text-muted-foreground">{activeTree.how}</p>
             <div className="mt-4 flex min-h-11 w-fit items-center gap-3">
               <ToggleSwitch
                 checked={finalDone}
                 onChange={(v) => setOwned(activeTree.id, v ? activeTree.req : 0)}
                 label="I've turned this in"
               />
-              <span className="text-sm font-medium text-ink">I've turned this in</span>
+              <span className="text-sm font-medium text-foreground">I've turned this in</span>
             </div>
           </div>
 
-          <div className="rounded-xl border border-stone bg-paper px-4 py-2 shadow-[var(--shadow-border)] sm:px-5">
+          <div className="rounded-xl border border-white/10 bg-[rgba(12,18,32,0.55)] px-4 py-2 shadow-[var(--shadow-border)] sm:px-5">
             {components.length ? (
               <>
-                <p className="pt-4 pb-1 text-sm font-semibold text-emerald-300">Components to craft</p>
+                <p className="pt-4 pb-1 text-sm font-semibold text-cyan-300">Components to craft</p>
                 {components.map((c) => (
                   <NodeRow key={c.id} node={c} counts={counts} onOwned={setOwned} />
                 ))}
@@ -443,7 +443,7 @@ export function ShipTracker() {
             ) : null}
             {materials.length ? (
               <>
-                <p className="border-t border-stone pt-4 pb-1 text-sm font-semibold text-emerald-300 first:border-t-0">
+                <p className="border-t border-white/10 pt-4 pb-1 text-sm font-semibold text-cyan-300 first:border-t-0">
                   Materials to gather
                 </p>
                 {materials.map((c) => (
@@ -453,7 +453,7 @@ export function ShipTracker() {
             ) : null}
           </div>
 
-          <p className="mt-6 text-center text-[0.78rem] text-muted">
+          <p className="mt-6 text-center text-[0.78rem] text-muted-foreground">
             Progress saves automatically in this browser.
           </p>
         </>
