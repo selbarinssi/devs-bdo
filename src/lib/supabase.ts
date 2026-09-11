@@ -27,6 +27,8 @@ export type SpotRow = {
   monsters: string;
   territory: string;
   icon_url: string | null;
+  /** pve | lifeskill — optional until SQL migration applied */
+  mode?: string | null;
   created_at: string;
 };
 

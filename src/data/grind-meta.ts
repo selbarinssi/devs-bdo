@@ -1,4 +1,3 @@
-/** BDO land territories / major regions (player-facing grind geography). */
 export const TERRITORIES = [
   "Balenos",
   "Serendia",
@@ -16,9 +15,6 @@ export const TERRITORIES = [
   "Other",
 ] as const;
 
-/**
- * Broad monster categories used for grind spots.
- */
 export const MONSTER_TYPES = [
   "Human",
   "Demihuman",
@@ -34,7 +30,6 @@ export const MONSTER_TYPES = [
   "Other",
 ] as const;
 
-/** Future lifeskill mode (when Monsters vs Lifeskills is enabled). */
 export const LIFESKILL_TYPES = [
   "Gathering",
   "Mining",
@@ -52,3 +47,5 @@ export const LIFESKILL_TYPES = [
   "Sailing",
   "Barter",
 ] as const;
+
+export type SpotMode = "pve" | "lifeskill";

@@ -5,9 +5,9 @@ export function Input({ className, ...props }: React.ComponentProps<"input">) {
   return (
     <input
       className={cn(
-        "h-11 w-full rounded-md border border-border bg-secondary px-3.5 py-2 font-serif text-sm text-foreground outline-none transition-[border-color,box-shadow] duration-150",
-        "placeholder:text-muted-foreground",
-        "focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/25",
+        "h-10 w-full rounded-xl border border-white/10 bg-black/25 px-3 py-2 font-serif text-sm text-foreground outline-none backdrop-blur-md transition-[border-color,box-shadow]",
+        "placeholder:text-muted-foreground/70",
+        "focus-visible:border-cyan-400/50 focus-visible:ring-2 focus-visible:ring-cyan-400/20",
         "disabled:opacity-50",
         className,
       )}
