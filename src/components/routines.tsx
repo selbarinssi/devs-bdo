@@ -15,7 +15,6 @@ export type RoutineTask = {
   id: string;
   title: string;
   type: RoutineType;
-  /** 0=Sun … 6=Sat; only used for weekly */
   resetDay?: number;
   priority: Priority;
   done: boolean;
@@ -135,7 +134,6 @@ export function Routines() {
   const sorted = useMemo(
     () =>
       [...tasks].sort((a, b) => {
-        // Dailies before weeklies, then incomplete first, then priority
         if (a.type !== b.type) return a.type === "daily" ? -1 : 1;
         if (a.done !== b.done) return a.done ? 1 : -1;
         return PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority];
@@ -271,11 +269,13 @@ export function Routines() {
                 aria-label={task.done ? "Mark incomplete" : "Mark complete"}
                 onClick={() => toggle(task.id)}
                 className={cn(
-                  "flex size-7 shrink-0 items-center justify-center rounded-[6px] border-2 transition-[background-color,border-color]",
-                  task.done ? "border-teal bg-teal text-ivory" : "border-muted bg-ivory",
+                  "grid size-7 shrink-0 place-items-center rounded-[6px] border-2 transition-[background-color,border-color]",
+                  task.done
+                    ? "border-emerald-400 bg-emerald-400/20 text-emerald-300"
+                    : "border-muted bg-secondary",
                 )}
               >
-                {task.done ? <Check className="size-3.5" strokeWidth={3} /> : null}
+                {task.done ? <Check className="block size-3.5" strokeWidth={3} /> : null}
               </button>
               <div className="min-w-0 flex-1">
                 <p
@@ -286,10 +286,19 @@ export function Routines() {
                 >
                   {task.title}
                 </p>
-                <p className="mt-0.5 flex flex-wrap gap-x-2 gap-y-0.5 text-[0.72rem] text-muted">
+                <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[0.72rem] text-muted">
                   <span className="capitalize">{task.type}</span>
                   <span>·</span>
-                  <span className="capitalize">{task.priority} priority</span>
+                  <span
+                    className={cn(
+                      "rounded px-1.5 py-0.5 text-[0.65rem] font-bold uppercase tracking-wide",
+                      task.priority === "high" && "bg-rose-500/20 text-rose-300",
+                      task.priority === "medium" && "bg-amber-500/20 text-amber-300",
+                      task.priority === "low" && "bg-emerald-500/20 text-emerald-300",
+                    )}
+                  >
+                    {task.priority}
+                  </span>
                   {task.type === "weekly" ? (
                     <>
                       <span>·</span>
