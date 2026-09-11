@@ -19,6 +19,7 @@ export async function createSpot(input: {
   name: string;
   monsters: string;
   territory: string;
+  icon_url?: string | null;
 }): Promise<SpotRow> {
   const { data, error } = await getSupabase()
     .from("spots")
@@ -143,6 +144,27 @@ export async function createSession(input: {
 
 export async function deleteSession(id: string): Promise<void> {
   const { error } = await getSupabase().from("sessions").delete().eq("id", id);
+  if (error) throw error;
+}
+
+export async function updateSession(
+  id: string,
+  patch: {
+    character_name?: string;
+    minutes?: number;
+    total_value?: number;
+    silver_per_hour?: number;
+  },
+): Promise<void> {
+  const { error } = await getSupabase().from("sessions").update(patch).eq("id", id);
+  if (error) throw error;
+}
+
+export async function updateSpot(
+  id: string,
+  patch: Partial<Pick<SpotRow, "name" | "monsters" | "territory" | "icon_url">>,
+): Promise<void> {
+  const { error } = await getSupabase().from("spots").update(patch).eq("id", id);
   if (error) throw error;
 }
 
