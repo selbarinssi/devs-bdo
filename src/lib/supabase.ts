@@ -26,6 +26,7 @@ export type SpotRow = {
   name: string;
   monsters: string;
   territory: string;
+  icon_url: string | null;
   created_at: string;
 };
 
