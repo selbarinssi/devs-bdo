@@ -14,9 +14,9 @@ export const Route = createRootRoute({
       {
         name: "description",
         content:
-          "Black Desert Online companion — Harmony Draught pipeline, daily Sailies voyage log, Carrack upgrade tracker, and routines.",
+          "Black Desert Online companion — grind tracker, Harmony pipeline, Sailies, Carrack, routines.",
       },
-      { name: "theme-color", content: "#20595C" },
+      { name: "theme-color", content: "#3B82F6" },
     ],
     links: [
       { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
@@ -36,7 +36,7 @@ export const Route = createRootRoute({
       <head>
         <HeadContent />
       </head>
-      <body className="min-h-screen bg-ivory text-ink font-serif">
+      <body className="min-h-screen bg-background text-foreground font-serif">
         <PreviewHostBridge />
         <AuthProvider>
           <Outlet />
