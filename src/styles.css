@@ -295,14 +295,23 @@
   .hub-orbit {
     transform-origin: 20px 20px;
   }
+  .hub-orbit-xfast {
+    animation: hub-spin 2.8s linear infinite;
+  }
   .hub-orbit-fast {
-    animation: hub-spin 5.5s linear infinite;
+    animation: hub-spin 4.2s linear infinite;
+  }
+  .hub-orbit-fast-rev {
+    animation: hub-spin 3.6s linear infinite reverse;
   }
   .hub-orbit-mid {
-    animation: hub-spin 9s linear infinite reverse;
+    animation: hub-spin 6.5s linear infinite;
+  }
+  .hub-orbit-mid-rev {
+    animation: hub-spin 5.5s linear infinite reverse;
   }
   .hub-orbit-slow {
-    animation: hub-spin 14s linear infinite;
+    animation: hub-spin 9s linear infinite;
   }
   @keyframes hub-spin {
     from { transform: rotate(0deg); }
