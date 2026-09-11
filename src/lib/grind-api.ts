@@ -169,4 +169,31 @@ export async function updateSpot(
   if (error) throw error;
 }
 
+export async function updateLoot(
+  id: string,
+  patch: {
+    name?: string;
+    kind?: "market" | "npc";
+    unit_price?: number;
+    icon_url?: string | null;
+  },
+): Promise<void> {
+  const { error } = await getSupabase().from("loots").update(patch).eq("id", id);
+  if (error) throw error;
+}
+
+/** Reuse an existing icon when the same loot name already exists elsewhere. */
+export async function findIconByLootName(name: string): Promise<string | null> {
+  const trimmed = name.trim();
+  if (!trimmed) return null;
+  const { data, error } = await getSupabase()
+    .from("loots")
+    .select("icon_url")
+    .ilike("name", trimmed)
+    .not("icon_url", "is", null)
+    .limit(1);
+  if (error) return null;
+  return data?.[0]?.icon_url ?? null;
+}
+
 export type { SessionLootRow };
