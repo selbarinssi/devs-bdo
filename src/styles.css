@@ -2,7 +2,8 @@
 @import "tw-animate-css";
 
 @theme {
-  --color-ivory: #e8eef7;
+  /* Legacy names used by Alchemy/Carrack/Voyage — mapped for dark UI */
+  --color-ivory: #1c2433;
   --color-teal: #3b82f6;
   --color-teal-deep: #1d4ed8;
   --color-stone: #2a3344;
@@ -80,6 +81,14 @@
   input[type="number"] {
     -moz-appearance: textfield;
     appearance: textfield;
+  }
+
+  /* Unticked checkboxes readable on dark */
+  input[type="checkbox"] {
+    accent-color: #3b82f6;
+    width: 1rem;
+    height: 1rem;
+    border-radius: 0.25rem;
   }
 }
 
