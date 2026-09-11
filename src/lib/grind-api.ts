@@ -20,6 +20,7 @@ export async function createSpot(input: {
   monsters: string;
   territory: string;
   icon_url?: string | null;
+  mode?: string | null;
 }): Promise<SpotRow> {
   const { data, error } = await getSupabase()
     .from("spots")
@@ -162,7 +163,7 @@ export async function updateSession(
 
 export async function updateSpot(
   id: string,
-  patch: Partial<Pick<SpotRow, "name" | "monsters" | "territory" | "icon_url">>,
+  patch: Partial<Pick<SpotRow, "name" | "monsters" | "territory" | "icon_url" | "mode">>,
 ): Promise<void> {
   const { error } = await getSupabase().from("spots").update(patch).eq("id", id);
   if (error) throw error;
