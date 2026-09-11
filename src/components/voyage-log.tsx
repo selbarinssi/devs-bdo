@@ -80,17 +80,17 @@ export function VoyageLog() {
           <p className="text-sm font-medium text-foreground">
             {doneCount === STOPS.length ? (
               <>
-                Voyage complete <span className="font-normal text-muted-foreground">· all stops turned in</span>
+                Voyage Complete <span className="font-normal text-muted-foreground">· All Stops Turned In</span>
               </>
             ) : (
               <>
-                Stop {currentIdx + 1} of {STOPS.length}{" "}
+                Stop {currentIdx + 1} Of {STOPS.length}{" "}
                 <span className="font-normal text-muted-foreground">· {STOPS[currentIdx]?.title}</span>
               </>
             )}
           </p>
           <p className="shrink-0 font-semibold tabular-nums neon-text">
-            {doneCount}/{STOPS.length} stops
+            {doneCount}/{STOPS.length} Stops
           </p>
         </div>
         <Progress value={pct} />
@@ -103,20 +103,20 @@ export function VoyageLog() {
           className="inline-flex min-h-11 items-center gap-2 text-sm text-muted-foreground underline decoration-white/20 underline-offset-[3px] hover:text-foreground"
         >
           <BookOpen className="size-4" strokeWidth={1.75} />
-          Captain's notes
+          Captain's Notes
         </button>
         <button
           type="button"
           onClick={() => setConfirmReset(true)}
           className="inline-flex min-h-11 items-center text-sm text-rose-400 underline decoration-rose-400/40 underline-offset-[3px] hover:text-rose-300"
         >
-          Reset voyage
+          Reset Voyage
         </button>
       </div>
 
       {notesOpen ? (
         <div className="glass mb-5 p-4">
-          <h3 className="mb-2 font-semibold neon-text">Captain's notes</h3>
+          <h3 className="mb-2 font-semibold neon-text">Captain's Notes</h3>
           <ul className="flex flex-col gap-1.5 text-sm text-muted-foreground">
             {CAPTAIN_NOTES.map((n) => (
               <li key={n} className="relative pl-3.5 before:absolute before:left-0 before:text-muted before:content-['—']">
@@ -129,7 +129,7 @@ export function VoyageLog() {
 
       {confirmReset ? (
         <div className="glass mb-5 border border-rose-400/30 p-4">
-          <p className="text-sm text-foreground">Reset all progress for this voyage?</p>
+          <p className="text-sm text-foreground">Reset All Progress For This Voyage?</p>
           <div className="mt-3 flex gap-2">
             <button
               type="button"
@@ -224,7 +224,7 @@ export function VoyageLog() {
                               </p>
                             ) : null}
                             <span className="mb-2 inline-block rounded px-1.5 py-0.5 text-[0.68rem] font-semibold tracking-wide text-slate-950 bg-cyan-400">
-                              {q.label || "Choose one"}
+                              {q.label || "Choose One"}
                             </span>
                             <div className="flex flex-col gap-1">
                               {q.choice.map((opt) => {
@@ -326,7 +326,7 @@ export function VoyageLog() {
       </div>
 
       <p className="mt-6 text-center text-[0.78rem] text-muted-foreground">
-        Progress saves automatically in this browser.
+        Progress Saves Automatically In This Browser.
       </p>
     </div>
   );

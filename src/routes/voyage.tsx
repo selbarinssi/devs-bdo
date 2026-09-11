@@ -23,7 +23,7 @@ function VoyagePage() {
 
   return (
     <AppShell
-      eyebrow={active === "carrack" ? "Epheria Carrack" : "Daily Sailies & bartering"}
+      eyebrow={active === "carrack" ? "Epheria Carrack" : "Daily Sailies & Bartering"}
       title="Voyage"
     >
       <div className="mb-4 flex w-fit gap-1 rounded-full border border-white/10 bg-black/25 p-1">

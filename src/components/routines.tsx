@@ -93,12 +93,12 @@ function ProgressBlock({
         <p className="text-sm font-medium text-foreground">
           {label}
           {total === 0 ? (
-            <span className="font-normal text-muted-foreground"> · none</span>
+            <span className="font-normal text-muted-foreground"> · None</span>
           ) : done === total ? (
-            <span className="font-normal text-muted-foreground"> · complete</span>
+            <span className="font-normal text-muted-foreground"> · Complete</span>
           ) : (
             <span className="font-normal text-muted-foreground">
-              {" "}· {done} of {total}
+              {" "}· {done} Of {total}
             </span>
           )}
         </p>
@@ -184,7 +184,7 @@ export function Routines() {
       <div className="mb-5 flex min-h-[12rem] flex-col gap-2">
         {sorted.length === 0 ? (
           <p className="glass px-4 py-10 text-center text-sm text-muted-foreground">
-            Add daily or weekly tasks to track here.
+            Add Daily Or Weekly Tasks To Track Here.
           </p>
         ) : (
           sorted.map((task) => (
@@ -197,7 +197,7 @@ export function Routines() {
             >
               <button
                 type="button"
-                aria-label={task.done ? "Mark incomplete" : "Mark complete"}
+                aria-label={task.done ? "Mark Incomplete" : "Mark Complete"}
                 onClick={() => toggle(task.id)}
                 className="tick-box size-7"
                 data-checked={task.done ? "true" : "false"}
@@ -248,7 +248,7 @@ export function Routines() {
       </div>
 
       <div className="glass p-4 sm:p-5">
-        <p className="mb-3 text-xs font-bold uppercase tracking-wider neon-text">Add routine</p>
+        <p className="mb-3 text-xs font-bold uppercase tracking-wider neon-text">Add Routine</p>
         <div className="flex flex-col gap-3">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="routine-title">Task</Label>
@@ -259,7 +259,7 @@ export function Routines() {
               onKeyDown={(e) => {
                 if (e.key === "Enter") addTask();
               }}
-              placeholder="e.g. Oquilla dailies"
+              placeholder="e.g. Oquilla Dailies"
             />
           </div>
           <div className="grid gap-3 sm:grid-cols-3">
@@ -289,7 +289,7 @@ export function Routines() {
               </select>
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="routine-reset">Reset day</Label>
+              <Label htmlFor="routine-reset">Reset Day</Label>
               <select
                 id="routine-reset"
                 className="field-select"
@@ -307,7 +307,7 @@ export function Routines() {
           </div>
           <button type="button" onClick={addTask} className="btn-primary h-11 w-full sm:w-auto">
             <Plus className="size-4" strokeWidth={2.25} />
-            Add task
+            Add Task
           </button>
         </div>
       </div>

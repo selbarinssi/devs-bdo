@@ -163,9 +163,9 @@ export function AlchemyPlanner() {
             onChange={(e) => patch({ proc: parseFloat(e.target.value) })}
             className="field-select h-9"
           >
-            <option value="2.5">2.5× (Master standard)</option>
+            <option value="2.5">2.5× (Master Standard)</option>
             <option value="2.8">2.8× (High Master)</option>
-            <option value="3.0">3.0× (Guru standard)</option>
+            <option value="3.0">3.0× (Guru Standard)</option>
           </select>
         </div>
       </div>
@@ -205,7 +205,7 @@ export function AlchemyPlanner() {
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Filter recipes on this tab by name…"
+          placeholder="Filter Recipes On This Tab By Name…"
           className="bg-[rgba(12,18,32,0.55)] pl-10"
           aria-label="Filter recipes"
         />
@@ -214,7 +214,7 @@ export function AlchemyPlanner() {
       <div className="flex flex-col gap-3" role="tabpanel">
         {filtered.length === 0 ? (
           <p className="rounded-xl border border-white/10 bg-[rgba(12,18,32,0.4)] px-4 py-10 text-center text-sm text-muted-foreground">
-            No recipes match "{query}".
+            No Recipes Match "{query}".
           </p>
         ) : (
           filtered.map((recipe) => (

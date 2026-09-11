@@ -6,7 +6,7 @@ export const Route = createFileRoute("/")({ component: Home });
 
 function Home() {
   return (
-    <AppShell eyebrow="Harmony Draught pipeline" title="Alchemy planner">
+    <AppShell eyebrow="Harmony Draught Pipeline" title="Alchemy Planner">
       <AlchemyPlanner />
     </AppShell>
   );

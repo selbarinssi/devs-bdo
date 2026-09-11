@@ -6,7 +6,7 @@ export const Route = createFileRoute("/routines")({ component: RoutinesPage });
 
 function RoutinesPage() {
   return (
-    <AppShell eyebrow="Task tracker" title="Routines">
+    <AppShell eyebrow="Task Tracker" title="Routines">
       <Routines />
     </AppShell>
   );

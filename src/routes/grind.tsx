@@ -6,7 +6,7 @@ export const Route = createFileRoute("/grind")({ component: GrindPage });
 
 function GrindPage() {
   return (
-    <AppShell eyebrow="PVE tracker" title="Grind">
+    <AppShell eyebrow="PvE Tracker" title="Grind">
       <GrindTracker />
     </AppShell>
   );
