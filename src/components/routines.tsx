@@ -90,19 +90,19 @@ function ProgressBlock({
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-baseline justify-between gap-3">
-        <p className="text-sm font-medium text-ink">
+        <p className="text-sm font-medium text-foreground">
           {label}
           {total === 0 ? (
-            <span className="font-normal text-muted"> · none</span>
+            <span className="font-normal text-muted-foreground"> · none</span>
           ) : done === total ? (
-            <span className="font-normal text-muted"> · complete</span>
+            <span className="font-normal text-muted-foreground"> · complete</span>
           ) : (
-            <span className="font-normal text-muted">
+            <span className="font-normal text-muted-foreground">
               {" "}· {done} of {total}
             </span>
           )}
         </p>
-        <p className="shrink-0 font-semibold tabular-nums text-teal">
+        <p className="shrink-0 font-semibold tabular-nums neon-text">
           {done}/{total}
         </p>
       </div>
@@ -176,13 +176,13 @@ export function Routines() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <div className="sticky top-2 z-20 mb-4 flex flex-col gap-4 rounded-xl border border-stone bg-paper/95 p-4 shadow-[var(--shadow-border)] backdrop-blur-md">
+      <div className="glass sticky top-2 z-20 mb-4 flex flex-col gap-4 p-4">
         <ProgressBlock label="Daily" done={dailyDone} total={dailyTasks.length} />
         <ProgressBlock label="Weekly" done={weeklyDone} total={weeklyTasks.length} />
       </div>
 
-      <div className="mb-5 rounded-xl border border-stone bg-paper p-4 shadow-[var(--shadow-border)] sm:p-5">
-        <p className="mb-3 text-xs font-bold uppercase tracking-wider text-teal">Add routine</p>
+      <div className="glass mb-5 p-4 sm:p-5">
+        <p className="mb-3 text-xs font-bold uppercase tracking-wider neon-text">Add routine</p>
         <div className="flex flex-col gap-3">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="routine-title">Task</Label>
@@ -239,11 +239,7 @@ export function Routines() {
               </select>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={addTask}
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-[10px] border border-teal bg-teal px-4 text-sm font-bold text-ivory shadow-[0_4px_14px_rgba(32,89,92,0.25)] transition-[opacity] hover:opacity-95"
-          >
+          <button type="button" onClick={addTask} className="btn-primary h-11 w-full sm:w-auto">
             <Plus className="size-4" strokeWidth={2.25} />
             Add task
           </button>
@@ -252,7 +248,7 @@ export function Routines() {
 
       <div className="flex flex-col gap-2">
         {sorted.length === 0 ? (
-          <p className="rounded-xl border border-stone bg-paper px-4 py-10 text-center text-sm text-muted">
+          <p className="glass px-4 py-10 text-center text-sm text-muted-foreground">
             Add daily or weekly tasks to track here.
           </p>
         ) : (
@@ -260,33 +256,29 @@ export function Routines() {
             <div
               key={task.id}
               className={cn(
-                "flex items-center gap-3 rounded-xl border bg-paper px-3 py-3 shadow-[var(--shadow-border)] sm:px-4",
-                task.done ? "border-stone opacity-60" : "border-stone",
+                "glass flex items-center gap-3 px-3 py-3 sm:px-4",
+                task.done && "opacity-55",
               )}
             >
               <button
                 type="button"
                 aria-label={task.done ? "Mark incomplete" : "Mark complete"}
                 onClick={() => toggle(task.id)}
-                className={cn(
-                  "grid size-7 shrink-0 place-items-center rounded-[6px] border-2 transition-[background-color,border-color]",
-                  task.done
-                    ? "border-emerald-400 bg-emerald-400/20 text-emerald-300"
-                    : "border-muted bg-secondary",
-                )}
+                className="tick-box size-7"
+                data-checked={task.done ? "true" : "false"}
               >
                 {task.done ? <Check className="block size-3.5" strokeWidth={3} /> : null}
               </button>
               <div className="min-w-0 flex-1">
                 <p
                   className={cn(
-                    "text-sm font-medium text-ink",
-                    task.done && "text-muted line-through",
+                    "text-sm font-medium text-foreground",
+                    task.done && "text-muted-foreground line-through",
                   )}
                 >
                   {task.title}
                 </p>
-                <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[0.72rem] text-muted">
+                <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[0.72rem] text-muted-foreground">
                   <span className="capitalize">{task.type}</span>
                   <span>·</span>
                   <span
@@ -311,7 +303,7 @@ export function Routines() {
                 type="button"
                 aria-label={`Delete ${task.title}`}
                 onClick={() => remove(task.id)}
-                className="flex size-9 shrink-0 items-center justify-center rounded-md text-muted transition-[color,background-color] hover:bg-danger/10 hover:text-danger"
+                className="flex size-9 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-[color,background-color] hover:bg-rose-500/10 hover:text-rose-400"
               >
                 <Trash2 className="size-4" strokeWidth={1.75} />
               </button>
