@@ -23,10 +23,10 @@ export function AppShell({
 
   return (
     <div className="min-h-screen pb-14 text-foreground">
-      <header className="sticky top-0 z-30 border-b border-white/10 bg-[#05070f]/70 backdrop-blur-2xl">
+      <header className="sticky top-0 z-30 border-b border-white/10 bg-[#04060c]/65 backdrop-blur-2xl">
         <div className="mx-auto flex max-w-[1400px] items-center justify-between gap-4 px-4 py-3 sm:px-6">
           <div className="flex items-center gap-3">
-            <div className="flex size-9 items-center justify-center rounded-xl bg-cyan-400/15 ring-1 ring-cyan-400/40 shadow-[0_0_20px_rgba(34,211,238,0.25)]">
+            <div className="flex size-9 items-center justify-center rounded-xl bg-cyan-400/15 ring-1 ring-cyan-400/40 shadow-[0_0_24px_rgba(34,211,238,0.35)]">
               <span className="text-sm font-bold text-cyan-300">D</span>
             </div>
             <div>
@@ -34,7 +34,7 @@ export function AppShell({
                 Black Desert Online
               </p>
               <h1 className="text-base font-semibold tracking-wide text-foreground sm:text-lg">
-                Dev's Hub
+                Dev&apos;s Hub
               </h1>
             </div>
           </div>
