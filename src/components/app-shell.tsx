@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Anchor, FlaskConical, ListChecks, Ship, Swords } from "lucide-react";
+import { Anchor, FlaskConical, ListChecks, Swords } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV = [
@@ -7,7 +7,6 @@ const NAV = [
   { to: "/grind", label: "Grind", icon: Swords, exact: false },
   { to: "/", label: "Alchemy", icon: FlaskConical, exact: true },
   { to: "/voyage", label: "Voyage", icon: Anchor, exact: false },
-  { to: "/ships", label: "Carrack", icon: Ship, exact: false },
 ] as const;
 
 /** Neon blue/purple geometric mark — crystal / portal vibe */
@@ -120,7 +119,7 @@ export function AppShell({
             })}
           </nav>
         </div>
-        <nav className="grid grid-cols-5 gap-0.5 border-t border-white/5 px-2 py-1.5 md:hidden">
+        <nav className="grid grid-cols-4 gap-0.5 border-t border-white/5 px-2 py-1.5 md:hidden">
           {NAV.map((item) => {
             const active = item.exact ? pathname === item.to : pathname.startsWith(item.to);
             const Icon = item.icon;
