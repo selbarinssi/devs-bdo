@@ -8,9 +8,11 @@ import { cn } from "@/lib/utils";
 
 type VoyageState = {
   checks: Record<string, boolean | string>;
+  /** stop id | null (auto = current incomplete) | "__closed__" (all collapsed) */
   open: string | null;
 };
 
+const CLOSED = "__closed__";
 const DEFAULT_STATE: VoyageState = { checks: {}, open: null };
 
 function isStopDone(stop: VoyageStop, checks: Record<string, boolean | string>) {
@@ -30,17 +32,38 @@ export function VoyageLog() {
   const doneCount = STOPS.filter((s) => isStopDone(s, value.checks)).length;
   const pct = Math.round((doneCount / STOPS.length) * 100);
   const currentIdx = STOPS.findIndex((s) => s.id === currentId);
-  const openId = value.open ?? currentId;
+  const openId =
+    value.open === CLOSED ? null : value.open != null ? value.open : currentId;
 
   const toggleOpen = (id: string) => {
-    setValue((prev) => ({ ...prev, open: prev.open === id ? null : id }));
+    setValue((prev) => {
+      const auto =
+        STOPS.find((s) => !isStopDone(s, prev.checks))?.id ?? STOPS[STOPS.length - 1].id;
+      const shown = prev.open === CLOSED ? null : prev.open != null ? prev.open : auto;
+      if (shown === id) {
+        // Collapse current: force CLOSED so auto-current doesn't re-open
+        return { ...prev, open: CLOSED };
+      }
+      return { ...prev, open: id };
+    });
   };
 
   const setCheck = (id: string, next: boolean | string) => {
     setValue((prev) => {
       const checks = { ...prev.checks };
+      const owner = STOPS.find((s) => s.quests.some((q) => q.id === id));
+      const wasDone = owner ? isStopDone(owner, prev.checks) : false;
+
       if (next === false || next === "") delete checks[id];
       else checks[id] = next;
+
+      const nowDone = owner ? isStopDone(owner, checks) : false;
+      // When a stop becomes fully validated → collapse it and open the next
+      if (owner && !wasDone && nowDone) {
+        const nextCurrent =
+          STOPS.find((s) => !isStopDone(s, checks))?.id ?? STOPS[STOPS.length - 1].id;
+        return { ...prev, checks, open: nextCurrent };
+      }
       return { ...prev, checks };
     });
   };
