@@ -1,6 +1,18 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="The Alchemist">
-  <rect width="32" height="32" rx="6" fill="#F3EEE4"/>
-  <rect x="11" y="2" width="10" height="4" rx="1" fill="#20595C"/>
-  <rect x="14" y="5" width="4" height="8" fill="#20595C"/>
-  <circle cx="16" cy="22" r="8" fill="#20595C"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Dev's Hub">
+  <defs>
+    <linearGradient id="g" x1="2" y1="2" x2="30" y2="30" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#67e8f9"/>
+      <stop offset="0.5" stop-color="#22d3ee"/>
+      <stop offset="1" stop-color="#a78bfa"/>
+    </linearGradient>
+    <linearGradient id="c" x1="12" y1="10" x2="20" y2="22" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#e0f2fe"/>
+      <stop offset="1" stop-color="#c4b5fd"/>
+    </linearGradient>
+  </defs>
+  <rect width="32" height="32" rx="8" fill="#04060c"/>
+  <path d="M16 4 L26 10 V22 L16 28 L6 22 V10 Z" fill="none" stroke="url(#g)" stroke-width="1.5" stroke-linejoin="round"/>
+  <path d="M16 10 L22 16 L16 22 L10 16 Z" fill="rgba(34,211,238,0.12)" stroke="url(#g)" stroke-width="1.2" stroke-linejoin="round"/>
+  <circle cx="16" cy="16" r="2.6" fill="url(#c)"/>
+  <circle cx="16" cy="16" r="1.1" fill="#f0f9ff"/>
 </svg>

@@ -16,7 +16,7 @@ export const Route = createRootRoute({
         content:
           "Black Desert Online companion — grind tracker, Harmony pipeline, Sailies, Carrack, routines.",
       },
-      { name: "theme-color", content: "#3B82F6" },
+      { name: "theme-color", content: "#04060c" },
     ],
     links: [
       { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
