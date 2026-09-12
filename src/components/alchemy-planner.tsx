@@ -51,28 +51,31 @@ export function AlchemyPlanner() {
     return recipeData.filter((r) => {
       if (category !== "all" && r.category !== category) return false;
       if (!q) return true;
-      return r.name.toLowerCase().includes(q);
+      return (
+        r.name.toLowerCase().includes(q) ||
+        r.ingredients.some((i) => i.name.toLowerCase().includes(q))
+      );
     });
   }, [query, category]);
 
   const setCraft = (id: string, n: number) => {
     setValue((prev) => ({
       ...prev,
-      crafts: { ...prev.crafts, [id]: Math.max(0, n) },
+      crafts: { ...prev.crafts, [id]: Math.max(0, Math.round(n) || 0) },
     }));
   };
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="glass flex flex-col gap-3 p-3 sm:flex-row sm:items-end sm:p-4">
-        <div className="flex flex-1 flex-col gap-1.5">
+      <div className="glass flex flex-col gap-3 p-3 sm:flex-row sm:items-end sm:gap-3 sm:p-4">
+        <div className="flex min-w-0 flex-1 flex-col gap-1.5">
           <Label>Search</Label>
           <div className="relative">
             <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Recipe name…"
+              placeholder="Recipe Or Material…"
               className="h-10 pl-8"
             />
           </div>
@@ -118,37 +121,58 @@ export function AlchemyPlanner() {
         </div>
       </div>
 
-      <ul className="flex flex-col gap-2">
-        {filtered.map((r) => {
-          const crafts = value.crafts[r.id] || 0;
-          const yieldN = estimatedYield(r, crafts, value.proc);
+      <div className="flex flex-col gap-2">
+        {filtered.map((recipe) => {
+          const crafts = value.crafts[recipe.id] || 0;
+          const yieldN = estimatedYield(recipe, crafts, value.proc);
           const time = crafts * value.craftTime;
           return (
-            <li key={r.id} className="glass flex flex-wrap items-center gap-3 px-3 py-2.5 sm:px-4">
-              <ItemGlyph name={r.name} className="size-9" />
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium">{r.name}</p>
-                <p className="text-[0.7rem] text-muted-foreground">{r.category}</p>
+            <div key={recipe.id} className="glass p-3 sm:p-4">
+              <div className="flex flex-wrap items-center gap-3">
+                <ItemGlyph name={recipe.name} className="size-10 shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold text-foreground">{recipe.name}</p>
+                  <p className="text-[0.7rem] text-muted-foreground">{recipe.category}</p>
+                </div>
+                <Input
+                  type="number"
+                  min={0}
+                  value={crafts || ""}
+                  onChange={(e) => setCraft(recipe.id, parseFloat(e.target.value) || 0)}
+                  placeholder="0"
+                  className="h-9 w-20 text-sm"
+                />
+                <div className="w-28 text-right text-xs">
+                  <p className="font-mono font-bold tabular-nums text-cyan-300">
+                    {formatNumber(Math.round(yieldN))}
+                  </p>
+                  <p className="text-muted-foreground">{formatTime(time)}</p>
+                </div>
               </div>
-              <Input
-                type="number"
-                min={0}
-                value={crafts || ""}
-                onChange={(e) => setCraft(r.id, parseFloat(e.target.value) || 0)}
-                placeholder="0"
-                className="h-9 w-20 text-sm"
-              />
-              <div className="w-24 text-right text-xs">
-                <p className="font-mono tabular-nums text-cyan-300">{formatNumber(Math.round(yieldN))}</p>
-                <p className="text-muted-foreground">{formatTime(time)}</p>
-              </div>
-            </li>
+              {recipe.ingredients?.length ? (
+                <ul className="mt-2 flex flex-wrap gap-1.5 border-t border-white/5 pt-2">
+                  {recipe.ingredients.map((ing) => (
+                    <li
+                      key={ing.name}
+                      className="inline-flex items-center gap-1 rounded-md bg-white/[0.04] px-1.5 py-0.5 text-[0.65rem] text-muted-foreground"
+                    >
+                      <ItemGlyph name={ing.name} className="size-4" />
+                      <span>
+                        {ing.name} ×{formatNumber(ing.qty * (crafts || 1))}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </div>
           );
         })}
         {filtered.length === 0 && (
-          <li className="glass px-4 py-8 text-center text-sm text-muted-foreground">No Recipes Match.</li>
+          <div className="glass px-4 py-8 text-center text-sm text-muted-foreground">
+            No Recipes Match.
+          </div>
         )}
-      </ul>
+      </div>
     </div>
   );
 }
