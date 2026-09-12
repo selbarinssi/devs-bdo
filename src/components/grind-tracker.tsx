@@ -448,12 +448,12 @@ export function GrindTracker() {
                   <button type="button" onClick={() => setAddingLoot((v) => !v)} className="btn-ghost h-7 px-2 text-[0.65rem]"><Plus className="size-3" /> Add</button>
                 </div>
                 {loots.length > 0 && (
-                  <div className="mb-1 flex items-center gap-2 px-2 text-[0.5rem] font-bold uppercase tracking-wider text-muted-foreground">
-                    <span className="min-w-0 flex-1">Item</span>
+                  <div className="mb-1 flex items-center gap-1.5 px-2 text-[0.5rem] font-bold uppercase tracking-wider text-muted-foreground">
+                    <span className="w-7 shrink-0" />
+                    <span className="w-[7.5rem] shrink-0 sm:w-[10rem]">Item</span>
                     <span className="w-14 text-center sm:w-16">Qty</span>
-                    <span className="hidden w-[4.25rem] text-right sm:block">Total</span>
-                    <span className="hidden w-[4.25rem] text-right sm:block">/h</span>
-                    <span className="w-14 shrink-0" />
+                    <span className="w-14 text-right sm:w-16">Total</span>
+                    <span className="w-14 text-right sm:w-16">/h</span>
                   </div>
                 )}
                 {addingLoot && (
@@ -483,25 +483,19 @@ export function GrindTracker() {
                             </div>
                           </div>
                         ) : (
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1.5 sm:gap-2">
                             {l.icon_url ? <img src={l.icon_url} alt="" className="size-7 shrink-0 rounded object-contain" /> : <span className="flex size-7 shrink-0 items-center justify-center rounded bg-white/5 text-[0.55rem] font-bold text-cyan-300">{l.name[0]?.toUpperCase()}</span>}
-                            <div className="min-w-0 flex-1">
+                            <div className="min-w-0 w-[7.5rem] shrink-0 sm:w-[10rem]">
                               <p className="truncate text-xs font-medium text-foreground">{l.name}</p>
-                              <p className="text-[0.65rem] text-muted-foreground">{formatSilver(Number(l.unit_price))} · {l.kind === "market" ? "Market" : "NPC"}</p>
+                              <p className="truncate text-[0.65rem] text-muted-foreground">{formatSilver(Number(l.unit_price))} · {l.kind === "market" ? "Market" : "NPC"}</p>
                             </div>
                             <Input type="number" min={0} value={qty[l.id] || ""} onChange={(e) => setQty((prev) => ({ ...prev, [l.id]: e.target.value }))} placeholder="0" className="h-8 w-14 shrink-0 text-xs sm:w-16" />
-                            <div className="flex shrink-0 flex-col items-end gap-0.5 sm:flex-row sm:items-center sm:gap-1.5">
-                              <span className="inline-flex min-w-[3.75rem] flex-col items-end rounded-lg border border-white/10 bg-white/[0.03] px-1.5 py-0.5 sm:min-w-[4.25rem]">
-                                <span className="text-[0.5rem] font-bold uppercase tracking-wider text-muted-foreground">Total</span>
-                                <span className="font-mono text-[0.7rem] font-bold tabular-nums text-cyan-300 sm:text-xs">{formatSilver(lineVal)}</span>
-                              </span>
-                              <span className="inline-flex min-w-[3.75rem] flex-col items-end rounded-lg border border-emerald-400/20 bg-emerald-400/5 px-1.5 py-0.5 sm:min-w-[4.25rem]">
-                                <span className="text-[0.5rem] font-bold uppercase tracking-wider text-muted-foreground">/h</span>
-                                <span className="font-mono text-[0.7rem] font-bold tabular-nums text-emerald-300 sm:text-xs">{formatSilver(lineSph)}</span>
-                              </span>
+                            <span className="w-14 shrink-0 text-right font-mono text-xs font-bold tabular-nums text-cyan-300 sm:w-16">{formatSilver(lineVal)}</span>
+                            <span className="w-14 shrink-0 text-right font-mono text-xs font-bold tabular-nums text-emerald-300 sm:w-16">{formatSilver(lineSph)}</span>
+                            <div className="ml-auto flex shrink-0 items-center">
+                              <button type="button" onClick={() => beginEditLoot(l)} className="flex size-7 items-center justify-center rounded text-muted-foreground hover:text-cyan-300"><Pencil className="size-3" strokeWidth={1.75} /></button>
+                              <button type="button" onClick={async () => { await deleteLoot(l.id); if (selectedId) setLoots(await listLoots(selectedId)); }} className="flex size-7 items-center justify-center rounded text-muted-foreground hover:text-rose-400"><Trash2 className="size-3" strokeWidth={1.75} /></button>
                             </div>
-                            <button type="button" onClick={() => beginEditLoot(l)} className="flex size-7 shrink-0 items-center justify-center rounded text-muted-foreground hover:text-cyan-300"><Pencil className="size-3" strokeWidth={1.75} /></button>
-                            <button type="button" onClick={async () => { await deleteLoot(l.id); if (selectedId) setLoots(await listLoots(selectedId)); }} className="flex size-7 shrink-0 items-center justify-center rounded text-muted-foreground hover:text-rose-400"><Trash2 className="size-3" strokeWidth={1.75} /></button>
                           </div>
                         )}
                       </li>
