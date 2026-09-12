@@ -3,12 +3,11 @@ import { useMemo, useState } from "react";
 import { RichText } from "@/components/rich-text";
 import { Progress } from "@/components/ui/progress";
 import { CAPTAIN_NOTES, STOPS, VOYAGE_STORAGE_KEY, type VoyageStop } from "@/data/voyage";
-import { useLocalStorage } from "@/lib/storage";
+import { useCloudStorage } from "@/lib/user-sync";
 import { cn } from "@/lib/utils";
 
 type VoyageState = {
   checks: Record<string, boolean | string>;
-  /** stop id | null (auto = current incomplete) | "__closed__" (all collapsed) */
   open: string | null;
 };
 
@@ -20,7 +19,7 @@ function isStopDone(stop: VoyageStop, checks: Record<string, boolean | string>) 
 }
 
 export function VoyageLog() {
-  const { value, setValue } = useLocalStorage<VoyageState>(VOYAGE_STORAGE_KEY, DEFAULT_STATE);
+  const { value, setValue } = useCloudStorage<VoyageState>(VOYAGE_STORAGE_KEY, DEFAULT_STATE);
   const [notesOpen, setNotesOpen] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
 
@@ -41,7 +40,6 @@ export function VoyageLog() {
         STOPS.find((s) => !isStopDone(s, prev.checks))?.id ?? STOPS[STOPS.length - 1].id;
       const shown = prev.open === CLOSED ? null : prev.open != null ? prev.open : auto;
       if (shown === id) {
-        // Collapse current: force CLOSED so auto-current doesn't re-open
         return { ...prev, open: CLOSED };
       }
       return { ...prev, open: id };
@@ -52,282 +50,148 @@ export function VoyageLog() {
     setValue((prev) => {
       const checks = { ...prev.checks };
       const owner = STOPS.find((s) => s.quests.some((q) => q.id === id));
-      const wasDone = owner ? isStopDone(owner, prev.checks) : false;
-
       if (next === false || next === "") delete checks[id];
       else checks[id] = next;
-
+      const wasDone = owner ? isStopDone(owner, prev.checks) : false;
       const nowDone = owner ? isStopDone(owner, checks) : false;
-      // When a stop becomes fully validated → collapse it and open the next
-      if (owner && !wasDone && nowDone) {
-        const nextCurrent =
-          STOPS.find((s) => !isStopDone(s, checks))?.id ?? STOPS[STOPS.length - 1].id;
-        return { ...prev, checks, open: nextCurrent };
+      let open = prev.open;
+      if (!wasDone && nowDone && owner) {
+        const idx = STOPS.findIndex((s) => s.id === owner.id);
+        const nextStop = STOPS.slice(idx + 1).find((s) => !isStopDone(s, checks));
+        open = nextStop?.id ?? CLOSED;
       }
-      return { ...prev, checks };
+      return { checks, open };
     });
   };
 
-  const reset = () => {
-    setValue({ checks: {}, open: STOPS[0].id });
+  const resetAll = () => {
+    setValue(DEFAULT_STATE);
     setConfirmReset(false);
   };
 
   return (
-    <div className="mx-auto max-w-2xl">
-      <div className="glass sticky top-2 z-20 mb-4 p-4">
-        <div className="mb-2 flex items-baseline justify-between gap-3">
-          <p className="text-sm font-medium text-foreground">
-            {doneCount === STOPS.length ? (
-              <>
-                Voyage Complete <span className="font-normal text-muted-foreground">· All Stops Turned In</span>
-              </>
-            ) : (
-              <>
-                Stop {currentIdx + 1} Of {STOPS.length}{" "}
-                <span className="font-normal text-muted-foreground">· {STOPS[currentIdx]?.title}</span>
-              </>
-            )}
-          </p>
-          <p className="shrink-0 font-semibold tabular-nums neon-text">
-            {doneCount}/{STOPS.length} Stops
+    <div className="mx-auto flex max-w-3xl flex-col gap-4">
+      <div className="glass sticky top-2 z-20 p-4">
+        <div className="mb-2 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <Compass className="size-4 text-cyan-300" />
+            <p className="text-sm font-semibold">Carrack Voyage</p>
+          </div>
+          <p className="font-mono text-sm tabular-nums text-cyan-300">
+            {doneCount}/{STOPS.length} · {pct}%
           </p>
         </div>
         <Progress value={pct} />
-      </div>
-
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <button
-          type="button"
-          onClick={() => setNotesOpen((o) => !o)}
-          className="inline-flex min-h-11 items-center gap-2 text-sm text-muted-foreground underline decoration-white/20 underline-offset-[3px] hover:text-foreground"
-        >
-          <BookOpen className="size-4" strokeWidth={1.75} />
-          Captain's Notes
-        </button>
-        <button
-          type="button"
-          onClick={() => setConfirmReset(true)}
-          className="inline-flex min-h-11 items-center text-sm text-rose-400 underline decoration-rose-400/40 underline-offset-[3px] hover:text-rose-300"
-        >
-          Reset Voyage
-        </button>
-      </div>
-
-      {notesOpen ? (
-        <div className="glass mb-5 p-4">
-          <h3 className="mb-2 font-semibold neon-text">Captain's Notes</h3>
-          <ul className="flex flex-col gap-1.5 text-sm text-muted-foreground">
-            {CAPTAIN_NOTES.map((n) => (
-              <li key={n} className="relative pl-3.5 before:absolute before:left-0 before:text-muted before:content-['—']">
-                {n}
+        <div className="mt-3 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setNotesOpen((v) => !v)}
+            className="btn-ghost h-8 px-2.5 text-xs"
+          >
+            <BookOpen className="size-3.5" /> Captain Notes
+          </button>
+          {!confirmReset ? (
+            <button type="button" onClick={() => setConfirmReset(true)} className="btn-ghost h-8 px-2.5 text-xs text-rose-300">
+              Reset Progress
+            </button>
+          ) : (
+            <>
+              <button type="button" onClick={resetAll} className="btn-primary h-8 px-2.5 text-xs">
+                Confirm Reset
+              </button>
+              <button type="button" onClick={() => setConfirmReset(false)} className="btn-ghost h-8 px-2.5 text-xs">
+                Cancel
+              </button>
+            </>
+          )}
+        </div>
+        {notesOpen && (
+          <ul className="mt-3 space-y-1.5 border-t border-white/10 pt-3 text-[0.75rem] text-muted-foreground">
+            {CAPTAIN_NOTES.map((n, i) => (
+              <li key={i} className="flex gap-2">
+                <span className="text-cyan-400/80">•</span>
+                <span>{n}</span>
               </li>
             ))}
           </ul>
-        </div>
-      ) : null}
+        )}
+      </div>
 
-      {confirmReset ? (
-        <div className="glass mb-5 border border-rose-400/30 p-4">
-          <p className="text-sm text-foreground">Reset All Progress For This Voyage?</p>
-          <div className="mt-3 flex gap-2">
-            <button
-              type="button"
-              onClick={reset}
-              className="inline-flex h-10 items-center rounded-full bg-rose-500 px-4 text-sm font-semibold text-white"
-            >
-              Reset
-            </button>
-            <button
-              type="button"
-              onClick={() => setConfirmReset(false)}
-              className="btn-ghost"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      ) : null}
-
-      <div className="relative">
+      <div className="flex flex-col gap-2">
         {STOPS.map((stop, idx) => {
           const done = isStopDone(stop, value.checks);
-          const isCurrent = stop.id === currentId;
-          const isOpen = stop.id === openId;
+          const open = openId === stop.id;
           return (
-            <div key={stop.id} className="flex gap-3.5">
-              <div className="flex w-7 shrink-0 flex-col items-center sm:w-[30px]">
-                <div
+            <div
+              key={stop.id}
+              className={cn(
+                "glass overflow-hidden",
+                done && "opacity-70",
+                idx === currentIdx && !done && "ring-1 ring-cyan-400/30",
+              )}
+            >
+              <button
+                type="button"
+                onClick={() => toggleOpen(stop.id)}
+                className="flex w-full items-center gap-3 px-3 py-3 text-left sm:px-4"
+              >
+                <span
                   className={cn(
-                    "relative z-[1] flex size-7 items-center justify-center rounded-full border-2 bg-[#0a0e1a] font-semibold transition-[border-color,background-color,color,box-shadow] duration-300 sm:size-[30px] sm:text-sm",
-                    done && "border-emerald-400 bg-emerald-400/25 text-emerald-300 shadow-[0_0_16px_rgba(52,211,153,0.45)]",
-                    !done && isCurrent && "border-cyan-400 text-cyan-300 shadow-[0_0_0_4px_rgba(34,211,238,0.2),0_0_18px_rgba(34,211,238,0.25)]",
-                    !done && !isCurrent && "border-white/20 text-muted-foreground",
+                    "flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-bold",
+                    done ? "bg-emerald-500/20 text-emerald-300" : "bg-white/5 text-muted-foreground",
                   )}
                 >
                   {done ? <Check className="size-3.5" strokeWidth={3} /> : idx + 1}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold">{stop.name}</p>
+                  <p className="truncate text-[0.7rem] text-muted-foreground">{stop.region}</p>
                 </div>
-                {idx < STOPS.length - 1 ? (
-                  <div
-                    className={cn(
-                      "my-0.5 w-0.5 min-h-3.5 flex-1",
-                      done ? "bg-emerald-400/70" : "bg-white/10",
-                    )}
-                  />
-                ) : (
-                  <div className="h-2" />
-                )}
-              </div>
-
-              <article
-                className={cn(
-                  "glass mb-3.5 min-w-0 flex-1 overflow-hidden transition-[border-color,opacity,box-shadow] duration-200",
-                  done && "opacity-55",
-                  !done && isCurrent && "border-cyan-400/35 shadow-[0_0_24px_rgba(34,211,238,0.08)]",
-                  !done && !isCurrent && "",
-                )}
-              >
-                <button
-                  type="button"
-                  onClick={() => toggleOpen(stop.id)}
-                  className="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left"
-                  aria-expanded={isOpen}
-                >
-                  <div>
-                    <h3 className="font-semibold text-foreground">{stop.title}</h3>
-                    <span className="mt-0.5 block text-[0.78rem] text-muted-foreground">{stop.loc}</span>
-                  </div>
-                  <ChevronDown
-                    className={cn(
-                      "size-4 shrink-0 text-muted transition-transform duration-200",
-                      isOpen && "rotate-180",
-                    )}
-                  />
-                </button>
-
-                {isOpen ? (
-                  <div className="px-4 pb-4">
-                    {stop.heading ? (
-                      <p className="mb-2 flex gap-1.5 border-b border-white/10 pb-2.5 text-[0.78rem] text-muted-foreground">
-                        <Compass className="mt-0.5 size-3.5 shrink-0 text-cyan-400" strokeWidth={1.75} />
-                        <span>{stop.heading}</span>
-                      </p>
-                    ) : null}
-
+                <ChevronDown
+                  className={cn("size-4 shrink-0 text-muted-foreground transition-transform", open && "rotate-180")}
+                />
+              </button>
+              {open && (
+                <div className="border-t border-white/5 px-3 py-3 sm:px-4">
+                  {stop.note ? (
+                    <p className="mb-2 text-[0.75rem] text-muted-foreground">{stop.note}</p>
+                  ) : null}
+                  <ul className="flex flex-col gap-2">
                     {stop.quests.map((q) => {
-                      if (q.choice) {
-                        return (
-                          <div key={q.id} className="border-t border-white/10 py-2.5 first:border-t-0">
-                            {q.heading ? (
-                              <p className="mb-2 border-t border-dashed border-white/10 pt-2 text-[0.74rem] text-cyan-300 first:border-t-0 first:pt-0">
-                                {q.heading}
-                              </p>
-                            ) : null}
-                            <span className="mb-2 inline-block rounded px-1.5 py-0.5 text-[0.68rem] font-semibold tracking-wide text-slate-950 bg-cyan-400">
-                              {q.label || "Choose One"}
-                            </span>
-                            <div className="flex flex-col gap-1">
-                              {q.choice.map((opt) => {
-                                const rid = `r-${q.id}-${opt.id}`;
-                                const checked = value.checks[q.id] === opt.id;
-                                return (
-                                  <label
-                                    key={opt.id}
-                                    htmlFor={rid}
-                                    className="flex min-h-11 cursor-pointer items-start gap-2.5 py-1 pl-1"
-                                  >
-                                    <input
-                                      type="radio"
-                                      id={rid}
-                                      name={q.id}
-                                      className="radio-dot"
-                                      checked={checked}
-                                      onChange={() => setCheck(q.id, opt.id)}
-                                    />
-                                    <span className="text-[0.87rem] text-ink">
-                                      {opt.text}
-                                      {opt.tag ? (
-                                        <span className="mt-0.5 block text-[0.75rem] text-muted">
-                                          {opt.tag}
-                                        </span>
-                                      ) : null}
-                                    </span>
-                                  </label>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        );
-                      }
-
                       const checked = !!value.checks[q.id];
-                      const cbId = `cb-${q.id}`;
                       return (
-                        <div key={q.id}>
-                          {q.heading ? (
-                            <p className="mt-2.5 border-t border-dashed border-white/10 pt-2 text-[0.74rem] text-cyan-300">
-                              {q.heading}
-                            </p>
-                          ) : null}
-                          <label
-                            htmlFor={cbId}
-                            className={cn(
-                              "flex min-h-11 cursor-pointer items-start gap-2.5 border-t border-white/10 py-2 first:border-t-0",
-                              q.optional && "text-muted-foreground",
-                            )}
+                        <li key={q.id} className="flex items-start gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setCheck(q.id, !checked)}
+                            className="tick-box mt-0.5 size-6 shrink-0"
+                            data-checked={checked ? "true" : "false"}
                           >
-                            <span
-                              className="tick-box mt-0.5"
-                              data-checked={checked ? "true" : "false"}
-                              aria-hidden
-                            >
-                              <input
-                                type="checkbox"
-                                id={cbId}
-                                checked={checked}
-                                onChange={(e) => setCheck(q.id, e.target.checked)}
-                                className="sr-only"
-                              />
-                              {checked ? <Check className="block size-3" strokeWidth={3} /> : null}
-                            </span>
-                            <span
-                              className={cn(
-                                "text-[0.88rem]",
-                                checked ? "text-muted-foreground line-through" : q.optional ? "text-muted-foreground" : "text-foreground",
-                              )}
-                            >
-                              <RichText text={q.text || ""} />
-                              {q.tag ? (
-                                <span className="ml-1.5 inline-block rounded border border-cyan-400/35 px-1.5 py-px align-middle text-[0.68rem] text-cyan-300">
-                                  {q.tag}
-                                </span>
+                            {checked ? <Check className="size-3" strokeWidth={3} /> : null}
+                          </button>
+                          <div className="min-w-0 flex-1">
+                            <p className={cn("text-sm", checked && "text-muted-foreground line-through")}>
+                              {q.name}
+                              {q.optional ? (
+                                <span className="ml-1 text-[0.65rem] text-muted-foreground">(Optional)</span>
                               ) : null}
-                            </span>
-                          </label>
-                        </div>
+                            </p>
+                            {q.detail ? (
+                              <div className="mt-0.5 text-[0.72rem] text-muted-foreground">
+                                <RichText text={q.detail} />
+                              </div>
+                            ) : null}
+                          </div>
+                        </li>
                       );
                     })}
-
-                    {stop.note ? (
-                      <p className="mt-2.5 rounded-lg border-l-2 border-cyan-400/30 bg-black/25 px-2.5 py-2 text-[0.8rem] text-muted-foreground">
-                        {stop.note}
-                      </p>
-                    ) : null}
-
-                    <p className="mt-2.5 inline-block rounded-md bg-emerald-400/10 px-2.5 py-1.5 text-[0.78rem] text-emerald-300">
-                      {stop.rewards}
-                    </p>
-                  </div>
-                ) : null}
-              </article>
+                  </ul>
+                </div>
+              )}
             </div>
           );
         })}
       </div>
-
-      <p className="mt-6 text-center text-[0.78rem] text-muted-foreground">
-        Progress Saves Automatically In This Browser.
-      </p>
     </div>
   );
 }
