@@ -447,6 +447,15 @@ export function GrindTracker() {
                   <p className="text-[0.65rem] font-bold uppercase tracking-wider text-muted-foreground">Loot</p>
                   <button type="button" onClick={() => setAddingLoot((v) => !v)} className="btn-ghost h-7 px-2 text-[0.65rem]"><Plus className="size-3" /> Add</button>
                 </div>
+                {loots.length > 0 && (
+                  <div className="mb-1 flex items-center gap-2 px-2 text-[0.5rem] font-bold uppercase tracking-wider text-muted-foreground">
+                    <span className="min-w-0 flex-1">Item</span>
+                    <span className="w-14 text-center sm:w-16">Qty</span>
+                    <span className="hidden w-[4.25rem] text-right sm:block">Total</span>
+                    <span className="hidden w-[4.25rem] text-right sm:block">/h</span>
+                    <span className="w-14 shrink-0" />
+                  </div>
+                )}
                 {addingLoot && (
                   <div className="mb-2 grid grid-cols-2 gap-1.5 rounded-lg bg-white/5 p-2 sm:grid-cols-4">
                     <Input value={lootName} onChange={(e) => setLootName(e.target.value)} placeholder="Item" className="h-8 text-xs" />
@@ -480,8 +489,17 @@ export function GrindTracker() {
                               <p className="truncate text-xs font-medium text-foreground">{l.name}</p>
                               <p className="text-[0.65rem] text-muted-foreground">{formatSilver(Number(l.unit_price))} · {l.kind === "market" ? "Market" : "NPC"}</p>
                             </div>
-                            <Input type="number" min={0} value={qty[l.id] || ""} onChange={(e) => setQty((prev) => ({ ...prev, [l.id]: e.target.value }))} placeholder="0" className="h-8 w-16 text-xs" />
-                            <span className="w-[4.5rem] text-right font-mono text-xs font-bold tabular-nums text-emerald-300">{formatSilver(lineSph)}</span>
+                            <Input type="number" min={0} value={qty[l.id] || ""} onChange={(e) => setQty((prev) => ({ ...prev, [l.id]: e.target.value }))} placeholder="0" className="h-8 w-14 shrink-0 text-xs sm:w-16" />
+                            <div className="flex shrink-0 flex-col items-end gap-0.5 sm:flex-row sm:items-center sm:gap-1.5">
+                              <span className="inline-flex min-w-[3.75rem] flex-col items-end rounded-lg border border-white/10 bg-white/[0.03] px-1.5 py-0.5 sm:min-w-[4.25rem]">
+                                <span className="text-[0.5rem] font-bold uppercase tracking-wider text-muted-foreground">Total</span>
+                                <span className="font-mono text-[0.7rem] font-bold tabular-nums text-cyan-300 sm:text-xs">{formatSilver(lineVal)}</span>
+                              </span>
+                              <span className="inline-flex min-w-[3.75rem] flex-col items-end rounded-lg border border-emerald-400/20 bg-emerald-400/5 px-1.5 py-0.5 sm:min-w-[4.25rem]">
+                                <span className="text-[0.5rem] font-bold uppercase tracking-wider text-muted-foreground">/h</span>
+                                <span className="font-mono text-[0.7rem] font-bold tabular-nums text-emerald-300 sm:text-xs">{formatSilver(lineSph)}</span>
+                              </span>
+                            </div>
                             <button type="button" onClick={() => beginEditLoot(l)} className="flex size-7 shrink-0 items-center justify-center rounded text-muted-foreground hover:text-cyan-300"><Pencil className="size-3" strokeWidth={1.75} /></button>
                             <button type="button" onClick={async () => { await deleteLoot(l.id); if (selectedId) setLoots(await listLoots(selectedId)); }} className="flex size-7 shrink-0 items-center justify-center rounded text-muted-foreground hover:text-rose-400"><Trash2 className="size-3" strokeWidth={1.75} /></button>
                           </div>
