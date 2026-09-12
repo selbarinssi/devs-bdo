@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useLocalStorage } from "@/lib/storage";
+import { useCloudStorage } from "@/lib/user-sync";
 import { cn } from "@/lib/utils";
 
 const STORAGE_KEY = "bdo_routines_v1";
@@ -112,7 +112,7 @@ function ProgressBlock({
 }
 
 export function Routines() {
-  const { value, setValue } = useLocalStorage<RoutinesState>(STORAGE_KEY, DEFAULT_STATE);
+  const { value, setValue } = useCloudStorage<RoutinesState>(STORAGE_KEY, DEFAULT_STATE);
   const [title, setTitle] = useState("");
   const [type, setType] = useState<RoutineType>("daily");
   const [resetDay, setResetDay] = useState(1);
