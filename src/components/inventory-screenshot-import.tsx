@@ -1,5 +1,6 @@
 import { ImagePlus, Loader2, X, Upload, Check } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createWorker, type Worker } from "tesseract.js";
 import { Input } from "@/components/ui/input";
 import type { LootRow } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
@@ -49,38 +50,231 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
+/** Convert image to grayscale ImageData at given size */
+function toGrayData(img: HTMLImageElement, w: number, h: number): ImageData {
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d", { willReadFrequently: true })!;
+  ctx.drawImage(img, 0, 0, w, h);
+  const data = ctx.getImageData(0, 0, w, h);
+  const d = data.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const g = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+    d[i] = d[i + 1] = d[i + 2] = g;
+  }
+  return data;
+}
+
 /**
- * Client-side detection pipeline (icon matching + stack-digit OCR).
- *
- * Current status: solid UI + apply logic is fully wired.
- * Detection itself is a stub that leaves every item as "not detected"
- * so qty stays unchanged. Real matching will be plugged in here later
- * (template match against loot icons at 1920×1080, then digit OCR on
- * the fixed stack region relative to each found icon).
+ * Fast-ish multi-scale template match.
+ * Returns best {x, y, score, scale} or null if below threshold.
+ * Score is 0–1 (higher = better match). Tuned for 1920×1080 BDO UI.
+ */
+function matchIcon(
+  screenGray: ImageData,
+  iconImg: HTMLImageElement,
+  scales = [0.7, 0.85, 1.0, 1.15, 1.3],
+): { x: number; y: number; score: number; scale: number; tw: number; th: number } | null {
+  const sw = screenGray.width;
+  const sh = screenGray.height;
+  const sData = screenGray.data;
+
+  let best: { x: number; y: number; score: number; scale: number; tw: number; th: number } | null =
+    null;
+
+  for (const scale of scales) {
+    const tw = Math.max(12, Math.round(iconImg.naturalWidth * scale));
+    const th = Math.max(12, Math.round(iconImg.naturalHeight * scale));
+    if (tw >= sw || th >= sh) continue;
+
+    const iconGray = toGrayData(iconImg, tw, th);
+    const tData = iconGray.data;
+
+    // Mean of template (for normalized-ish score)
+    let tSum = 0;
+    const tPixels = tw * th;
+    for (let i = 0; i < tData.length; i += 4) tSum += tData[i];
+    const tMean = tSum / tPixels;
+
+    // Stride to keep it interactive (~every 3–4 px)
+    const stride = Math.max(2, Math.floor(Math.min(tw, th) / 12));
+
+    for (let y = 0; y <= sh - th; y += stride) {
+      for (let x = 0; x <= sw - tw; x += stride) {
+        let sumDiff = 0;
+        let sSum = 0;
+        for (let ty = 0; ty < th; ty++) {
+          const sRow = ((y + ty) * sw + x) * 4;
+          const tRow = ty * tw * 4;
+          for (let tx = 0; tx < tw; tx++) {
+            const sVal = sData[sRow + tx * 4];
+            const tVal = tData[tRow + tx * 4];
+            sumDiff += Math.abs(sVal - tVal);
+            sSum += sVal;
+          }
+        }
+        const meanDiff = sumDiff / tPixels;
+        // Normalize roughly against intensity so dark/light icons both work
+        const score = 1 - meanDiff / 255;
+        if (!best || score > best.score) {
+          best = { x, y, score, scale, tw, th };
+        }
+      }
+    }
+  }
+
+  // Threshold — tune later with real screenshots
+  if (!best || best.score < 0.72) return null;
+  return best;
+}
+
+/** Crop the typical BDO stack-number region relative to a found icon */
+function cropStackRegion(
+  screenImg: HTMLImageElement,
+  match: { x: number; y: number; tw: number; th: number },
+): string {
+  // BDO usually draws the stack count in the bottom-right of the slot,
+  // slightly overlapping / just outside the icon.
+  const padX = Math.round(match.tw * 0.15);
+  const padY = Math.round(match.th * 0.1);
+  const cx = Math.max(0, match.x + Math.round(match.tw * 0.45));
+  const cy = Math.max(0, match.y + Math.round(match.th * 0.65));
+  const cw = Math.min(screenImg.naturalWidth - cx, Math.round(match.tw * 0.7) + padX);
+  const ch = Math.min(screenImg.naturalHeight - cy, Math.round(match.th * 0.55) + padY);
+
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, cw);
+  canvas.height = Math.max(1, ch);
+  const ctx = canvas.getContext("2d")!;
+  ctx.drawImage(screenImg, cx, cy, cw, ch, 0, 0, cw, ch);
+
+  // Upscale a bit — helps Tesseract on small digits
+  const up = document.createElement("canvas");
+  up.width = canvas.width * 3;
+  up.height = canvas.height * 3;
+  const uctx = up.getContext("2d")!;
+  uctx.imageSmoothingEnabled = false;
+  uctx.drawImage(canvas, 0, 0, up.width, up.height);
+
+  return up.toDataURL("image/png");
+}
+
+async function ocrDigits(worker: Worker, dataUrl: string): Promise<number | null> {
+  try {
+    const {
+      data: { text },
+    } = await worker.recognize(dataUrl);
+    const cleaned = (text || "").replace(/[^0-9]/g, "");
+    if (!cleaned) return null;
+    const n = parseInt(cleaned, 10);
+    return Number.isFinite(n) && n >= 0 ? n : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Client-side detection: icon template matching + stack-digit OCR.
+ * Tuned for ~1920×1080 BDO inventory / enhancement windows.
  */
 async function runDetection(
   loots: LootRow[],
   normalDataUrl: string | null,
   enhanceDataUrl: string | null,
 ): Promise<DetectionRow[]> {
-  // Keep the function async so the real implementation can await
-  // image loads / Tesseract without changing the call site.
-  void normalDataUrl;
-  void enhanceDataUrl;
+  const screens: HTMLImageElement[] = [];
+  for (const url of [normalDataUrl, enhanceDataUrl]) {
+    if (!url) continue;
+    try {
+      screens.push(await loadImage(url));
+    } catch {
+      /* skip bad image */
+    }
+  }
 
-  // Brief delay so the processing spinner is visible and feels intentional.
-  await new Promise((r) => setTimeout(r, 600));
+  if (screens.length === 0) {
+    return loots.map((l) => ({
+      lootId: l.id,
+      name: l.name,
+      iconUrl: l.icon_url,
+      detectedQty: null,
+      mode: "override" as QtyMode,
+      ignore: false,
+      confidence: null,
+      editQty: "",
+    }));
+  }
 
-  return loots.map((l) => ({
-    lootId: l.id,
-    name: l.name,
-    iconUrl: l.icon_url,
-    detectedQty: null,
-    mode: "override" as QtyMode,
-    ignore: false,
-    confidence: null,
-    editQty: "",
-  }));
+  // Precompute grayscale screens at native size (cap very large images)
+  const screenGrays: { img: HTMLImageElement; gray: ImageData }[] = [];
+  for (const img of screens) {
+    const maxW = 1920;
+    const scale = img.naturalWidth > maxW ? maxW / img.naturalWidth : 1;
+    const w = Math.round(img.naturalWidth * scale);
+    const h = Math.round(img.naturalHeight * scale);
+    screenGrays.push({ img, gray: toGrayData(img, w, h) });
+  }
+
+  // One Tesseract worker shared across all items
+  const worker = await createWorker("eng", 1, {
+    logger: () => {},
+  });
+  await worker.setParameters({
+    tessedit_char_whitelist: "0123456789",
+    tessedit_pageseg_mode: "7" as unknown as string, // treat as single text line
+  });
+
+  const results: DetectionRow[] = [];
+
+  try {
+    for (const l of loots) {
+      let bestQty: number | null = null;
+      let bestConf: number | null = null;
+
+      if (l.icon_url) {
+        try {
+          const iconImg = await loadImage(l.icon_url);
+
+          for (const { img, gray } of screenGrays) {
+            const match = matchIcon(gray, iconImg);
+            if (!match) continue;
+
+            const cropUrl = cropStackRegion(img, match);
+            const qty = await ocrDigits(worker, cropUrl);
+
+            // Prefer higher confidence match; if multiple screens, take higher qty as absolute
+            if (qty != null) {
+              if (bestQty == null || qty > bestQty || (match.score > (bestConf ?? 0))) {
+                bestQty = qty;
+                bestConf = match.score;
+              }
+            } else if (bestConf == null || match.score > bestConf) {
+              // Matched icon but OCR failed — still record confidence so UI can show "found"
+              bestConf = match.score;
+            }
+          }
+        } catch {
+          /* icon load / match failed → leave undetected */
+        }
+      }
+
+      results.push({
+        lootId: l.id,
+        name: l.name,
+        iconUrl: l.icon_url,
+        detectedQty: bestQty,
+        mode: "override",
+        ignore: false,
+        confidence: bestConf,
+        editQty: "",
+      });
+    }
+  } finally {
+    await worker.terminate();
+  }
+
+  return results;
 }
 
 function UploadSlot({
@@ -157,7 +351,6 @@ export function InventoryScreenshotImport({ open, onClose, loots, currentQty, on
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  // Reset when the modal is closed / reopened
   useEffect(() => {
     if (!open) return;
     setStep("upload");
@@ -188,7 +381,6 @@ export function InventoryScreenshotImport({ open, onClose, loots, currentQty, on
     setStep("processing");
     try {
       const detected = await runDetection(loots, normalPreview, enhancePreview);
-      // Seed editQty from current session qty so "not detected" items stay unchanged
       const seeded = detected.map((d) => ({
         ...d,
         editQty: d.detectedQty != null ? String(d.detectedQty) : currentQty[d.lootId] || "",
@@ -216,19 +408,14 @@ export function InventoryScreenshotImport({ open, onClose, loots, currentQty, on
       const before = parseFloat(currentQty[r.lootId] || "0") || 0;
       const detected = r.detectedQty;
 
-      if (detected == null) {
-        // Not found in screenshots → leave qty unchanged (already in `next`)
-        continue;
-      }
+      if (detected == null) continue;
 
-      // Prefer the user-edited value when present
       const edited = parseFloat(r.editQty);
       const value = Number.isFinite(edited) ? edited : detected;
 
       if (r.mode === "add") {
         next[r.lootId] = String(before + value);
       } else {
-        // override (default)
         next[r.lootId] = String(value);
       }
     }
@@ -241,7 +428,6 @@ export function InventoryScreenshotImport({ open, onClose, loots, currentQty, on
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
-      {/* backdrop */}
       <button
         type="button"
         aria-label="Close"
@@ -250,7 +436,6 @@ export function InventoryScreenshotImport({ open, onClose, loots, currentQty, on
       />
 
       <div className="glass-strong relative z-10 flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden sm:max-w-xl sm:rounded-2xl">
-        {/* header */}
         <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
           <div>
             <p className="text-[0.65rem] font-bold uppercase tracking-wider text-cyan-300/90">
@@ -345,15 +530,17 @@ export function InventoryScreenshotImport({ open, onClose, loots, currentQty, on
                           <p className="truncate text-sm font-semibold text-foreground">{r.name}</p>
                           <p className="text-[0.65rem] text-muted-foreground">
                             {detected == null
-                              ? "Not detected · qty unchanged"
+                              ? r.confidence != null
+                                ? `Icon found · OCR missed · was ${before || 0}`
+                                : "Not detected · qty unchanged"
                               : `Detected ${detected}${r.confidence != null ? ` · ${Math.round(r.confidence * 100)}%` : ""}`}
-                            {before > 0 && ` · was ${before}`}
+                            {before > 0 && detected != null && ` · was ${before}`}
                           </p>
                         </div>
                         <Input
                           type="number"
                           min={0}
-                          disabled={r.ignore || detected == null}
+                          disabled={r.ignore}
                           value={r.editQty}
                           onChange={(e) => updateRow(r.lootId, { editQty: e.target.value })}
                           placeholder={detected == null ? "—" : "0"}
@@ -364,7 +551,7 @@ export function InventoryScreenshotImport({ open, onClose, loots, currentQty, on
                       <div className="mt-2 flex flex-wrap items-center gap-1.5">
                         <button
                           type="button"
-                          disabled={detected == null}
+                          disabled={detected == null && r.confidence == null}
                           onClick={() => updateRow(r.lootId, { mode: "override" })}
                           className={cn(
                             "btn-ghost h-7 px-2.5 text-[0.65rem]",
@@ -375,7 +562,7 @@ export function InventoryScreenshotImport({ open, onClose, loots, currentQty, on
                         </button>
                         <button
                           type="button"
-                          disabled={detected == null}
+                          disabled={detected == null && r.confidence == null}
                           onClick={() => updateRow(r.lootId, { mode: "add" })}
                           className={cn(
                             "btn-ghost h-7 px-2.5 text-[0.65rem]",
@@ -406,7 +593,6 @@ export function InventoryScreenshotImport({ open, onClose, loots, currentQty, on
           )}
         </div>
 
-        {/* footer */}
         <div className="flex items-center justify-end gap-2 border-t border-white/10 px-4 py-3">
           {step === "upload" && (
             <>
