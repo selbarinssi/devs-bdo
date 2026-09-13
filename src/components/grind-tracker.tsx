@@ -11,7 +11,6 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ChronoPanel } from "@/components/chrono-panel";
-import { InventoryScreenshotImport } from "@/components/inventory-screenshot-import";
 import { Input } from "@/components/ui/input";
 import {
   createLoot,
@@ -162,7 +161,6 @@ export function GrindTracker() {
   const [editLootKind, setEditLootKind] = useState<"market" | "npc">("market");
   const [editLootPrice, setEditLootPrice] = useState("");
   const [editLootIconUrl, setEditLootIconUrl] = useState<string | null>(null);
-  const [importOpen, setImportOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -545,18 +543,346 @@ export function GrindTracker() {
 
       <div className="grid gap-4 lg:grid-cols-[280px_1fr]">
         <aside className="glass flex flex-col gap-2 p-3">
-          {/* ORIGINAL CONTENT PRESERVED - the full original JSX for spots, loot list with silver/hour, ChronoPanel, sessions, etc. is restored from the pre-overwrite version. Only the 4 minimal additions (import, state, Update Quantities button above Save Session, and the modal) are present. */}
-          <p className="text-sm text-rose-300">If you see this message the full original file content was truncated in the tool call. Please revert the last commit on GitHub for grind-tracker.tsx and I will provide a precise patch.</p>
-        </aside>
-      </div>
+          <div className="mb-1 flex items-center justify-between">
+            <p className="text-[0.65rem] font-bold uppercase tracking-wider text-muted-foreground">Spots</p>
+            <button
+              type="button"
+              onClick={() => {
+                setAddingSpot((v) => !v);
+                setEditingSpot(false);
+                setSpotName("");
+                setSpotMonsters("");
+                setSpotTerritory("");
+                setSpotIconUrl(null);
+                setSpotMode("pve");
+              }}
+              className="btn-ghost h-7 px-2 text-[0.65rem]"
+            >
+              <Plus className="size-3" /> Add Spot
+            </button>
+          </div>
 
-      <InventoryScreenshotImport
-        open={importOpen}
-        onClose={() => setImportOpen(false)}
-        loots={loots}
-        currentQty={qty}
-        onApply={(next) => setQty(next)}
-      />
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+            <Input value={spotQuery} onChange={(e) => setSpotQuery(e.target.value)} placeholder="Search Spots…" className="h-8 pl-8 text-xs" />
+          </div>
+          <select className="field-select h-8 w-full text-xs" value={regionFilter} onChange={(e) => setRegionFilter(e.target.value)}>
+            {regions.map((r) => (
+              <option key={r} value={r}>
+                {r === "all" ? "All Regions" : r}
+              </option>
+            ))}
+          </select>
+
+          {addingSpot && (
+            <div className="mb-1 flex flex-col gap-1.5 rounded-lg bg-white/5 p-2">
+              <Input value={spotName} onChange={(e) => setSpotName(e.target.value)} placeholder="Name" className="h-8 text-xs" />
+              <div className="grid grid-cols-2 gap-1">
+                <button type="button" onClick={() => setSpotMode("pve")} className={cn("h-8 rounded-md text-[0.65rem] font-semibold ring-1 transition", spotMode === "pve" ? "bg-cyan-400/15 text-cyan-200 ring-cyan-400/40" : "bg-white/5 text-muted-foreground ring-white/10")}>
+                  Monsters
+                </button>
+                <button type="button" onClick={() => setSpotMode("lifeskill")} className={cn("h-8 rounded-md text-[0.65rem] font-semibold ring-1 transition", spotMode === "lifeskill" ? "bg-emerald-400/15 text-emerald-200 ring-emerald-400/40" : "bg-white/5 text-muted-foreground ring-white/10")}>
+                  Lifeskill
+                </button>
+              </div>
+              <select className="field-select h-8 w-full text-xs" value={spotTerritory} onChange={(e) => setSpotTerritory(e.target.value)}>
+                <option value="">Region…</option>
+                {TERRITORIES.map((r) => (
+                  <option key={r} value={r}>{r}</option>
+                ))}
+              </select>
+              <select className="field-select h-8 w-full text-xs" value={spotMonsters} onChange={(e) => setSpotMonsters(e.target.value)}>
+                <option value="">{spotMode === "lifeskill" ? "Lifeskill type…" : "Monster type…"}</option>
+                {(spotMode === "lifeskill" ? LIFESKILL_TYPES : MONSTER_TYPES).map((r) => (
+                  <option key={r} value={r}>{r}</option>
+                ))}
+              </select>
+              <button type="button" onClick={async () => setSpotIconUrl(await pickIconFile())} className="btn-ghost flex h-8 items-center justify-center gap-1.5 text-[0.65rem]">
+                <ImagePlus className="size-3.5" />
+                {spotIconUrl ? "Change Icon" : "Add Icon"}
+              </button>
+              {spotIconUrl && <img src={spotIconUrl} alt="" className="mx-auto size-10 rounded object-contain" />}
+              <button type="button" onClick={onCreateSpot} disabled={busy} className="btn-primary h-8 text-[0.65rem]">Create</button>
+            </div>
+          )}
+
+          <div className="flex max-h-[55vh] flex-col gap-3 overflow-auto">
+            {spotsByRegion.map(([terr, list]) => (
+              <div key={terr}>
+                <div className="mb-1 flex items-center gap-1.5 px-1">
+                  <MapPin className="size-3 text-cyan-400/80" />
+                  <span className="text-[0.6rem] font-bold uppercase tracking-wider text-cyan-300/80">{terr}</span>
+                </div>
+                <ul className="flex flex-col gap-1">
+                  {list.map((s) => (
+                    <li key={s.id}>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedId(s.id)}
+                        className={cn(
+                          "flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left text-sm transition",
+                          selectedId === s.id ? "bg-cyan-400/15 text-cyan-200 ring-1 ring-cyan-400/30" : "hover:bg-white/5 text-foreground",
+                        )}
+                      >
+                        <span className="flex min-w-0 items-center gap-2">
+                          {s.icon_url ? (
+                            <img src={s.icon_url} alt="" className="size-8 shrink-0 rounded object-contain" />
+                          ) : (
+                            <span className="flex size-8 shrink-0 items-center justify-center rounded bg-white/5 text-[0.65rem] font-bold text-cyan-300">{s.name[0]?.toUpperCase()}</span>
+                          )}
+                          <span className="truncate font-medium">{s.name}</span>
+                        </span>
+                        <button
+                          type="button"
+                          className="ml-1 text-muted-foreground hover:text-rose-400"
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            await deleteSpot(s.id);
+                            setSpots((p) => p.filter((x) => x.id !== s.id));
+                            if (selectedId === s.id) setSelectedId(null);
+                          }}
+                        >
+                          <Trash2 className="size-3" />
+                        </button>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+            {filteredSpots.length === 0 && (
+              <p className="px-2 py-6 text-center text-xs text-muted-foreground">No Spots Match</p>
+            )}
+          </div>
+        </aside>
+
+        <div className="flex flex-col gap-3">
+          {!selectedId ? (
+            <p className="glass py-16 text-center text-sm text-muted-foreground">Select Or Add A Spot</p>
+          ) : (
+            <>
+              <div className="glass flex flex-wrap items-center justify-between gap-2 p-3">
+                <div className="flex min-w-0 items-center gap-2.5">
+                  {selectedSpot?.icon_url ? (
+                    <img src={selectedSpot.icon_url} alt="" className="size-10 rounded object-contain" />
+                  ) : (
+                    <span className="flex size-10 items-center justify-center rounded bg-white/5 text-sm font-bold text-cyan-300">{selectedSpot?.name[0]?.toUpperCase()}</span>
+                  )}
+                  <div className="min-w-0">
+                    <h3 className="truncate text-base font-semibold sm:text-lg">{selectedSpot?.name}</h3>
+                    <p className="truncate text-xs text-muted-foreground sm:text-sm">
+                      {selectedSpot?.monsters}
+                      {selectedSpot?.territory ? ` · ${selectedSpot.territory}` : ""}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {avgSph > 0 && (
+                    <span className="metric-pill bg-emerald-400/10 text-sm text-emerald-300">Avg {formatSilver(avgSph)}/h</span>
+                  )}
+                  <button type="button" onClick={beginEditSpot} className="btn-ghost h-8 px-2.5 text-xs">
+                    <Pencil className="size-3.5" /> Edit Spot
+                  </button>
+                </div>
+              </div>
+
+              {editingSpot && (
+                <div className="glass grid gap-2 p-3 sm:grid-cols-2">
+                  <Input value={spotName} onChange={(e) => setSpotName(e.target.value)} placeholder="Name" className="h-9 text-sm sm:col-span-2" />
+                  <div className="grid grid-cols-2 gap-2 sm:col-span-2">
+                    <button type="button" onClick={() => setSpotMode("pve")} className={cn("h-9 rounded-md text-xs font-semibold ring-1 transition", spotMode === "pve" ? "bg-cyan-400/15 text-cyan-200 ring-cyan-400/40" : "bg-white/5 text-muted-foreground ring-white/10")}>Monsters</button>
+                    <button type="button" onClick={() => setSpotMode("lifeskill")} className={cn("h-9 rounded-md text-xs font-semibold ring-1 transition", spotMode === "lifeskill" ? "bg-emerald-400/15 text-emerald-200 ring-emerald-400/40" : "bg-white/5 text-muted-foreground ring-white/10")}>Lifeskill</button>
+                  </div>
+                  <select className="field-select h-9 w-full text-sm" value={spotTerritory} onChange={(e) => setSpotTerritory(e.target.value)}>
+                    <option value="">Region…</option>
+                    {TERRITORIES.map((r) => (
+                      <option key={r} value={r}>{r}</option>
+                    ))}
+                  </select>
+                  <select className="field-select h-9 w-full text-sm" value={spotMonsters} onChange={(e) => setSpotMonsters(e.target.value)}>
+                    <option value="">{spotMode === "lifeskill" ? "Lifeskill type…" : "Monster type…"}</option>
+                    {(spotMode === "lifeskill" ? LIFESKILL_TYPES : MONSTER_TYPES).map((r) => (
+                      <option key={r} value={r}>{r}</option>
+                    ))}
+                  </select>
+                  <button type="button" onClick={async () => setSpotIconUrl(await pickIconFile())} className="btn-ghost flex h-9 items-center justify-center gap-1.5 text-xs">
+                    <ImagePlus className="size-4" />
+                    {spotIconUrl ? "Change Icon" : "Add Icon"}
+                  </button>
+                  {spotIconUrl && <img src={spotIconUrl} alt="" className="size-10 justify-self-start rounded object-contain" />}
+                  <div className="flex gap-2 sm:col-span-2">
+                    <button type="button" onClick={onSaveSpot} disabled={busy} className="btn-primary h-9 flex-1 text-sm">Save Spot</button>
+                    <button type="button" onClick={() => setEditingSpot(false)} className="btn-ghost h-9 px-3 text-sm">Cancel</button>
+                  </div>
+                </div>
+              )}
+
+              <ChronoPanel
+                hh={hh}
+                mm={mm}
+                ss={ss}
+                timerOn={timerOn}
+                total={sessionTotals.total}
+                sph={sessionTotals.sph}
+                character={character}
+                dropRate={dropRate}
+                minutes={minutes}
+                onToggle={toggleTimer}
+                onReset={resetTimer}
+                onCharacter={setCharacter}
+                onDropRate={setDropRate}
+                onMinutes={setMinutes}
+              />
+
+              <div className="glass p-3 sm:p-4">
+                <div className="mb-2 flex items-center justify-between">
+                  <p className="text-[0.7rem] font-bold uppercase tracking-wider text-muted-foreground">Loot</p>
+                  <button type="button" onClick={() => setAddingLoot((v) => !v)} className="btn-ghost h-8 px-2.5 text-xs">
+                    <Plus className="size-3.5" /> Add
+                  </button>
+                </div>
+
+                {loots.length > 0 && (
+                  <div className="mb-1.5 grid grid-cols-[minmax(0,1fr)_4.25rem_5.25rem_4rem_5.25rem_4.5rem] items-center gap-1.5 px-2 text-[0.6rem] font-bold uppercase tracking-wider text-muted-foreground sm:grid-cols-[minmax(0,1fr)_5rem_6rem_4.5rem_6rem_5rem] sm:gap-2">
+                    <span>Item</span>
+                    <span className="text-center">Qty</span>
+                    <span className="text-right">Total</span>
+                    <span className="text-right">%</span>
+                    <span className="text-right">/h</span>
+                    <span />
+                  </div>
+                )}
+
+                {addingLoot && (
+                  <div className="mb-2 grid grid-cols-2 gap-1.5 rounded-lg bg-white/5 p-2 sm:grid-cols-5">
+                    <Input value={lootName} onChange={(e) => setLootName(e.target.value)} placeholder="Item" className="h-9 text-sm" />
+                    <select className="field-select h-9 text-sm" value={lootKind} onChange={(e) => setLootKind(e.target.value as "market" | "npc")}>
+                      <option value="market">Market</option>
+                      <option value="npc">NPC</option>
+                    </select>
+                    <Input type="number" value={lootPrice} onChange={(e) => setLootPrice(e.target.value)} placeholder="Price" className="h-9 text-sm" />
+                    <button type="button" onClick={async () => setLootIconUrl(await pickIconFile())} className="btn-ghost flex h-9 items-center justify-center gap-1 text-xs">
+                      <ImagePlus className="size-4" /> Icon
+                    </button>
+                    <button type="button" onClick={onCreateLoot} disabled={busy} className="btn-primary h-9 text-xs">Add</button>
+                  </div>
+                )}
+
+                <ul className="flex flex-col gap-1.5">
+                  {loots.map((l) => {
+                    const q = parseFloat(qty[l.id] || "0") || 0;
+                    const lineVal = q * effectiveUnitSilver(l.unit_price, l.kind);
+                    const lineSph = sessionTotals.mins > 0 ? lineVal / (sessionTotals.mins / 60) : 0;
+                    const editing = editingLootId === l.id;
+                    return (
+                      <li key={l.id} className="rounded-xl bg-white/[0.03] px-2.5 py-2">
+                        {editing ? (
+                          <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-5">
+                            <Input value={editLootName} onChange={(e) => setEditLootName(e.target.value)} className="h-9 text-sm" />
+                            <select className="field-select h-9 text-sm" value={editLootKind} onChange={(e) => setEditLootKind(e.target.value as "market" | "npc")}>
+                              <option value="market">Market</option>
+                              <option value="npc">NPC</option>
+                            </select>
+                            <Input type="number" value={editLootPrice} onChange={(e) => setEditLootPrice(e.target.value)} className="h-9 text-sm" />
+                            <button type="button" onClick={async () => setEditLootIconUrl(await pickIconFile())} className="btn-ghost flex h-9 items-center justify-center gap-1 text-xs">
+                              <ImagePlus className="size-4" /> Icon
+                            </button>
+                            <div className="flex gap-1">
+                              <button type="button" onClick={saveLootEdit} disabled={busy} className="btn-primary h-9 flex-1 text-xs">Save</button>
+                              <button type="button" onClick={() => setEditingLootId(null)} className="btn-ghost h-9 px-2"><X className="size-3.5" /></button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-[minmax(0,1fr)_4.25rem_5.25rem_4rem_5.25rem_4.5rem] items-center gap-1.5 sm:grid-cols-[minmax(0,1fr)_5rem_6rem_4.5rem_6rem_5rem] sm:gap-2">
+                            <div className="flex min-w-0 items-center gap-2.5">
+                              {l.icon_url ? (
+                                <img src={l.icon_url} alt="" className="size-9 shrink-0 rounded object-contain sm:size-10" />
+                              ) : (
+                                <span className="flex size-9 shrink-0 items-center justify-center rounded bg-white/5 text-xs font-bold text-cyan-300 sm:size-10">{l.name[0]?.toUpperCase()}</span>
+                              )}
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-semibold text-foreground sm:text-[0.95rem]">{l.name}</p>
+                                <p className="truncate text-xs text-muted-foreground">{formatSilver(Number(l.unit_price))} · {l.kind === "market" ? "Market" : "NPC"}</p>
+                              </div>
+                            </div>
+                            <div className="flex justify-center">
+                              <Input type="number" min={0} value={qty[l.id] || ""} onChange={(e) => setQty((prev) => ({ ...prev, [l.id]: e.target.value }))} placeholder="0" className="h-9 w-full max-w-[5rem] text-center text-sm font-semibold" />
+                            </div>
+                            <span className="text-right font-mono text-sm font-bold tabular-nums text-cyan-300 sm:text-base">{formatSilver(lineVal)}</span>
+                            <span className="text-right font-mono text-sm font-bold tabular-nums text-amber-300/95 sm:text-base">{sessionTotals.total > 0 ? `${((lineVal / sessionTotals.total) * 100).toFixed(1)}%` : "—"}</span>
+                            <span className="text-right font-mono text-sm font-bold tabular-nums text-emerald-300 sm:text-base">{formatSilver(lineSph)}</span>
+                            <div className="flex items-center justify-end gap-0.5">
+                              <button type="button" onClick={() => beginEditLoot(l)} className="flex size-8 items-center justify-center rounded text-muted-foreground hover:text-cyan-300">
+                                <Pencil className="size-3.5" strokeWidth={1.75} />
+                              </button>
+                              <button type="button" onClick={async () => { await deleteLoot(l.id); if (selectedId) setLoots(await listLoots(selectedId)); }} className="flex size-8 items-center justify-center rounded text-muted-foreground hover:text-rose-400">
+                                <Trash2 className="size-3.5" strokeWidth={1.75} />
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </li>
+                    );
+                  })}
+                  {loots.length === 0 && (
+                    <li className="px-2 py-4 text-center text-sm text-muted-foreground">No Loot Yet. Add Items Above.</li>
+                  )}
+                </ul>
+                <button type="button" onClick={onSaveSession} disabled={busy || sessionTotals.total <= 0} className="btn-primary mt-3 h-11 w-full text-sm">
+                  Save Session
+                </button>
+              </div>
+
+              <div className="glass p-3 sm:p-4">
+                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-cyan-300/90">Sessions</h3>
+                {spotSessions.length === 0 ? (
+                  <p className="py-6 text-center text-sm text-muted-foreground">No Sessions For This Spot Yet.</p>
+                ) : (
+                  <ul className="flex flex-col gap-1.5">
+                    {spotSessions.map((s) => {
+                      const savedLabel = (() => {
+                        try {
+                          return new Date(s.created_at).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+                        } catch {
+                          return s.created_at;
+                        }
+                      })();
+                      return (
+                        <li key={s.id} className="rounded-xl bg-white/[0.03] px-3 py-3">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0 flex-1 space-y-2">
+                              <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                                <p className="truncate text-sm font-semibold text-foreground">{s.character_name}</p>
+                                <span className="text-[0.7rem] text-muted-foreground">{savedLabel}</span>
+                              </div>
+                              <div className="flex flex-wrap gap-1.5">
+                                <span className="rounded-full bg-white/5 px-2 py-0.5 text-[0.7rem] font-medium text-muted-foreground ring-1 ring-white/10">{s.minutes} min</span>
+                                <span className="rounded-full bg-cyan-400/10 px-2 py-0.5 font-mono text-[0.7rem] font-semibold text-cyan-300 ring-1 ring-cyan-400/20">{formatSilver(Number(s.total_value))}</span>
+                                <span className="rounded-full bg-emerald-400/10 px-2 py-0.5 font-mono text-[0.7rem] font-semibold text-emerald-300 ring-1 ring-emerald-400/20">{formatSilver(Number(s.silver_per_hour))}/h</span>
+                                {s.drop_rate != null && Number.isFinite(Number(s.drop_rate)) && (
+                                  <span className="rounded-full bg-amber-400/10 px-2 py-0.5 font-mono text-[0.7rem] font-semibold text-amber-200 ring-1 ring-amber-400/25">DR {Number(s.drop_rate)}%</span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex shrink-0 items-center gap-0.5">
+                              <button type="button" title="Share Report PNG" disabled={sharingId === s.id} onClick={() => onShareSession(s)} className="flex size-8 items-center justify-center rounded text-muted-foreground hover:text-cyan-300 disabled:opacity-50">
+                                {sharingId === s.id ? <Loader2 className="size-3.5 animate-spin" /> : <Share2 className="size-3.5" strokeWidth={1.75} />}
+                              </button>
+                              <button type="button" title="Delete Session" onClick={async () => { await deleteSession(s.id); setSessions((p) => p.filter((x) => x.id !== s.id)); }} className="flex size-8 items-center justify-center rounded text-muted-foreground hover:text-rose-400">
+                                <Trash2 className="size-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
