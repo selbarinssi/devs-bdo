@@ -8,7 +8,8 @@ import {
 
 async function requireUserId(): Promise<string> {
   const { data, error } = await getSupabase().auth.getUser();
-  if (error || !data.user) throw new Error("Sign in required");
+  if (error) throw new Error(error.message || "Auth check failed");
+  if (!data.user) throw new Error("Sign in required — open the app and log in with Discord again");
   return data.user.id;
 }
 
@@ -146,7 +147,9 @@ export async function createSession(input: {
     })
     .select()
     .single();
-  if (error) throw error;
+  if (error) {
+    throw new Error(error.message || "Session insert failed");
+  }
 
   if (input.lines.length) {
     const { error: lineErr } = await sb.from("session_loots").insert(
@@ -159,7 +162,9 @@ export async function createSession(input: {
         line_value: l.line_value,
       })),
     );
-    if (lineErr) throw lineErr;
+    if (lineErr) {
+      throw new Error(lineErr.message || "Session loot lines failed");
+    }
   }
 
   return session;
