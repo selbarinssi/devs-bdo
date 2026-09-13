@@ -13,7 +13,6 @@ async function requireUserId(): Promise<string> {
 }
 
 export async function listSpots(): Promise<SpotRow[]> {
-  // Shared catalog — all signed-in users see the same spots
   const { data, error } = await getSupabase()
     .from("spots")
     .select("*")
@@ -30,7 +29,6 @@ export async function createSpot(input: {
   icon_url?: string | null;
   mode?: string | null;
 }): Promise<SpotRow> {
-  // Shared catalog — no per-user ownership on spots
   const { data, error } = await getSupabase()
     .from("spots")
     .insert(input)
@@ -188,9 +186,15 @@ export async function updateSession(
 export async function updateSpot(
   id: string,
   patch: Partial<Pick<SpotRow, "name" | "monsters" | "territory" | "icon_url" | "mode">>,
-): Promise<void> {
-  const { error } = await getSupabase().from("spots").update(patch).eq("id", id);
+): Promise<SpotRow> {
+  const { data, error } = await getSupabase()
+    .from("spots")
+    .update(patch)
+    .eq("id", id)
+    .select()
+    .single();
   if (error) throw error;
+  return data;
 }
 
 export async function updateLoot(
@@ -201,9 +205,15 @@ export async function updateLoot(
     unit_price?: number;
     icon_url?: string | null;
   },
-): Promise<void> {
-  const { error } = await getSupabase().from("loots").update(patch).eq("id", id);
+): Promise<LootRow> {
+  const { data, error } = await getSupabase()
+    .from("loots")
+    .update(patch)
+    .eq("id", id)
+    .select()
+    .single();
   if (error) throw error;
+  return data;
 }
 
 export async function findIconByLootName(name: string): Promise<string | null> {
