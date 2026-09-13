@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ChronoPanel } from "@/components/chrono-panel";
+import { InventoryScreenshotImport } from "@/components/inventory-screenshot-import";
 import { Input } from "@/components/ui/input";
 import {
   createLoot,
@@ -161,6 +162,7 @@ export function GrindTracker() {
   const [editLootKind, setEditLootKind] = useState<"market" | "npc">("market");
   const [editLootPrice, setEditLootPrice] = useState("");
   const [editLootIconUrl, setEditLootIconUrl] = useState<string | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -828,9 +830,18 @@ export function GrindTracker() {
                     <li className="px-2 py-4 text-center text-sm text-muted-foreground">No Loot Yet. Add Items Above.</li>
                   )}
                 </ul>
-                <button type="button" onClick={onSaveSession} disabled={busy || sessionTotals.total <= 0} className="btn-primary mt-3 h-11 w-full text-sm">
-                  Save Session
-                </button>
+                {loots.length > 0 && (
+  <button
+    type="button"
+    onClick={() => setImportOpen(true)}
+    className="btn-ghost mt-3 h-10 w-full text-xs"
+  >
+    <ImagePlus className="size-3.5" /> Update Quantities
+  </button>
+)}
+<button type="button" onClick={onSaveSession} disabled={busy || sessionTotals.total <= 0} className="btn-primary mt-2 h-11 w-full text-sm">
+  Save Session
+</button>
               </div>
 
               <div className="glass p-3 sm:p-4">
@@ -883,6 +894,13 @@ export function GrindTracker() {
           )}
         </div>
       </div>
+          <InventoryScreenshotImport
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        loots={loots}
+        currentQty={qty}
+        onApply={(next) => setQty(next)}
+      />
     </div>
   );
 }
