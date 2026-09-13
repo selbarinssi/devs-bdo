@@ -1,6 +1,6 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import type { ReactNode } from "react";
-import { Anchor, FlaskConical, ListChecks, Swords } from "lucide-react";
+import { Anchor, FlaskConical, ListChecks, Map, Swords } from "lucide-react";
 import { AuthPanel } from "@/components/auth-panel";
 import { LoginLanding, useSupabaseUser } from "@/components/login-landing";
 import { cn } from "@/lib/utils";
@@ -8,11 +8,11 @@ import { cn } from "@/lib/utils";
 const NAV = [
   { to: "/routines", label: "Routines", icon: ListChecks, exact: false },
   { to: "/grind", label: "Grind", icon: Swords, exact: false },
+  { to: "/research", label: "Research", icon: Map, exact: false },
   { to: "/alchemy", label: "Alchemy", icon: FlaskConical, exact: false },
   { to: "/voyage", label: "Voyage", icon: Anchor, exact: false },
 ] as const;
 
-/** White star + purple planets orbiting — transparent, no plate */
 function HubMark({ className }: { className?: string }) {
   return (
     <svg
@@ -114,7 +114,7 @@ export function AppShell({
                 Black Desert Online
               </p>
               <h1 className="text-base font-semibold tracking-wide text-foreground sm:text-lg">
-                Dev&apos;s Hub
+                Dev's Hub
               </h1>
             </div>
           </div>
@@ -142,7 +142,7 @@ export function AppShell({
           </nav>
           <AuthPanel className="shrink-0" />
         </div>
-        <nav className="grid grid-cols-4 gap-0.5 border-t border-white/5 px-2 py-1.5 md:hidden">
+        <nav className="grid grid-cols-5 gap-0.5 border-t border-white/5 px-2 py-1.5 md:hidden">
           {NAV.map((item) => {
             const active = item.exact ? pathname === item.to : pathname.startsWith(item.to);
             const Icon = item.icon;
@@ -151,7 +151,7 @@ export function AppShell({
                 key={item.to}
                 to={item.to}
                 className={cn(
-                  "flex flex-col items-center gap-0.5 rounded-lg py-1.5 text-[0.65rem] font-semibold",
+                  "flex flex-col items-center gap-0.5 rounded-lg py-1.5 text-[0.6rem] font-semibold",
                   active ? "bg-cyan-400/10 text-cyan-300" : "text-muted-foreground",
                 )}
               >
