@@ -27,3 +27,13 @@ export function formatSilverCompact(n: number): string {
   }
   return `${sign}${formatNumber(Math.round(a))}`;
 }
+
+/** Market tax: you recover this fraction of listed price (NPC = 100%). */
+export const MARKET_SILVER_RECOVERY = 0.85475;
+
+/** Effective silver per unit after market tax when kind is market. */
+export function effectiveUnitSilver(unitPrice: number, kind: "market" | "npc" | string): number {
+  const p = Number(unitPrice) || 0;
+  if (kind === "npc") return p;
+  return p * MARKET_SILVER_RECOVERY;
+}
