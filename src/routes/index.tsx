@@ -1,13 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { AlchemyPlanner } from "@/components/alchemy-planner";
-import { AppShell } from "@/components/app-shell";
+import { createFileRoute, Navigate } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/")({ component: Home });
 
+/** Signed-in users land on Routines; signed-out users see Login via AppShell. */
 function Home() {
-  return (
-    <AppShell eyebrow="Harmony Draught Pipeline" title="Alchemy Planner">
-      <AlchemyPlanner />
-    </AppShell>
-  );
+  return <Navigate to="/routines" />;
 }
