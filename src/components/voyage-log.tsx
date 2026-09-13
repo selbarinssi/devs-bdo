@@ -1,6 +1,5 @@
 import { BookOpen, Check, ChevronDown, Compass } from "lucide-react";
 import { useMemo, useState } from "react";
-import { RichText } from "@/components/rich-text";
 import { Progress } from "@/components/ui/progress";
 import { CAPTAIN_NOTES, STOPS, VOYAGE_STORAGE_KEY, type VoyageStop } from "@/data/voyage";
 import { useCloudStorage } from "@/lib/user-sync";
@@ -15,7 +14,12 @@ const CLOSED = "__closed__";
 const DEFAULT_STATE: VoyageState = { checks: {}, open: null };
 
 function isStopDone(stop: VoyageStop, checks: Record<string, boolean | string>) {
-  return stop.quests.filter((q) => !q.optional).every((q) => !!checks[q.id]);
+  return stop.quests.filter((q) => !q.optional).every((q) => {
+    if (q.choice?.length) {
+      return q.choice.some((c) => !!checks[c.id]);
+    }
+    return !!checks[q.id];
+  });
 }
 
 export function VoyageLog() {
@@ -39,9 +43,7 @@ export function VoyageLog() {
       const auto =
         STOPS.find((s) => !isStopDone(s, prev.checks))?.id ?? STOPS[STOPS.length - 1].id;
       const shown = prev.open === CLOSED ? null : prev.open != null ? prev.open : auto;
-      if (shown === id) {
-        return { ...prev, open: CLOSED };
-      }
+      if (shown === id) return { ...prev, open: CLOSED };
       return { ...prev, open: id };
     });
   };
@@ -49,9 +51,23 @@ export function VoyageLog() {
   const setCheck = (id: string, next: boolean | string) => {
     setValue((prev) => {
       const checks = { ...prev.checks };
-      const owner = STOPS.find((s) => s.quests.some((q) => q.id === id));
+      const owner = STOPS.find((s) =>
+        s.quests.some((q) => q.id === id || q.choice?.some((c) => c.id === id)),
+      );
       if (next === false || next === "") delete checks[id];
       else checks[id] = next;
+
+      // exclusive choice group: clear siblings when picking one
+      if (owner) {
+        for (const q of owner.quests) {
+          if (q.choice?.some((c) => c.id === id)) {
+            for (const c of q.choice) {
+              if (c.id !== id) delete checks[c.id];
+            }
+          }
+        }
+      }
+
       const wasDone = owner ? isStopDone(owner, prev.checks) : false;
       const nowDone = owner ? isStopDone(owner, checks) : false;
       let open = prev.open;
@@ -75,7 +91,7 @@ export function VoyageLog() {
         <div className="mb-2 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <Compass className="size-4 text-cyan-300" />
-            <p className="text-sm font-semibold">Carrack Voyage</p>
+            <p className="text-sm font-semibold">Carrack Voyage · Sailies</p>
           </div>
           <p className="font-mono text-sm tabular-nums text-cyan-300">
             {doneCount}/{STOPS.length} · {pct}%
@@ -83,11 +99,7 @@ export function VoyageLog() {
         </div>
         <Progress value={pct} />
         <div className="mt-3 flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => setNotesOpen((v) => !v)}
-            className="btn-ghost h-8 px-2.5 text-xs"
-          >
+          <button type="button" onClick={() => setNotesOpen((v) => !v)} className="btn-ghost h-8 px-2.5 text-xs">
             <BookOpen className="size-3.5" /> Captain Notes
           </button>
           {!confirmReset ? (
@@ -144,8 +156,8 @@ export function VoyageLog() {
                   {done ? <Check className="size-3.5" strokeWidth={3} /> : idx + 1}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold">{stop.name}</p>
-                  <p className="truncate text-[0.7rem] text-muted-foreground">{stop.region}</p>
+                  <p className="truncate text-sm font-semibold">{stop.title}</p>
+                  <p className="truncate text-[0.7rem] text-muted-foreground">{stop.loc}</p>
                 </div>
                 <ChevronDown
                   className={cn("size-4 shrink-0 text-muted-foreground transition-transform", open && "rotate-180")}
@@ -153,11 +165,49 @@ export function VoyageLog() {
               </button>
               {open && (
                 <div className="border-t border-white/5 px-3 py-3 sm:px-4">
-                  {stop.note ? (
-                    <p className="mb-2 text-[0.75rem] text-muted-foreground">{stop.note}</p>
-                  ) : null}
+                  {(stop.heading || stop.note) && (
+                    <p className="mb-2 text-[0.75rem] text-muted-foreground">{stop.heading || stop.note}</p>
+                  )}
+                  {stop.rewards && (
+                    <p className="mb-2 text-[0.7rem] font-medium text-cyan-300/80">Rewards: {stop.rewards}</p>
+                  )}
                   <ul className="flex flex-col gap-2">
                     {stop.quests.map((q) => {
+                      if (q.choice?.length) {
+                        return (
+                          <li key={q.id} className="rounded-lg bg-white/[0.03] p-2">
+                            {q.heading || q.label || q.text ? (
+                              <p className="mb-1.5 text-sm font-medium">{q.heading || q.label || q.text}</p>
+                            ) : null}
+                            <div className="flex flex-col gap-1.5">
+                              {q.choice.map((c) => {
+                                const checked = !!value.checks[c.id];
+                                return (
+                                  <button
+                                    key={c.id}
+                                    type="button"
+                                    onClick={() => setCheck(c.id, !checked)}
+                                    className="flex items-start gap-2 text-left"
+                                  >
+                                    <span
+                                      className="tick-box mt-0.5 size-6 shrink-0"
+                                      data-checked={checked ? "true" : "false"}
+                                    >
+                                      {checked ? <Check className="size-3" strokeWidth={3} /> : null}
+                                    </span>
+                                    <span className={cn("text-sm", checked && "text-muted-foreground line-through")}>
+                                      {c.text}
+                                      {c.tag ? (
+                                        <span className="ml-1 text-[0.65rem] text-amber-300/90">· {c.tag}</span>
+                                      ) : null}
+                                    </span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </li>
+                        );
+                      }
                       const checked = !!value.checks[q.id];
                       return (
                         <li key={q.id} className="flex items-start gap-2">
@@ -171,16 +221,14 @@ export function VoyageLog() {
                           </button>
                           <div className="min-w-0 flex-1">
                             <p className={cn("text-sm", checked && "text-muted-foreground line-through")}>
-                              {q.name}
+                              {q.text}
                               {q.optional ? (
                                 <span className="ml-1 text-[0.65rem] text-muted-foreground">(Optional)</span>
                               ) : null}
+                              {q.tag ? (
+                                <span className="ml-1 text-[0.65rem] text-amber-300/90">· {q.tag}</span>
+                              ) : null}
                             </p>
-                            {q.detail ? (
-                              <div className="mt-0.5 text-[0.72rem] text-muted-foreground">
-                                <RichText text={q.detail} />
-                              </div>
-                            ) : null}
                           </div>
                         </li>
                       );
