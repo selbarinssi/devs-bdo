@@ -5,7 +5,6 @@ export type SessionReportInput = {
   session: SessionRow;
   spot: SpotRow | null | undefined;
   lines: SessionLootRow[];
-  /** loot_id → icon URL for report icons */
   iconByLootId?: Record<string, string | null | undefined>;
 };
 
@@ -67,17 +66,14 @@ async function ensureLora() {
       ]);
     }
   } catch {
-    /* fallback to system serif */
+    /* fallback */
   }
 }
 
-/** White star + purple planets — matches HubMark */
 function drawHubLogo(ctx: CanvasRenderingContext2D, cx: number, cy: number, scale = 1) {
-  const s = scale;
   ctx.save();
   ctx.translate(cx, cy);
-  ctx.scale(s, s);
-
+  ctx.scale(scale, scale);
   for (const [r, a] of [
     [8, 0.28],
     [11.5, 0.2],
@@ -90,7 +86,6 @@ function drawHubLogo(ctx: CanvasRenderingContext2D, cx: number, cy: number, scal
     ctx.lineWidth = 0.4;
     ctx.stroke();
   }
-
   const planets: [number, number, number, string][] = [
     [0, -8, 1.9, "#a78bfa"],
     [11, 0, 1.45, "#8b5cf6"],
@@ -108,7 +103,6 @@ function drawHubLogo(ctx: CanvasRenderingContext2D, cx: number, cy: number, scal
     ctx.fillStyle = g;
     ctx.fill();
   }
-
   const star = ctx.createRadialGradient(0, 0, 0, 0, 0, 3.2);
   star.addColorStop(0, "#ffffff");
   star.addColorStop(0.55, "#f8fafc");
@@ -121,7 +115,6 @@ function drawHubLogo(ctx: CanvasRenderingContext2D, cx: number, cy: number, scal
   ctx.arc(0, 0, 1.1, 0, Math.PI * 2);
   ctx.fillStyle = "#ffffff";
   ctx.fill();
-
   ctx.restore();
 }
 
@@ -132,7 +125,6 @@ export async function downloadSessionReportPng(input: SessionReportInput): Promi
 
   await ensureLora();
 
-  const spotImg = await loadImage(spot?.icon_url);
   const lineImgs = await Promise.all(
     sorted.map((l) => loadImage(l.loot_id ? iconByLootId[l.loot_id] : null)),
   );
@@ -184,43 +176,43 @@ export async function downloadSessionReportPng(input: SessionReportInput): Promi
   ctx.lineWidth = 1;
   ctx.stroke();
 
-  drawHubLogo(ctx, pad + 44, y + headerH / 2, 1.85);
+  drawHubLogo(ctx, pad + 36, y + headerH / 2, 1.35);
 
-  ctx.fillStyle = "rgba(34,211,238,0.95)";
-  ctx.font = `600 12px ${font}`;
-  ctx.fillText("DEV'S HUB", pad + 78, y + 34);
-
-  const nameX = pad + 78;
-  if (spotImg) {
-    ctx.drawImage(spotImg, nameX, y + 48, 36, 36);
-  } else {
-    roundRect(ctx, nameX, y + 48, 36, 36, 8);
-    ctx.fillStyle = "rgba(255,255,255,0.06)";
-    ctx.fill();
-    ctx.fillStyle = "#67e8f9";
-    ctx.font = `700 16px ${font}`;
-    ctx.fillText((spot?.name || "?")[0]?.toUpperCase() || "?", nameX + 12, y + 72);
-  }
-
+  const nameX = pad + 72;
   ctx.fillStyle = "#f0f7ff";
   ctx.font = `700 26px ${font}`;
-  ctx.fillText(spot?.name || "Unknown Spot", nameX + 48, y + 68);
+  ctx.fillText(spot?.name || "Unknown Spot", nameX, y + 52);
 
-  // created_at = when the session row was saved
   const savedAt = fmtDate(session.created_at);
   ctx.fillStyle = "rgba(148,163,184,0.95)";
   ctx.font = `500 14px ${font}`;
   const sub = [session.character_name || "Unknown", `${session.minutes} min`, `Saved ${savedAt}`].join(
     "  ·  ",
   );
-  ctx.fillText(sub, nameX + 48, y + 94);
+  ctx.fillText(sub, nameX, y + 80);
 
+  const rightX = W - pad - 24;
   if (spot?.territory) {
     ctx.fillStyle = "rgba(167,139,250,0.95)";
     ctx.font = `600 12px ${font}`;
     const region = String(spot.territory);
     const tw = ctx.measureText(region).width;
-    ctx.fillText(region, W - pad - 24 - tw, y + 34);
+    ctx.fillText(region, rightX - tw, y + 40);
+  }
+  const dr = session.drop_rate;
+  if (dr != null && Number.isFinite(Number(dr))) {
+    const label = `Drop Rate  ${Number(dr)}%`;
+    ctx.font = `700 15px ${font}`;
+    const tw = ctx.measureText(label).width;
+    const px = rightX - tw - 16;
+    const py = y + 52;
+    roundRect(ctx, px, py, tw + 16, 28, 8);
+    ctx.fillStyle = "rgba(250,204,21,0.12)";
+    ctx.fill();
+    ctx.strokeStyle = "rgba(250,204,21,0.45)";
+    ctx.stroke();
+    ctx.fillStyle = "rgba(253,224,71,0.98)";
+    ctx.fillText(label, px + 8, py + 19);
   }
 
   y += headerH + 16;
