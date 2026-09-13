@@ -1,7 +1,10 @@
 import {
+  ImagePlus,
   Loader2,
+  MapPin,
   Pencil,
   Plus,
+  Search,
   Trash2,
   X,
 } from "lucide-react";
@@ -19,6 +22,8 @@ import {
   listSessions,
   listSpots,
   updateLoot,
+  updateSpot,
+  uploadLootIcon,
 } from "@/lib/grind-api";
 import type { LootRow, SessionRow, SpotRow } from "@/lib/supabase";
 import { cn, formatSilverCompact } from "@/lib/utils";
@@ -86,6 +91,27 @@ function formatElapsed(ms: number) {
   };
 }
 
+async function pickIconFile(): Promise<string | null> {
+  return new Promise((resolve) => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
+    input.onchange = async () => {
+      const file = input.files?.[0];
+      if (!file) {
+        resolve(null);
+        return;
+      }
+      try {
+        resolve(await uploadLootIcon(file));
+      } catch {
+        resolve(null);
+      }
+    };
+    input.click();
+  });
+}
+
 export function GrindTracker() {
   const [spots, setSpots] = useState<SpotRow[]>([]);
   const [loots, setLoots] = useState<LootRow[]>([]);
@@ -95,6 +121,9 @@ export function GrindTracker() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [chronoHydrated, setChronoHydrated] = useState(false);
+
+  const [spotQuery, setSpotQuery] = useState("");
+  const [regionFilter, setRegionFilter] = useState("all");
 
   const [qty, setQty] = useState<Record<string, string>>({});
   const [character, setCharacter] = useState("");
@@ -107,16 +136,21 @@ export function GrindTracker() {
   const [spotName, setSpotName] = useState("");
   const [spotMonsters, setSpotMonsters] = useState("");
   const [spotTerritory, setSpotTerritory] = useState("");
+  const [spotIconUrl, setSpotIconUrl] = useState<string | null>(null);
   const [addingSpot, setAddingSpot] = useState(false);
+  const [editingSpot, setEditingSpot] = useState(false);
 
   const [addingLoot, setAddingLoot] = useState(false);
   const [lootName, setLootName] = useState("");
   const [lootKind, setLootKind] = useState<"market" | "npc">("market");
   const [lootPrice, setLootPrice] = useState("");
+  const [lootIconUrl, setLootIconUrl] = useState<string | null>(null);
+
   const [editingLootId, setEditingLootId] = useState<string | null>(null);
   const [editLootName, setEditLootName] = useState("");
   const [editLootKind, setEditLootKind] = useState<"market" | "npc">("market");
   const [editLootPrice, setEditLootPrice] = useState("");
+  const [editLootIconUrl, setEditLootIconUrl] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -168,6 +202,8 @@ export function GrindTracker() {
       setTimerOn(false);
       setElapsed(draft.accumulatedMs ?? 0);
     }
+    setEditingSpot(false);
+    setEditingLootId(null);
     return () => {
       cancelled = true;
     };
@@ -197,6 +233,38 @@ export function GrindTracker() {
     }, 250);
     return () => clearInterval(id);
   }, [timerOn]);
+
+  const regions = useMemo(() => {
+    const set = new Set<string>();
+    for (const s of spots) {
+      set.add((s.territory || "").trim() || "Unspecified");
+    }
+    return ["all", ...Array.from(set).sort((a, b) => a.localeCompare(b))];
+  }, [spots]);
+
+  const filteredSpots = useMemo(() => {
+    const q = spotQuery.trim().toLowerCase();
+    return spots.filter((s) => {
+      const terr = (s.territory || "").trim() || "Unspecified";
+      if (regionFilter !== "all" && terr !== regionFilter) return false;
+      if (!q) return true;
+      return (
+        s.name.toLowerCase().includes(q) ||
+        (s.monsters || "").toLowerCase().includes(q) ||
+        terr.toLowerCase().includes(q)
+      );
+    });
+  }, [spots, spotQuery, regionFilter]);
+
+  const spotsByRegion = useMemo(() => {
+    const map = new Map<string, SpotRow[]>();
+    for (const s of filteredSpots) {
+      const key = (s.territory || "").trim() || "Unspecified";
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(s);
+    }
+    return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b));
+  }, [filteredSpots]);
 
   const { hh, mm, ss, mins: timerMins } = formatElapsed(elapsed);
   const manualMins = parseFloat(minutes) || 0;
@@ -252,15 +320,47 @@ export function GrindTracker() {
         name: spotName.trim(),
         monsters: spotMonsters.trim(),
         territory: spotTerritory.trim(),
+        icon_url: spotIconUrl,
       });
       setSpots((p) => [...p, row].sort((a, b) => a.name.localeCompare(b.name)));
       setSelectedId(row.id);
       setSpotName("");
       setSpotMonsters("");
       setSpotTerritory("");
+      setSpotIconUrl(null);
       setAddingSpot(false);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Create failed");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const beginEditSpot = () => {
+    const sp = spots.find((s) => s.id === selectedId);
+    if (!sp) return;
+    setSpotName(sp.name);
+    setSpotMonsters(sp.monsters || "");
+    setSpotTerritory(sp.territory || "");
+    setSpotIconUrl(sp.icon_url);
+    setEditingSpot(true);
+    setAddingSpot(false);
+  };
+
+  const onSaveSpot = async () => {
+    if (!selectedId || !spotName.trim()) return;
+    setBusy(true);
+    try {
+      const row = await updateSpot(selectedId, {
+        name: spotName.trim(),
+        monsters: spotMonsters.trim(),
+        territory: spotTerritory.trim(),
+        icon_url: spotIconUrl,
+      });
+      setSpots((p) => p.map((x) => (x.id === row.id ? row : x)));
+      setEditingSpot(false);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Update spot failed");
     } finally {
       setBusy(false);
     }
@@ -275,10 +375,12 @@ export function GrindTracker() {
         name: lootName.trim(),
         kind: lootKind,
         unit_price: parseFloat(lootPrice) || 0,
+        icon_url: lootIconUrl,
       });
       setLoots((p) => [...p, row]);
       setLootName("");
       setLootPrice("");
+      setLootIconUrl(null);
       setAddingLoot(false);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Create loot failed");
@@ -292,6 +394,7 @@ export function GrindTracker() {
     setEditLootName(l.name);
     setEditLootKind(l.kind);
     setEditLootPrice(String(l.unit_price));
+    setEditLootIconUrl(l.icon_url);
   };
 
   const saveLootEdit = async () => {
@@ -302,6 +405,7 @@ export function GrindTracker() {
         name: editLootName.trim(),
         kind: editLootKind,
         unit_price: parseFloat(editLootPrice) || 0,
+        icon_url: editLootIconUrl,
       });
       setLoots((p) => p.map((x) => (x.id === row.id ? row : x)));
       setEditingLootId(null);
@@ -371,66 +475,119 @@ export function GrindTracker() {
         </p>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-[240px_1fr]">
+      <div className="grid gap-4 lg:grid-cols-[280px_1fr]">
         <aside className="glass flex flex-col gap-2 p-3">
           <div className="mb-1 flex items-center justify-between">
             <p className="text-[0.65rem] font-bold uppercase tracking-wider text-muted-foreground">Spots</p>
-            <button type="button" onClick={() => setAddingSpot((v) => !v)} className="btn-ghost h-7 px-2 text-[0.65rem]">
+            <button
+              type="button"
+              onClick={() => {
+                setAddingSpot((v) => !v);
+                setEditingSpot(false);
+                setSpotName("");
+                setSpotMonsters("");
+                setSpotTerritory("");
+                setSpotIconUrl(null);
+              }}
+              className="btn-ghost h-7 px-2 text-[0.65rem]"
+            >
               <Plus className="size-3" /> Add Spot
             </button>
           </div>
+
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={spotQuery}
+              onChange={(e) => setSpotQuery(e.target.value)}
+              placeholder="Search Spots…"
+              className="h-8 pl-8 text-xs"
+            />
+          </div>
+          <select
+            className="field-select h-8 w-full text-xs"
+            value={regionFilter}
+            onChange={(e) => setRegionFilter(e.target.value)}
+          >
+            {regions.map((r) => (
+              <option key={r} value={r}>
+                {r === "all" ? "All Regions" : r}
+              </option>
+            ))}
+          </select>
+
           {addingSpot && (
-            <div className="mb-2 flex flex-col gap-1.5 rounded-lg bg-white/5 p-2">
+            <div className="mb-1 flex flex-col gap-1.5 rounded-lg bg-white/5 p-2">
               <Input value={spotName} onChange={(e) => setSpotName(e.target.value)} placeholder="Name" className="h-8 text-xs" />
               <Input value={spotMonsters} onChange={(e) => setSpotMonsters(e.target.value)} placeholder="Monsters" className="h-8 text-xs" />
-              <Input value={spotTerritory} onChange={(e) => setSpotTerritory(e.target.value)} placeholder="Territory" className="h-8 text-xs" />
+              <Input value={spotTerritory} onChange={(e) => setSpotTerritory(e.target.value)} placeholder="Region / Territory" className="h-8 text-xs" />
+              <button
+                type="button"
+                onClick={async () => setSpotIconUrl(await pickIconFile())}
+                className="btn-ghost flex h-8 items-center justify-center gap-1.5 text-[0.65rem]"
+              >
+                <ImagePlus className="size-3.5" />
+                {spotIconUrl ? "Change Icon" : "Add Icon"}
+              </button>
+              {spotIconUrl && <img src={spotIconUrl} alt="" className="mx-auto size-10 rounded object-contain" />}
               <button type="button" onClick={onCreateSpot} disabled={busy} className="btn-primary h-8 text-[0.65rem]">
                 Create
               </button>
             </div>
           )}
-          <ul className="flex max-h-[50vh] flex-col gap-1 overflow-auto">
-            {spots.map((s) => (
-              <li key={s.id}>
-                <button
-                  type="button"
-                  onClick={() => setSelectedId(s.id)}
-                  className={cn(
-                    "flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left text-sm transition",
-                    selectedId === s.id
-                      ? "bg-cyan-400/15 text-cyan-200 ring-1 ring-cyan-400/30"
-                      : "hover:bg-white/5 text-foreground",
-                  )}
-                >
-                  <span className="flex min-w-0 items-center gap-2">
-                    {s.icon_url ? (
-                      <img src={s.icon_url} alt="" className="size-7 shrink-0 rounded object-contain" />
-                    ) : (
-                      <span className="flex size-7 shrink-0 items-center justify-center rounded bg-white/5 text-[0.6rem] font-bold text-cyan-300">
-                        {s.name[0]?.toUpperCase()}
-                      </span>
-                    )}
-                    <span className="truncate font-medium">{s.name}</span>
-                  </span>
-                  <button
-                    type="button"
-                    className="ml-1 text-muted-foreground hover:text-rose-400"
-                    onClick={async (e) => {
-                      e.stopPropagation();
-                      await deleteSpot(s.id);
-                      setSpots((p) => p.filter((x) => x.id !== s.id));
-                      if (selectedId === s.id) setSelectedId(null);
-                    }}
-                  >
-                    <Trash2 className="size-3" />
-                  </button>
-                </button>
-              </li>
+
+          <div className="flex max-h-[55vh] flex-col gap-3 overflow-auto">
+            {spotsByRegion.map(([terr, list]) => (
+              <div key={terr}>
+                <div className="mb-1 flex items-center gap-1.5 px-1">
+                  <MapPin className="size-3 text-cyan-400/80" />
+                  <span className="text-[0.6rem] font-bold uppercase tracking-wider text-cyan-300/80">{terr}</span>
+                </div>
+                <ul className="flex flex-col gap-1">
+                  {list.map((s) => (
+                    <li key={s.id}>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedId(s.id)}
+                        className={cn(
+                          "flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left text-sm transition",
+                          selectedId === s.id
+                            ? "bg-cyan-400/15 text-cyan-200 ring-1 ring-cyan-400/30"
+                            : "hover:bg-white/5 text-foreground",
+                        )}
+                      >
+                        <span className="flex min-w-0 items-center gap-2">
+                          {s.icon_url ? (
+                            <img src={s.icon_url} alt="" className="size-8 shrink-0 rounded object-contain" />
+                          ) : (
+                            <span className="flex size-8 shrink-0 items-center justify-center rounded bg-white/5 text-[0.65rem] font-bold text-cyan-300">
+                              {s.name[0]?.toUpperCase()}
+                            </span>
+                          )}
+                          <span className="truncate font-medium">{s.name}</span>
+                        </span>
+                        <button
+                          type="button"
+                          className="ml-1 text-muted-foreground hover:text-rose-400"
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            await deleteSpot(s.id);
+                            setSpots((p) => p.filter((x) => x.id !== s.id));
+                            if (selectedId === s.id) setSelectedId(null);
+                          }}
+                        >
+                          <Trash2 className="size-3" />
+                        </button>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             ))}
-            {spots.length === 0 && (
-              <li className="px-2 py-6 text-center text-xs text-muted-foreground">No Spots Yet</li>
+            {filteredSpots.length === 0 && (
+              <p className="px-2 py-6 text-center text-xs text-muted-foreground">No Spots Match</p>
             )}
-          </ul>
+          </div>
         </aside>
 
         <div className="flex flex-col gap-3">
@@ -439,28 +596,58 @@ export function GrindTracker() {
           ) : (
             <>
               <div className="glass flex flex-wrap items-center justify-between gap-2 p-3">
-                <div className="flex items-center gap-2.5">
+                <div className="flex min-w-0 items-center gap-2.5">
                   {selectedSpot?.icon_url ? (
-                    <img src={selectedSpot.icon_url} alt="" className="size-9 rounded object-contain" />
+                    <img src={selectedSpot.icon_url} alt="" className="size-10 rounded object-contain" />
                   ) : (
-                    <span className="flex size-9 items-center justify-center rounded bg-white/5 text-sm font-bold text-cyan-300">
+                    <span className="flex size-10 items-center justify-center rounded bg-white/5 text-sm font-bold text-cyan-300">
                       {selectedSpot?.name[0]?.toUpperCase()}
                     </span>
                   )}
-                  <div>
-                    <h3 className="text-base font-semibold">{selectedSpot?.name}</h3>
-                    <p className="text-xs text-muted-foreground">
+                  <div className="min-w-0">
+                    <h3 className="truncate text-base font-semibold sm:text-lg">{selectedSpot?.name}</h3>
+                    <p className="truncate text-xs text-muted-foreground sm:text-sm">
                       {selectedSpot?.monsters}
                       {selectedSpot?.territory ? ` · ${selectedSpot.territory}` : ""}
                     </p>
                   </div>
                 </div>
-                {avgSph > 0 && (
-                  <span className="metric-pill bg-emerald-400/10 text-emerald-300">
-                    Avg {formatSilver(avgSph)}/h
-                  </span>
-                )}
+                <div className="flex items-center gap-2">
+                  {avgSph > 0 && (
+                    <span className="metric-pill bg-emerald-400/10 text-sm text-emerald-300">
+                      Avg {formatSilver(avgSph)}/h
+                    </span>
+                  )}
+                  <button type="button" onClick={beginEditSpot} className="btn-ghost h-8 px-2.5 text-xs">
+                    <Pencil className="size-3.5" /> Edit Spot
+                  </button>
+                </div>
               </div>
+
+              {editingSpot && (
+                <div className="glass grid gap-2 p-3 sm:grid-cols-2">
+                  <Input value={spotName} onChange={(e) => setSpotName(e.target.value)} placeholder="Name" className="h-9 text-sm" />
+                  <Input value={spotTerritory} onChange={(e) => setSpotTerritory(e.target.value)} placeholder="Region" className="h-9 text-sm" />
+                  <Input value={spotMonsters} onChange={(e) => setSpotMonsters(e.target.value)} placeholder="Monsters" className="h-9 text-sm sm:col-span-2" />
+                  <button
+                    type="button"
+                    onClick={async () => setSpotIconUrl(await pickIconFile())}
+                    className="btn-ghost flex h-9 items-center justify-center gap-1.5 text-xs"
+                  >
+                    <ImagePlus className="size-4" />
+                    {spotIconUrl ? "Change Icon" : "Add Icon"}
+                  </button>
+                  {spotIconUrl && <img src={spotIconUrl} alt="" className="size-10 justify-self-start rounded object-contain" />}
+                  <div className="flex gap-2 sm:col-span-2">
+                    <button type="button" onClick={onSaveSpot} disabled={busy} className="btn-primary h-9 flex-1 text-sm">
+                      Save Spot
+                    </button>
+                    <button type="button" onClick={() => setEditingSpot(false)} className="btn-ghost h-9 px-3 text-sm">
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
 
               <ChronoPanel
                 hh={hh}
@@ -478,14 +665,15 @@ export function GrindTracker() {
               />
 
               <div className="glass p-3 sm:p-4">
-                <div className="mb-1.5 flex items-center justify-between">
-                  <p className="text-[0.65rem] font-bold uppercase tracking-wider text-muted-foreground">Loot</p>
-                  <button type="button" onClick={() => setAddingLoot((v) => !v)} className="btn-ghost h-7 px-2 text-[0.65rem]">
-                    <Plus className="size-3" /> Add
+                <div className="mb-2 flex items-center justify-between">
+                  <p className="text-[0.7rem] font-bold uppercase tracking-wider text-muted-foreground">Loot</p>
+                  <button type="button" onClick={() => setAddingLoot((v) => !v)} className="btn-ghost h-8 px-2.5 text-xs">
+                    <Plus className="size-3.5" /> Add
                   </button>
                 </div>
+
                 {loots.length > 0 && (
-                  <div className="mb-1 grid grid-cols-[minmax(0,1fr)_4.5rem_5.5rem_5.5rem_4rem] items-center gap-2 px-2 text-[0.55rem] font-bold uppercase tracking-wider text-muted-foreground sm:grid-cols-[minmax(0,1fr)_5rem_6rem_6rem_4.5rem]">
+                  <div className="mb-1.5 grid grid-cols-[minmax(0,1fr)_5rem_6rem_6rem_4.5rem] items-center gap-2 px-2 text-[0.6rem] font-bold uppercase tracking-wider text-muted-foreground sm:grid-cols-[minmax(0,1fr)_5.5rem_6.5rem_6.5rem_5rem]">
                     <span>Item</span>
                     <span className="text-center">Qty</span>
                     <span className="text-right">Total</span>
@@ -493,57 +681,84 @@ export function GrindTracker() {
                     <span />
                   </div>
                 )}
+
                 {addingLoot && (
-                  <div className="mb-2 grid grid-cols-2 gap-1.5 rounded-lg bg-white/5 p-2 sm:grid-cols-4">
-                    <Input value={lootName} onChange={(e) => setLootName(e.target.value)} placeholder="Item" className="h-8 text-xs" />
-                    <select className="field-select h-8 text-xs" value={lootKind} onChange={(e) => setLootKind(e.target.value as "market" | "npc")}>
+                  <div className="mb-2 grid grid-cols-2 gap-1.5 rounded-lg bg-white/5 p-2 sm:grid-cols-5">
+                    <Input value={lootName} onChange={(e) => setLootName(e.target.value)} placeholder="Item" className="h-9 text-sm" />
+                    <select className="field-select h-9 text-sm" value={lootKind} onChange={(e) => setLootKind(e.target.value as "market" | "npc")}>
                       <option value="market">Market</option>
                       <option value="npc">NPC</option>
                     </select>
-                    <Input type="number" value={lootPrice} onChange={(e) => setLootPrice(e.target.value)} placeholder="Price" className="h-8 text-xs" />
-                    <button type="button" onClick={onCreateLoot} disabled={busy} className="btn-primary h-8 px-2 text-[0.65rem]">
+                    <Input type="number" value={lootPrice} onChange={(e) => setLootPrice(e.target.value)} placeholder="Price" className="h-9 text-sm" />
+                    <button
+                      type="button"
+                      onClick={async () => setLootIconUrl(await pickIconFile())}
+                      className="btn-ghost flex h-9 items-center justify-center gap-1 text-xs"
+                    >
+                      <ImagePlus className="size-4" />
+                      Icon
+                    </button>
+                    <button type="button" onClick={onCreateLoot} disabled={busy} className="btn-primary h-9 text-xs">
                       Add
                     </button>
                   </div>
                 )}
-                <ul className="flex flex-col gap-1">
+
+                <ul className="flex flex-col gap-1.5">
                   {loots.map((l) => {
                     const q = parseFloat(qty[l.id] || "0") || 0;
                     const lineVal = q * Number(l.unit_price);
                     const lineSph = sessionTotals.mins > 0 ? lineVal / (sessionTotals.mins / 60) : 0;
                     const editing = editingLootId === l.id;
                     return (
-                      <li key={l.id} className="rounded-lg bg-white/[0.03] px-2 py-1.5">
+                      <li key={l.id} className="rounded-xl bg-white/[0.03] px-2.5 py-2">
                         {editing ? (
-                          <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
-                            <Input value={editLootName} onChange={(e) => setEditLootName(e.target.value)} className="h-8 text-xs" />
-                            <select className="field-select h-8 text-xs" value={editLootKind} onChange={(e) => setEditLootKind(e.target.value as "market" | "npc")}>
+                          <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-5">
+                            <Input value={editLootName} onChange={(e) => setEditLootName(e.target.value)} className="h-9 text-sm" />
+                            <select
+                              className="field-select h-9 text-sm"
+                              value={editLootKind}
+                              onChange={(e) => setEditLootKind(e.target.value as "market" | "npc")}
+                            >
                               <option value="market">Market</option>
                               <option value="npc">NPC</option>
                             </select>
-                            <Input type="number" value={editLootPrice} onChange={(e) => setEditLootPrice(e.target.value)} className="h-8 text-xs" />
+                            <Input
+                              type="number"
+                              value={editLootPrice}
+                              onChange={(e) => setEditLootPrice(e.target.value)}
+                              className="h-9 text-sm"
+                            />
+                            <button
+                              type="button"
+                              onClick={async () => setEditLootIconUrl(await pickIconFile())}
+                              className="btn-ghost flex h-9 items-center justify-center gap-1 text-xs"
+                            >
+                              <ImagePlus className="size-4" />
+                              Icon
+                            </button>
                             <div className="flex gap-1">
-                              <button type="button" onClick={saveLootEdit} disabled={busy} className="btn-primary h-8 flex-1 text-[0.65rem]">
+                              <button type="button" onClick={saveLootEdit} disabled={busy} className="btn-primary h-9 flex-1 text-xs">
                                 Save
                               </button>
-                              <button type="button" onClick={() => setEditingLootId(null)} className="btn-ghost h-8 px-2 text-[0.65rem]">
-                                <X className="size-3" />
+                              <button type="button" onClick={() => setEditingLootId(null)} className="btn-ghost h-9 px-2">
+                                <X className="size-3.5" />
                               </button>
                             </div>
                           </div>
                         ) : (
-                          <div className="grid grid-cols-[minmax(0,1fr)_4.5rem_5.5rem_5.5rem_4rem] items-center gap-2 sm:grid-cols-[minmax(0,1fr)_5rem_6rem_6rem_4.5rem]">
-                            <div className="flex min-w-0 items-center gap-2">
+                          <div className="grid grid-cols-[minmax(0,1fr)_5rem_6rem_6rem_4.5rem] items-center gap-2 sm:grid-cols-[minmax(0,1fr)_5.5rem_6.5rem_6.5rem_5rem]">
+                            <div className="flex min-w-0 items-center gap-2.5">
                               {l.icon_url ? (
-                                <img src={l.icon_url} alt="" className="size-7 shrink-0 rounded object-contain" />
+                                <img src={l.icon_url} alt="" className="size-9 shrink-0 rounded object-contain sm:size-10" />
                               ) : (
-                                <span className="flex size-7 shrink-0 items-center justify-center rounded bg-white/5 text-[0.55rem] font-bold text-cyan-300">
+                                <span className="flex size-9 shrink-0 items-center justify-center rounded bg-white/5 text-xs font-bold text-cyan-300 sm:size-10">
                                   {l.name[0]?.toUpperCase()}
                                 </span>
                               )}
                               <div className="min-w-0">
-                                <p className="truncate text-xs font-medium text-foreground">{l.name}</p>
-                                <p className="truncate text-[0.65rem] text-muted-foreground">
+                                <p className="truncate text-sm font-semibold text-foreground sm:text-[0.95rem]">{l.name}</p>
+                                <p className="truncate text-xs text-muted-foreground">
                                   {formatSilver(Number(l.unit_price))} · {l.kind === "market" ? "Market" : "NPC"}
                                 </p>
                               </div>
@@ -555,18 +770,22 @@ export function GrindTracker() {
                                 value={qty[l.id] || ""}
                                 onChange={(e) => setQty((prev) => ({ ...prev, [l.id]: e.target.value }))}
                                 placeholder="0"
-                                className="h-8 w-full max-w-[4.5rem] text-center text-xs"
+                                className="h-9 w-full max-w-[5rem] text-center text-sm font-semibold"
                               />
                             </div>
-                            <span className="text-right font-mono text-xs font-bold tabular-nums text-cyan-300">
+                            <span className="text-right font-mono text-sm font-bold tabular-nums text-cyan-300 sm:text-base">
                               {formatSilver(lineVal)}
                             </span>
-                            <span className="text-right font-mono text-xs font-bold tabular-nums text-emerald-300">
+                            <span className="text-right font-mono text-sm font-bold tabular-nums text-emerald-300 sm:text-base">
                               {formatSilver(lineSph)}
                             </span>
                             <div className="flex items-center justify-end gap-0.5">
-                              <button type="button" onClick={() => beginEditLoot(l)} className="flex size-7 items-center justify-center rounded text-muted-foreground hover:text-cyan-300">
-                                <Pencil className="size-3" strokeWidth={1.75} />
+                              <button
+                                type="button"
+                                onClick={() => beginEditLoot(l)}
+                                className="flex size-8 items-center justify-center rounded text-muted-foreground hover:text-cyan-300"
+                              >
+                                <Pencil className="size-3.5" strokeWidth={1.75} />
                               </button>
                               <button
                                 type="button"
@@ -574,9 +793,9 @@ export function GrindTracker() {
                                   await deleteLoot(l.id);
                                   if (selectedId) setLoots(await listLoots(selectedId));
                                 }}
-                                className="flex size-7 items-center justify-center rounded text-muted-foreground hover:text-rose-400"
+                                className="flex size-8 items-center justify-center rounded text-muted-foreground hover:text-rose-400"
                               >
-                                <Trash2 className="size-3" strokeWidth={1.75} />
+                                <Trash2 className="size-3.5" strokeWidth={1.75} />
                               </button>
                             </div>
                           </div>
@@ -585,14 +804,14 @@ export function GrindTracker() {
                     );
                   })}
                   {loots.length === 0 && (
-                    <li className="px-2 py-4 text-center text-xs text-muted-foreground">No Loot Yet. Add Items Above.</li>
+                    <li className="px-2 py-4 text-center text-sm text-muted-foreground">No Loot Yet. Add Items Above.</li>
                   )}
                 </ul>
                 <button
                   type="button"
                   onClick={onSaveSession}
                   disabled={busy || sessionTotals.total <= 0}
-                  className="btn-primary mt-3 h-10 w-full text-sm"
+                  className="btn-primary mt-3 h-11 w-full text-sm"
                 >
                   Save Session
                 </button>
@@ -601,15 +820,15 @@ export function GrindTracker() {
               <div className="glass p-3 sm:p-4">
                 <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-cyan-300/90">Sessions</h3>
                 {spotSessions.length === 0 ? (
-                  <p className="py-6 text-center text-xs text-muted-foreground">No Sessions For This Spot Yet.</p>
+                  <p className="py-6 text-center text-sm text-muted-foreground">No Sessions For This Spot Yet.</p>
                 ) : (
                   <ul className="flex flex-col gap-1.5">
                     {spotSessions.map((s) => (
-                      <li key={s.id} className="rounded-lg bg-white/[0.03] px-2.5 py-2">
+                      <li key={s.id} className="rounded-lg bg-white/[0.03] px-2.5 py-2.5">
                         <div className="flex items-center justify-between gap-2">
                           <div className="min-w-0">
-                            <p className="truncate text-sm font-medium">{s.character_name}</p>
-                            <p className="text-[0.7rem] text-muted-foreground">
+                            <p className="truncate text-sm font-semibold">{s.character_name}</p>
+                            <p className="text-xs text-muted-foreground sm:text-sm">
                               {s.minutes} min · {formatSilver(Number(s.total_value))} ·{" "}
                               {formatSilver(Number(s.silver_per_hour))}/h
                             </p>
