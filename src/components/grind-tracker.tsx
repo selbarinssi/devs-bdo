@@ -5,22 +5,20 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ChronoPanel } from "@/components/chrono-panel";
 import { Input } from "@/components/ui/input";
 import {
   createLoot,
   createSession,
+  createSpot,
   deleteLoot,
   deleteSession,
   deleteSpot,
   listLoots,
-  listSessionLoots,
   listSessions,
   listSpots,
   updateLoot,
-  updateSession,
-  createSpot,
 } from "@/lib/grind-api";
 import type { LootRow, SessionRow, SpotRow } from "@/lib/supabase";
 import { cn, formatSilverCompact } from "@/lib/utils";
@@ -119,10 +117,6 @@ export function GrindTracker() {
   const [editLootName, setEditLootName] = useState("");
   const [editLootKind, setEditLootKind] = useState<"market" | "npc">("market");
   const [editLootPrice, setEditLootPrice] = useState("");
-
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editChar, setEditChar] = useState("");
-  const [editMinutes, setEditMinutes] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -330,7 +324,7 @@ export function GrindTracker() {
         total_value: sessionTotals.total,
         silver_per_hour: sessionTotals.sph,
         started_at: timerStart.current ? new Date(timerStart.current).toISOString() : null,
-        loots: loots
+        lines: loots
           .map((l) => {
             const q = parseFloat(qty[l.id] || "0") || 0;
             return {
@@ -363,6 +357,8 @@ export function GrindTracker() {
       </div>
     );
   }
+
+  const selectedSpot = spots.find((s) => s.id === selectedId);
 
   return (
     <div className="flex flex-col gap-4">
@@ -406,7 +402,16 @@ export function GrindTracker() {
                       : "hover:bg-white/5 text-foreground",
                   )}
                 >
-                  <span className="truncate font-medium">{s.name}</span>
+                  <span className="flex min-w-0 items-center gap-2">
+                    {s.icon_url ? (
+                      <img src={s.icon_url} alt="" className="size-7 shrink-0 rounded object-contain" />
+                    ) : (
+                      <span className="flex size-7 shrink-0 items-center justify-center rounded bg-white/5 text-[0.6rem] font-bold text-cyan-300">
+                        {s.name[0]?.toUpperCase()}
+                      </span>
+                    )}
+                    <span className="truncate font-medium">{s.name}</span>
+                  </span>
                   <button
                     type="button"
                     className="ml-1 text-muted-foreground hover:text-rose-400"
@@ -434,14 +439,21 @@ export function GrindTracker() {
           ) : (
             <>
               <div className="glass flex flex-wrap items-center justify-between gap-2 p-3">
-                <div>
-                  <h3 className="text-base font-semibold">{spots.find((s) => s.id === selectedId)?.name}</h3>
-                  <p className="text-xs text-muted-foreground">
-                    {spots.find((s) => s.id === selectedId)?.monsters}
-                    {spots.find((s) => s.id === selectedId)?.territory
-                      ? ` · ${spots.find((s) => s.id === selectedId)?.territory}`
-                      : ""}
-                  </p>
+                <div className="flex items-center gap-2.5">
+                  {selectedSpot?.icon_url ? (
+                    <img src={selectedSpot.icon_url} alt="" className="size-9 rounded object-contain" />
+                  ) : (
+                    <span className="flex size-9 items-center justify-center rounded bg-white/5 text-sm font-bold text-cyan-300">
+                      {selectedSpot?.name[0]?.toUpperCase()}
+                    </span>
+                  )}
+                  <div>
+                    <h3 className="text-base font-semibold">{selectedSpot?.name}</h3>
+                    <p className="text-xs text-muted-foreground">
+                      {selectedSpot?.monsters}
+                      {selectedSpot?.territory ? ` · ${selectedSpot.territory}` : ""}
+                    </p>
+                  </div>
                 </div>
                 {avgSph > 0 && (
                   <span className="metric-pill bg-emerald-400/10 text-emerald-300">
@@ -598,7 +610,8 @@ export function GrindTracker() {
                           <div className="min-w-0">
                             <p className="truncate text-sm font-medium">{s.character_name}</p>
                             <p className="text-[0.7rem] text-muted-foreground">
-                              {s.minutes} min · {formatSilver(Number(s.total_value))} · {formatSilver(Number(s.silver_per_hour))}/h
+                              {s.minutes} min · {formatSilver(Number(s.total_value))} ·{" "}
+                              {formatSilver(Number(s.silver_per_hour))}/h
                             </p>
                           </div>
                           <button
