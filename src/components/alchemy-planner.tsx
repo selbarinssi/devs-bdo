@@ -86,9 +86,9 @@ function RecipeCard({
         {recipe.ingredients.map((ing) => (
           <li
             key={ing.name}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.03] px-2 py-1 text-[0.72rem] text-muted-foreground"
+            className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-2.5 py-1.5 text-[0.8rem] text-muted-foreground"
           >
-            <ItemGlyph name={ing.name} size={18} />
+            <ItemGlyph name={ing.name} size={28} />
             <span className="text-foreground/90">{ing.name}</span>
             <span className="font-mono tabular-nums text-cyan-300/90">
               ×{formatNumber(ing.qty * Math.max(crafts, 1))}
