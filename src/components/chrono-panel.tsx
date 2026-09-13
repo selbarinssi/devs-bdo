@@ -16,10 +16,12 @@ export function ChronoPanel({
   total,
   sph,
   character,
+  dropRate,
   minutes,
   onToggle,
   onReset,
   onCharacter,
+  onDropRate,
   onMinutes,
 }: {
   hh: string;
@@ -29,10 +31,12 @@ export function ChronoPanel({
   total: number;
   sph: number;
   character: string;
+  dropRate: string;
   minutes: string;
   onToggle: () => void;
   onReset: () => void;
   onCharacter: (v: string) => void;
+  onDropRate: (v: string) => void;
   onMinutes: (v: string) => void;
 }) {
   return (
@@ -88,39 +92,46 @@ export function ChronoPanel({
 
         <div className="flex flex-col items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3">
           <p className="mb-1 text-[0.6rem] font-bold uppercase tracking-wider text-muted-foreground">Total Silver</p>
-          <p className="font-mono text-2xl font-bold tabular-nums text-cyan-300 sm:text-3xl">
-            {formatSilver(total)}
-          </p>
-          <p className="mt-1 text-[0.65rem] text-muted-foreground">Session Value</p>
+          <p className="font-mono text-2xl font-bold tabular-nums text-cyan-300 sm:text-3xl">{formatSilver(total)}</p>
         </div>
 
-        <div className="flex flex-col items-center justify-center rounded-xl border border-emerald-400/20 bg-emerald-400/5 px-3 py-3">
+        <div className="flex flex-col items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3">
           <p className="mb-1 text-[0.6rem] font-bold uppercase tracking-wider text-muted-foreground">Silver / Hour</p>
-          <p className="font-mono text-2xl font-bold tabular-nums text-emerald-300 sm:text-3xl">
-            {formatSilver(sph)}
-          </p>
-          <p className="mt-1 text-[0.65rem] text-muted-foreground">Live /h</p>
+          <p className="font-mono text-2xl font-bold tabular-nums text-emerald-300 sm:text-3xl">{formatSilver(sph)}</p>
         </div>
       </div>
 
-      <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-[1fr_auto]">
-        <div className="flex flex-col gap-1">
-          <Label className="text-[0.65rem]">Character</Label>
+      <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3 sm:gap-3">
+        <div>
+          <Label className="mb-1 text-[0.65rem] uppercase tracking-wider text-muted-foreground">Character</Label>
           <Input
             value={character}
             onChange={(e) => onCharacter(e.target.value)}
-            placeholder="Character Name"
+            placeholder="Name"
             className="h-9 text-sm"
           />
         </div>
-        <div className="flex flex-col gap-1">
-          <Label className="text-[0.65rem]">Minutes</Label>
+        <div>
+          <Label className="mb-1 text-[0.65rem] uppercase tracking-wider text-muted-foreground">Drop Rate %</Label>
           <Input
             type="number"
-            min={1}
+            min={0}
+            step="0.1"
+            value={dropRate}
+            onChange={(e) => onDropRate(e.target.value)}
+            placeholder="e.g. 250"
+            className="h-9 text-sm"
+          />
+        </div>
+        <div>
+          <Label className="mb-1 text-[0.65rem] uppercase tracking-wider text-muted-foreground">Minutes</Label>
+          <Input
+            type="number"
+            min={0}
             value={minutes}
             onChange={(e) => onMinutes(e.target.value)}
-            className="h-9 w-20 text-sm"
+            placeholder="Manual if no timer"
+            className="h-9 text-sm"
           />
         </div>
       </div>

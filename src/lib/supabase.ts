@@ -51,6 +51,7 @@ export type SessionRow = {
   minutes: number;
   total_value: number;
   silver_per_hour: number;
+  drop_rate?: number | null;
   started_at: string | null;
   created_at: string;
 };
