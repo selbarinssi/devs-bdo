@@ -28,6 +28,15 @@ type Props = {
 
 type Step = "upload" | "processing" | "review";
 
+type SlotHit = {
+  x: number;
+  y: number;
+  size: number;
+  qty: number | null;
+  iconScore: number; // best match score against any loot icon
+  lootId: string | null;
+};
+
 function fileToDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -47,11 +56,11 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
-function toGrayData(img: CanvasImageSource, w: number, h: number): ImageData {
-  const canvas = document.createElement("canvas");
-  canvas.width = w;
-  canvas.height = h;
-  const ctx = canvas.getContext("2d", { willReadFrequently: true })!;
+function toGray(img: CanvasImageSource, w: number, h: number): ImageData {
+  const c = document.createElement("canvas");
+  c.width = w;
+  c.height = h;
+  const ctx = c.getContext("2d", { willReadFrequently: true })!;
   ctx.drawImage(img, 0, 0, w, h);
   const data = ctx.getImageData(0, 0, w, h);
   const d = data.data;
@@ -62,125 +71,112 @@ function toGrayData(img: CanvasImageSource, w: number, h: number): ImageData {
   return data;
 }
 
-/** Estimate typical slot size from screenshot (BDO inventory is a regular grid). */
-function estimateSlotSize(sw: number, sh: number): number {
-  // Common BDO layouts: ~8–10 columns visible in a crop
-  // Prefer a size that divides the width reasonably
-  const candidates = [32, 36, 40, 44, 48, 52, 56, 60, 64];
-  let best = 44;
-  let bestScore = Infinity;
-  for (const c of candidates) {
-    const cols = sw / c;
-    const rows = sh / c;
-    // Prefer sizes that nearly tile the image
-    const score = Math.abs(cols - Math.round(cols)) + Math.abs(rows - Math.round(rows));
-    if (score < bestScore) {
-      bestScore = score;
-      best = c;
+/** Find the best regular grid cell size for a BDO inventory crop. */
+function findSlotSize(w: number, h: number): { size: number; cols: number; rows: number } {
+  // BDO inventory is typically 8 columns; crops may show fewer
+  const candidates: number[] = [];
+  for (let s = 28; s <= 72; s++) candidates.push(s);
+
+  let best = { size: 44, cols: 1, rows: 1, score: -Infinity };
+
+  for (const size of candidates) {
+    const cols = Math.round(w / size);
+    const rows = Math.round(h / size);
+    if (cols < 3 || rows < 3) continue;
+    if (cols > 12 || rows > 12) continue;
+
+    // How cleanly does this size tile the image?
+    const xErr = Math.abs(w - cols * size) / w;
+    const yErr = Math.abs(h - rows * size) / h;
+    const tileScore = 1 - (xErr + yErr);
+
+    // Prefer ~8 columns (standard BDO bag width)
+    const colBonus = 1 - Math.abs(cols - 8) / 8;
+
+    const score = tileScore * 0.7 + colBonus * 0.3;
+    if (score > best.score) {
+      best = { size, cols, rows, score };
     }
   }
-  // Also clamp to a reasonable fraction of the image
-  return Math.max(28, Math.min(best, Math.floor(sw / 6)));
+
+  return { size: best.size, cols: best.cols, rows: best.rows };
 }
 
-/**
- * Template match that works on both full 1920 screenshots and small crops.
- * Uses adaptive template sizes based on estimated slot size, and matches
- * only the center of the icon (ignores rarity border differences).
- */
-function matchIcon(
-  screenGray: ImageData,
+/** Average brightness of a region — empty/locked slots are darker. */
+function regionBrightness(gray: ImageData, x: number, y: number, size: number): number {
+  const { width: sw, data } = gray;
+  let sum = 0;
+  let n = 0;
+  const x1 = Math.max(0, x);
+  const y1 = Math.max(0, y);
+  const x2 = Math.min(sw, x + size);
+  const y2 = Math.min(gray.height, y + size);
+  for (let py = y1; py < y2; py++) {
+    for (let px = x1; px < x2; px++) {
+      sum += data[(py * sw + px) * 4];
+      n++;
+    }
+  }
+  return n ? sum / n : 0;
+}
+
+/** Compare center of a slot against a loot icon. Returns 0–1 score. */
+function scoreIconMatch(
+  slotGray: ImageData,
+  sx: number,
+  sy: number,
+  size: number,
   iconImg: HTMLImageElement,
-  slotHint: number,
-): { x: number; y: number; score: number; tw: number; th: number } | null {
-  const sw = screenGray.width;
-  const sh = screenGray.height;
-  const sData = screenGray.data;
+): number {
+  const inset = Math.max(2, Math.floor(size * 0.15));
+  const inner = size - inset * 2;
+  if (inner < 8) return 0;
 
-  // Build a few template sizes around the estimated slot size
-  const sizes = [
-    Math.round(slotHint * 0.75),
-    Math.round(slotHint * 0.9),
-    slotHint,
-    Math.round(slotHint * 1.1),
-    Math.round(slotHint * 1.25),
-  ].filter((s) => s >= 16 && s < Math.min(sw, sh));
+  const iconGray = toGray(iconImg, inner, inner);
+  const tData = iconGray.data;
+  const sData = slotGray.data;
+  const sw = slotGray.width;
 
-  let best: { x: number; y: number; score: number; tw: number; th: number } | null = null;
-
-  for (const size of sizes) {
-    // Use only the center 70% of the icon to avoid rarity frame mismatch
-    const tw = size;
-    const th = size;
-    const iconGray = toGrayData(iconImg, tw, th);
-    const tData = iconGray.data;
-    const tPixels = tw * th;
-
-    // Inset: compare only inner region (skip outer 12% border)
-    const inset = Math.max(2, Math.floor(size * 0.12));
-    const innerW = tw - inset * 2;
-    const innerH = th - inset * 2;
-    if (innerW < 8 || innerH < 8) continue;
-    const innerPixels = innerW * innerH;
-
-    const stride = Math.max(1, Math.floor(size / 10));
-
-    for (let y = 0; y <= sh - th; y += stride) {
-      for (let x = 0; x <= sw - tw; x += stride) {
-        let sumDiff = 0;
-        for (let ty = inset; ty < th - inset; ty++) {
-          const sRow = ((y + ty) * sw + x) * 4;
-          const tRow = ty * tw * 4;
-          for (let tx = inset; tx < tw - inset; tx++) {
-            sumDiff += Math.abs(sData[sRow + tx * 4] - tData[tRow + tx * 4]);
-          }
-        }
-        const score = 1 - sumDiff / (innerPixels * 255);
-        if (!best || score > best.score) {
-          best = { x, y, score, tw, th };
-        }
-      }
+  let sumDiff = 0;
+  const pixels = inner * inner;
+  for (let ty = 0; ty < inner; ty++) {
+    const sRow = ((sy + inset + ty) * sw + (sx + inset)) * 4;
+    const tRow = ty * inner * 4;
+    for (let tx = 0; tx < inner; tx++) {
+      sumDiff += Math.abs(sData[sRow + tx * 4] - tData[tRow + tx * 4]);
     }
   }
-
-  // More permissive threshold — user can still ignore false positives in review
-  if (!best || best.score < 0.55) return null;
-  return best;
+  return 1 - sumDiff / (pixels * 255);
 }
 
-/**
- * Crop the stack-number area.
- * In BDO the count sits in the bottom-right of the slot, often overlapping the icon.
- */
-function cropStackRegion(
-  screenImg: HTMLImageElement,
-  match: { x: number; y: number; tw: number; th: number },
-  scaleX: number,
-  scaleY: number,
+function cropSlotDigit(
+  img: HTMLImageElement,
+  x: number,
+  y: number,
+  size: number,
+  scale: number,
 ): HTMLCanvasElement {
-  // Map match coords back to original image if we scaled the gray buffer
-  const x = Math.round(match.x / scaleX);
-  const y = Math.round(match.y / scaleY);
-  const tw = Math.round(match.tw / scaleX);
-  const th = Math.round(match.th / scaleY);
+  // Map from working (scaled) coords back to original image
+  const ox = Math.round(x / scale);
+  const oy = Math.round(y / scale);
+  const os = Math.round(size / scale);
 
-  // Bottom-right quadrant of the slot — where stack numbers live
-  const cx = Math.max(0, x + Math.floor(tw * 0.4));
-  const cy = Math.max(0, y + Math.floor(th * 0.55));
-  const cw = Math.min(screenImg.naturalWidth - cx, Math.ceil(tw * 0.7));
-  const ch = Math.min(screenImg.naturalHeight - cy, Math.ceil(th * 0.55));
+  // Bottom-right area of the slot
+  const cx = Math.max(0, ox + Math.floor(os * 0.35));
+  const cy = Math.max(0, oy + Math.floor(os * 0.5));
+  const cw = Math.min(img.naturalWidth - cx, Math.ceil(os * 0.7));
+  const ch = Math.min(img.naturalHeight - cy, Math.ceil(os * 0.55));
 
-  const canvas = document.createElement("canvas");
-  canvas.width = Math.max(1, cw);
-  canvas.height = Math.max(1, ch);
-  const ctx = canvas.getContext("2d")!;
-  ctx.drawImage(screenImg, cx, cy, cw, ch, 0, 0, cw, ch);
-  return canvas;
+  const c = document.createElement("canvas");
+  c.width = Math.max(1, cw);
+  c.height = Math.max(1, ch);
+  const ctx = c.getContext("2d")!;
+  ctx.drawImage(img, cx, cy, cw, ch, 0, 0, cw, ch);
+  return c;
 }
 
-/** High-contrast upscaled version for Tesseract */
-function prepareForOcr(src: HTMLCanvasElement): string {
-  const scale = 4;
+function prepareOcr(src: HTMLCanvasElement): string {
+  const scale = 5;
   const up = document.createElement("canvas");
   up.width = src.width * scale;
   up.height = src.height * scale;
@@ -188,13 +184,12 @@ function prepareForOcr(src: HTMLCanvasElement): string {
   ctx.imageSmoothingEnabled = false;
   ctx.drawImage(src, 0, 0, up.width, up.height);
 
-  // Boost contrast / threshold-ish so white digits stand out on dark bg
   const img = ctx.getImageData(0, 0, up.width, up.height);
   const d = img.data;
   for (let i = 0; i < d.length; i += 4) {
     const g = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
-    // BDO stack numbers are bright; force high contrast
-    const v = g > 140 ? 255 : g < 80 ? 0 : Math.round(g);
+    // White stack numbers on dark slots
+    const v = g > 130 ? 255 : 0;
     d[i] = d[i + 1] = d[i + 2] = v;
   }
   ctx.putImageData(img, 0, 0);
@@ -206,10 +201,9 @@ async function ocrDigits(worker: Worker, dataUrl: string): Promise<number | null
     const {
       data: { text },
     } = await worker.recognize(dataUrl);
-    // Prefer the longest digit sequence (avoids single-digit noise from borders)
     const matches = (text || "").match(/\d+/g);
-    if (!matches || matches.length === 0) return null;
-    // Take the largest number found in the crop (stack counts, not fragment digits)
+    if (!matches?.length) return null;
+    // Prefer multi-digit numbers; fall back to single digit
     let best = 0;
     for (const m of matches) {
       const n = parseInt(m, 10);
@@ -221,23 +215,20 @@ async function ocrDigits(worker: Worker, dataUrl: string): Promise<number | null
   }
 }
 
+/**
+ * Grid-first detection:
+ * 1. Estimate inventory slot grid
+ * 2. For each non-empty slot → OCR stack count
+ * 3. Match slot icon against loot list icons
+ * 4. Assign qty to best-matching loot (each loot at most once)
+ */
 async function runDetection(
   loots: LootRow[],
   normalDataUrl: string | null,
   enhanceDataUrl: string | null,
 ): Promise<DetectionRow[]> {
-  const screens: HTMLImageElement[] = [];
-  for (const url of [normalDataUrl, enhanceDataUrl]) {
-    if (!url) continue;
-    try {
-      screens.push(await loadImage(url));
-    } catch {
-      /* skip */
-    }
-  }
-
-  if (screens.length === 0) {
-    return loots.map((l) => ({
+  const empty = (): DetectionRow[] =>
+    loots.map((l) => ({
       lootId: l.id,
       name: l.name,
       iconUrl: l.icon_url,
@@ -247,92 +238,129 @@ async function runDetection(
       confidence: null,
       editQty: "",
     }));
+
+  const screens: HTMLImageElement[] = [];
+  for (const url of [normalDataUrl, enhanceDataUrl]) {
+    if (!url) continue;
+    try {
+      screens.push(await loadImage(url));
+    } catch {
+      /* skip */
+    }
   }
+  if (!screens.length) return empty();
 
-  // Work at a reasonable resolution for matching speed + accuracy
-  const screenGrays: {
-    img: HTMLImageElement;
-    gray: ImageData;
-    scaleX: number;
-    scaleY: number;
-    slot: number;
-  }[] = [];
-
-  for (const img of screens) {
-    const maxSide = 900; // enough detail, still fast
-    const scale =
-      Math.max(img.naturalWidth, img.naturalHeight) > maxSide
-        ? maxSide / Math.max(img.naturalWidth, img.naturalHeight)
-        : 1;
-    const w = Math.round(img.naturalWidth * scale);
-    const h = Math.round(img.naturalHeight * scale);
-    const gray = toGrayData(img, w, h);
-    const slot = estimateSlotSize(w, h);
-    screenGrays.push({
-      img,
-      gray,
-      scaleX: scale,
-      scaleY: scale,
-      slot,
-    });
+  // Preload loot icons
+  const lootIcons: { loot: LootRow; img: HTMLImageElement }[] = [];
+  for (const l of loots) {
+    if (!l.icon_url) continue;
+    try {
+      lootIcons.push({ loot: l, img: await loadImage(l.icon_url) });
+    } catch {
+      /* skip broken icon */
+    }
   }
 
   const worker = await createWorker("eng", 1, { logger: () => {} });
   await worker.setParameters({
     tessedit_char_whitelist: "0123456789",
-    // single word / sparse text works better for isolated stack counts
     tessedit_pageseg_mode: "8" as unknown as string,
   });
 
-  const results: DetectionRow[] = [];
+  // Collect all slot hits across screenshots
+  const allHits: SlotHit[] = [];
 
   try {
-    for (const l of loots) {
-      let bestQty: number | null = null;
-      let bestConf: number | null = null;
+    for (const img of screens) {
+      // Work at a manageable size
+      const maxSide = 800;
+      const scale =
+        Math.max(img.naturalWidth, img.naturalHeight) > maxSide
+          ? maxSide / Math.max(img.naturalWidth, img.naturalHeight)
+          : 1;
+      const w = Math.round(img.naturalWidth * scale);
+      const h = Math.round(img.naturalHeight * scale);
+      const gray = toGray(img, w, h);
 
-      if (l.icon_url) {
-        try {
-          const iconImg = await loadImage(l.icon_url);
+      const { size, cols, rows } = findSlotSize(w, h);
 
-          for (const { img, gray, scaleX, scaleY, slot } of screenGrays) {
-            const match = matchIcon(gray, iconImg, slot);
-            if (!match) continue;
+      // Center the grid in the image if there's leftover margin
+      const gridW = cols * size;
+      const gridH = rows * size;
+      const originX = Math.floor((w - gridW) / 2);
+      const originY = Math.floor((h - gridH) / 2);
 
-            const cropCanvas = cropStackRegion(img, match, scaleX, scaleY);
-            const ocrUrl = prepareForOcr(cropCanvas);
-            const qty = await ocrDigits(worker, ocrUrl);
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          const x = originX + c * size;
+          const y = originY + r * size;
 
-            if (qty != null) {
-              if (bestQty == null || match.score > (bestConf ?? 0)) {
-                bestQty = qty;
-                bestConf = match.score;
-              }
-            } else if (bestConf == null || match.score > bestConf) {
-              bestConf = match.score;
+          // Skip empty / locked slots (very dark)
+          const brightness = regionBrightness(gray, x, y, size);
+          if (brightness < 18) continue;
+
+          // OCR stack number
+          const digitCrop = cropSlotDigit(img, x, y, size, scale);
+          const qty = await ocrDigits(worker, prepareOcr(digitCrop));
+
+          // Match against loot icons
+          let bestLoot: string | null = null;
+          let bestScore = 0;
+          for (const { loot, img: iconImg } of lootIcons) {
+            const s = scoreIconMatch(gray, x, y, size, iconImg);
+            if (s > bestScore) {
+              bestScore = s;
+              bestLoot = loot.id;
             }
           }
-        } catch {
-          /* icon failed */
+
+          // Keep slots that either have a readable qty or a decent icon match
+          if (qty != null || bestScore >= 0.45) {
+            allHits.push({
+              x,
+              y,
+              size,
+              qty,
+              iconScore: bestScore,
+              lootId: bestScore >= 0.45 ? bestLoot : null,
+            });
+          }
         }
       }
-
-      results.push({
-        lootId: l.id,
-        name: l.name,
-        iconUrl: l.icon_url,
-        detectedQty: bestQty,
-        mode: "override",
-        ignore: false,
-        confidence: bestConf,
-        editQty: "",
-      });
     }
   } finally {
     await worker.terminate();
   }
 
-  return results;
+  // Assign hits to loots: each loot gets the highest-scoring matching slot
+  const assigned = new Map<string, { qty: number | null; conf: number }>();
+
+  // Sort hits by icon score descending so best matches claim first
+  allHits.sort((a, b) => b.iconScore - a.iconScore);
+
+  const usedLoots = new Set<string>();
+  for (const hit of allHits) {
+    if (!hit.lootId || usedLoots.has(hit.lootId)) continue;
+    usedLoots.add(hit.lootId);
+    assigned.set(hit.lootId, {
+      qty: hit.qty,
+      conf: hit.iconScore,
+    });
+  }
+
+  return loots.map((l) => {
+    const a = assigned.get(l.id);
+    return {
+      lootId: l.id,
+      name: l.name,
+      iconUrl: l.icon_url,
+      detectedQty: a?.qty ?? null,
+      mode: "override" as QtyMode,
+      ignore: false,
+      confidence: a?.conf ?? null,
+      editQty: "",
+    };
+  });
 }
 
 function UploadSlot({
@@ -467,7 +495,6 @@ export function InventoryScreenshotImport({ open, onClose, loots, currentQty, on
       const detected = r.detectedQty;
 
       if (detected == null) {
-        // Allow manual edit even when OCR missed
         const edited = parseFloat(r.editQty);
         if (Number.isFinite(edited) && r.editQty.trim() !== "") {
           next[r.lootId] = String(edited);
@@ -508,7 +535,7 @@ export function InventoryScreenshotImport({ open, onClose, loots, currentQty, on
             </p>
             <p className="text-sm text-muted-foreground">
               {step === "upload" && "Drop inventory screenshots"}
-              {step === "processing" && "Matching icons…"}
+              {step === "processing" && "Reading inventory grid…"}
               {step === "review" && "Review & apply"}
             </p>
           </div>
@@ -544,8 +571,8 @@ export function InventoryScreenshotImport({ open, onClose, loots, currentQty, on
                 onClear={() => setEnhancePreview(null)}
               />
               <p className="text-[0.7rem] leading-relaxed text-muted-foreground">
-                Works with full or cropped inventory screenshots. Icons are matched against this
-                spot’s loot list. You can always correct numbers on the review screen.
+                Detects the inventory grid, reads every stack number, then matches icons to this
+                spot’s loot list. You can always correct values on the review screen.
               </p>
             </div>
           )}
@@ -553,7 +580,7 @@ export function InventoryScreenshotImport({ open, onClose, loots, currentQty, on
           {step === "processing" && (
             <div className="flex flex-col items-center justify-center gap-3 py-16 text-sm text-muted-foreground">
               <Loader2 className="size-8 animate-spin text-cyan-300" />
-              Matching icons & reading stack counts…
+              Reading inventory grid & stack counts…
             </div>
           )}
 
@@ -595,7 +622,7 @@ export function InventoryScreenshotImport({ open, onClose, loots, currentQty, on
                           <p className="text-[0.65rem] text-muted-foreground">
                             {detected == null
                               ? r.confidence != null
-                                ? `Icon found · OCR missed`
+                                ? `Icon matched · OCR missed`
                                 : "Not detected"
                               : `Detected ${detected}${r.confidence != null ? ` · ${Math.round(r.confidence * 100)}%` : ""}`}
                             {before > 0 && ` · was ${before}`}
