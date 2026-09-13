@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ChronoPanel } from "@/components/chrono-panel";
+import { InventoryScreenshotImport } from "@/components/inventory-screenshot-import";
 import { Input } from "@/components/ui/input";
 import {
   createLoot,
@@ -161,6 +162,7 @@ export function GrindTracker() {
   const [editLootKind, setEditLootKind] = useState<"market" | "npc">("market");
   const [editLootPrice, setEditLootPrice] = useState("");
   const [editLootIconUrl, setEditLootIconUrl] = useState<string | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -287,7 +289,7 @@ export function GrindTracker() {
     for (const l of loots) {
       const q = parseFloat(qty[l.id] || "0") || 0;
       total += q * effectiveUnitSilver(l.unit_price, l.kind);
-    }
+      }
     const mins = effectiveMins > 0 ? effectiveMins : 0;
     const sph = mins > 0 ? total / (mins / 60) : 0;
     return { total, sph, mins };
@@ -577,185 +579,150 @@ export function GrindTracker() {
           {addingSpot && (
             <div className="mb-1 flex flex-col gap-1.5 rounded-lg bg-white/5 p-2">
               <Input value={spotName} onChange={(e) => setSpotName(e.target.value)} placeholder="Name" className="h-8 text-xs" />
-              <div className="grid grid-cols-2 gap-1">
-                <button type="button" onClick={() => setSpotMode("pve")} className={cn("h-8 rounded-md text-[0.65rem] font-semibold ring-1 transition", spotMode === "pve" ? "bg-cyan-400/15 text-cyan-200 ring-cyan-400/40" : "bg-white/5 text-muted-foreground ring-white/10")}>
-                  Monsters
+              <Input value={spotMonsters} onChange={(e) => setSpotMonsters(e.target.value)} placeholder="Monsters" className="h-8 text-xs" />
+              <Input value={spotTerritory} onChange={(e) => setSpotTerritory(e.target.value)} placeholder="Territory" className="h-8 text-xs" />
+              <select className="field-select h-8 text-xs" value={spotMode} onChange={(e) => setSpotMode(e.target.value as SpotMode)}>
+                <option value="pve">PvE</option>
+                <option value="lifeskill">LifeSkill</option>
+              </select>
+              <div className="flex gap-1">
+                <button type="button" onClick={async () => setSpotIconUrl(await pickIconFile())} className="btn-ghost flex h-8 flex-1 items-center justify-center gap-1 text-xs">
+                  <ImagePlus className="size-3.5" /> Icon
                 </button>
-                <button type="button" onClick={() => setSpotMode("lifeskill")} className={cn("h-8 rounded-md text-[0.65rem] font-semibold ring-1 transition", spotMode === "lifeskill" ? "bg-emerald-400/15 text-emerald-200 ring-emerald-400/40" : "bg-white/5 text-muted-foreground ring-white/10")}>
-                  Lifeskill
-                </button>
+                <button type="button" onClick={onCreateSpot} disabled={busy} className="btn-primary h-8 flex-1 text-xs">Add</button>
               </div>
-              <select className="field-select h-8 w-full text-xs" value={spotTerritory} onChange={(e) => setSpotTerritory(e.target.value)}>
-                <option value="">Region…</option>
-                {TERRITORIES.map((r) => (
-                  <option key={r} value={r}>{r}</option>
-                ))}
-              </select>
-              <select className="field-select h-8 w-full text-xs" value={spotMonsters} onChange={(e) => setSpotMonsters(e.target.value)}>
-                <option value="">{spotMode === "lifeskill" ? "Lifeskill type…" : "Monster type…"}</option>
-                {(spotMode === "lifeskill" ? LIFESKILL_TYPES : MONSTER_TYPES).map((r) => (
-                  <option key={r} value={r}>{r}</option>
-                ))}
-              </select>
-              <button type="button" onClick={async () => setSpotIconUrl(await pickIconFile())} className="btn-ghost flex h-8 items-center justify-center gap-1.5 text-[0.65rem]">
-                <ImagePlus className="size-3.5" />
-                {spotIconUrl ? "Change Icon" : "Add Icon"}
-              </button>
-              {spotIconUrl && <img src={spotIconUrl} alt="" className="mx-auto size-10 rounded object-contain" />}
-              <button type="button" onClick={onCreateSpot} disabled={busy} className="btn-primary h-8 text-[0.65rem]">Create</button>
             </div>
           )}
 
-          <div className="flex max-h-[55vh] flex-col gap-3 overflow-auto">
-            {spotsByRegion.map(([terr, list]) => (
-              <div key={terr}>
-                <div className="mb-1 flex items-center gap-1.5 px-1">
-                  <MapPin className="size-3 text-cyan-400/80" />
-                  <span className="text-[0.6rem] font-bold uppercase tracking-wider text-cyan-300/80">{terr}</span>
-                </div>
-                <ul className="flex flex-col gap-1">
-                  {list.map((s) => (
+          <div className="max-h-[50vh] space-y-2 overflow-y-auto pr-0.5">
+            {spotsByRegion.map(([region, regionSpots]) => (
+              <div key={region}>
+                <p className="mb-1 px-1 text-[0.6rem] font-bold uppercase tracking-wider text-muted-foreground/80">{region}</p>
+                <ul className="flex flex-col gap-0.5">
+                  {regionSpots.map((s) => (
                     <li key={s.id}>
                       <button
                         type="button"
                         onClick={() => setSelectedId(s.id)}
                         className={cn(
-                          "flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left text-sm transition",
-                          selectedId === s.id ? "bg-cyan-400/15 text-cyan-200 ring-1 ring-cyan-400/30" : "hover:bg-white/5 text-foreground",
+                          "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm transition",
+                          selectedId === s.id
+                            ? "bg-cyan-500/15 text-cyan-100 ring-1 ring-cyan-400/30"
+                            : "text-muted-foreground hover:bg-white/5 hover:text-foreground",
                         )}
                       >
-                        <span className="flex min-w-0 items-center gap-2">
-                          {s.icon_url ? (
-                            <img src={s.icon_url} alt="" className="size-8 shrink-0 rounded object-contain" />
-                          ) : (
-                            <span className="flex size-8 shrink-0 items-center justify-center rounded bg-white/5 text-[0.65rem] font-bold text-cyan-300">{s.name[0]?.toUpperCase()}</span>
-                          )}
-                          <span className="truncate font-medium">{s.name}</span>
-                        </span>
-                        <button
-                          type="button"
-                          className="ml-1 text-muted-foreground hover:text-rose-400"
-                          onClick={async (e) => {
-                            e.stopPropagation();
-                            await deleteSpot(s.id);
-                            setSpots((p) => p.filter((x) => x.id !== s.id));
-                            if (selectedId === s.id) setSelectedId(null);
-                          }}
-                        >
-                          <Trash2 className="size-3" />
-                        </button>
+                        {s.icon_url ? (
+                          <img src={s.icon_url} alt="" className="size-6 shrink-0 rounded object-contain" />
+                        ) : (
+                          <MapPin className="size-4 shrink-0 opacity-50" />
+                        )}
+                        <span className="truncate font-medium">{s.name}</span>
                       </button>
                     </li>
                   ))}
                 </ul>
               </div>
             ))}
-            {filteredSpots.length === 0 && (
-              <p className="px-2 py-6 text-center text-xs text-muted-foreground">No Spots Match</p>
-            )}
           </div>
         </aside>
 
-        <div className="flex flex-col gap-3">
-          {!selectedId ? (
-            <p className="glass py-16 text-center text-sm text-muted-foreground">Select Or Add A Spot</p>
-          ) : (
+        <div className="flex flex-col gap-4">
+          {selectedSpot && (
             <>
-              <div className="glass flex flex-wrap items-center justify-between gap-2 p-3">
-                <div className="flex min-w-0 items-center gap-2.5">
-                  {selectedSpot?.icon_url ? (
-                    <img src={selectedSpot.icon_url} alt="" className="size-10 rounded object-contain" />
-                  ) : (
-                    <span className="flex size-10 items-center justify-center rounded bg-white/5 text-sm font-bold text-cyan-300">{selectedSpot?.name[0]?.toUpperCase()}</span>
-                  )}
-                  <div className="min-w-0">
-                    <h3 className="truncate text-base font-semibold sm:text-lg">{selectedSpot?.name}</h3>
-                    <p className="truncate text-xs text-muted-foreground sm:text-sm">
-                      {selectedSpot?.monsters}
-                      {selectedSpot?.territory ? ` · ${selectedSpot.territory}` : ""}
+              <div className="glass p-3 sm:p-4">
+                <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
+                  <div>
+                    <h2 className="text-lg font-bold text-foreground">{selectedSpot.name}</h2>
+                    <p className="text-xs text-muted-foreground">
+                      {(selectedSpot.monsters || "").trim() || "No monsters listed"}
+                      {selectedSpot.territory ? ` · ${selectedSpot.territory}` : ""}
                     </p>
                   </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  {avgSph > 0 && (
-                    <span className="metric-pill bg-emerald-400/10 text-sm text-emerald-300">Avg {formatSilver(avgSph)}/h</span>
-                  )}
-                  <button type="button" onClick={beginEditSpot} className="btn-ghost h-8 px-2.5 text-xs">
-                    <Pencil className="size-3.5" /> Edit Spot
-                  </button>
-                </div>
-              </div>
-
-              {editingSpot && (
-                <div className="glass grid gap-2 p-3 sm:grid-cols-2">
-                  <Input value={spotName} onChange={(e) => setSpotName(e.target.value)} placeholder="Name" className="h-9 text-sm sm:col-span-2" />
-                  <div className="grid grid-cols-2 gap-2 sm:col-span-2">
-                    <button type="button" onClick={() => setSpotMode("pve")} className={cn("h-9 rounded-md text-xs font-semibold ring-1 transition", spotMode === "pve" ? "bg-cyan-400/15 text-cyan-200 ring-cyan-400/40" : "bg-white/5 text-muted-foreground ring-white/10")}>Monsters</button>
-                    <button type="button" onClick={() => setSpotMode("lifeskill")} className={cn("h-9 rounded-md text-xs font-semibold ring-1 transition", spotMode === "lifeskill" ? "bg-emerald-400/15 text-emerald-200 ring-emerald-400/40" : "bg-white/5 text-muted-foreground ring-white/10")}>Lifeskill</button>
-                  </div>
-                  <select className="field-select h-9 w-full text-sm" value={spotTerritory} onChange={(e) => setSpotTerritory(e.target.value)}>
-                    <option value="">Region…</option>
-                    {TERRITORIES.map((r) => (
-                      <option key={r} value={r}>{r}</option>
-                    ))}
-                  </select>
-                  <select className="field-select h-9 w-full text-sm" value={spotMonsters} onChange={(e) => setSpotMonsters(e.target.value)}>
-                    <option value="">{spotMode === "lifeskill" ? "Lifeskill type…" : "Monster type…"}</option>
-                    {(spotMode === "lifeskill" ? LIFESKILL_TYPES : MONSTER_TYPES).map((r) => (
-                      <option key={r} value={r}>{r}</option>
-                    ))}
-                  </select>
-                  <button type="button" onClick={async () => setSpotIconUrl(await pickIconFile())} className="btn-ghost flex h-9 items-center justify-center gap-1.5 text-xs">
-                    <ImagePlus className="size-4" />
-                    {spotIconUrl ? "Change Icon" : "Add Icon"}
-                  </button>
-                  {spotIconUrl && <img src={spotIconUrl} alt="" className="size-10 justify-self-start rounded object-contain" />}
-                  <div className="flex gap-2 sm:col-span-2">
-                    <button type="button" onClick={onSaveSpot} disabled={busy} className="btn-primary h-9 flex-1 text-sm">Save Spot</button>
-                    <button type="button" onClick={() => setEditingSpot(false)} className="btn-ghost h-9 px-3 text-sm">Cancel</button>
+                  <div className="flex gap-1">
+                    <button type="button" onClick={beginEditSpot} className="btn-ghost h-8 px-2 text-xs">
+                      <Pencil className="size-3.5" /> Edit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (!selectedId || !confirm("Delete this spot and all its loots?")) return;
+                        setBusy(true);
+                        try {
+                          await deleteSpot(selectedId);
+                          setSpots((p) => p.filter((x) => x.id !== selectedId));
+                          setSelectedId(null);
+                          setLoots([]);
+                        } catch (e) {
+                          setError(e instanceof Error ? e.message : "Delete failed");
+                        } finally {
+                          setBusy(false);
+                        }
+                      }}
+                      className="btn-ghost h-8 px-2 text-xs text-rose-300"
+                    >
+                      <Trash2 className="size-3.5" />
+                    </button>
                   </div>
                 </div>
-              )}
 
-              <ChronoPanel
-                hh={hh}
-                mm={mm}
-                ss={ss}
-                timerOn={timerOn}
-                total={sessionTotals.total}
-                sph={sessionTotals.sph}
-                character={character}
-                dropRate={dropRate}
-                minutes={minutes}
-                onToggle={toggleTimer}
-                onReset={resetTimer}
-                onCharacter={setCharacter}
-                onDropRate={setDropRate}
-                onMinutes={setMinutes}
-              />
-
-              <div className="glass p-3 sm:p-4">
-                <div className="mb-2 flex items-center justify-between">
-                  <p className="text-[0.7rem] font-bold uppercase tracking-wider text-muted-foreground">Loot</p>
-                  <button type="button" onClick={() => setAddingLoot((v) => !v)} className="btn-ghost h-8 px-2.5 text-xs">
-                    <Plus className="size-3.5" /> Add
-                  </button>
-                </div>
-
-                {loots.length > 0 && (
-                  <div className="mb-1.5 grid grid-cols-[minmax(0,1fr)_4.25rem_5.25rem_4rem_5.25rem_4.5rem] items-center gap-1.5 px-2 text-[0.6rem] font-bold uppercase tracking-wider text-muted-foreground sm:grid-cols-[minmax(0,1fr)_5rem_6rem_4.5rem_6rem_5rem] sm:gap-2">
-                    <span>Item</span>
-                    <span className="text-center">Qty</span>
-                    <span className="text-right">Total</span>
-                    <span className="text-right">%</span>
-                    <span className="text-right">/h</span>
-                    <span />
+                {editingSpot && (
+                  <div className="mb-3 grid gap-1.5 rounded-lg bg-white/5 p-2 sm:grid-cols-2">
+                    <Input value={spotName} onChange={(e) => setSpotName(e.target.value)} placeholder="Name" className="h-9 text-sm" />
+                    <Input value={spotMonsters} onChange={(e) => setSpotMonsters(e.target.value)} placeholder="Monsters" className="h-9 text-sm" />
+                    <Input value={spotTerritory} onChange={(e) => setSpotTerritory(e.target.value)} placeholder="Territory" className="h-9 text-sm" />
+                    <select className="field-select h-9 text-sm" value={spotMode} onChange={(e) => setSpotMode(e.target.value as SpotMode)}>
+                      <option value="pve">PvE</option>
+                      <option value="lifeskill">LifeSkill</option>
+                    </select>
+                    <button type="button" onClick={async () => setSpotIconUrl(await pickIconFile())} className="btn-ghost flex h-9 items-center justify-center gap-1 text-xs">
+                      <ImagePlus className="size-4" /> Icon
+                    </button>
+                    <div className="flex gap-1">
+                      <button type="button" onClick={onSaveSpot} disabled={busy} className="btn-primary h-9 flex-1 text-xs">Save</button>
+                      <button type="button" onClick={() => setEditingSpot(false)} className="btn-ghost h-9 px-2"><X className="size-3.5" /></button>
+                    </div>
                   </div>
                 )}
 
+                <ChronoPanel
+                  character={character}
+                  setCharacter={setCharacter}
+                  dropRate={dropRate}
+                  setDropRate={setDropRate}
+                  minutes={minutes}
+                  setMinutes={setMinutes}
+                  timerOn={timerOn}
+                  toggleTimer={toggleTimer}
+                  resetTimer={resetTimer}
+                  hh={hh}
+                  mm={mm}
+                  ss={ss}
+                  total={sessionTotals.total}
+                  sph={sessionTotals.sph}
+                  avgSph={avgSph}
+                />
+              </div>
+
+              <div className="glass p-3 sm:p-4">
+                <div className="mb-2 flex items-center justify-between">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-cyan-300/90">Loot</h3>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAddingLoot((v) => !v);
+                      setLootName("");
+                      setLootPrice("");
+                      setLootIconUrl(null);
+                    }}
+                    className="btn-ghost h-7 px-2 text-[0.65rem]"
+                  >
+                    <Plus className="size-3" /> Add Loot
+                  </button>
+                </div>
+
                 {addingLoot && (
-                  <div className="mb-2 grid grid-cols-2 gap-1.5 rounded-lg bg-white/5 p-2 sm:grid-cols-5">
-                    <Input value={lootName} onChange={(e) => setLootName(e.target.value)} placeholder="Item" className="h-9 text-sm" />
+                  <div className="mb-2 grid grid-cols-2 gap-1.5 sm:grid-cols-5">
+                    <Input value={lootName} onChange={(e) => setLootName(e.target.value)} placeholder="Name" className="h-9 text-sm" />
                     <select className="field-select h-9 text-sm" value={lootKind} onChange={(e) => setLootKind(e.target.value as "market" | "npc")}>
                       <option value="market">Market</option>
                       <option value="npc">NPC</option>
@@ -793,32 +760,52 @@ export function GrindTracker() {
                             </div>
                           </div>
                         ) : (
-                          <div className="grid grid-cols-[minmax(0,1fr)_4.25rem_5.25rem_4rem_5.25rem_4.5rem] items-center gap-1.5 sm:grid-cols-[minmax(0,1fr)_5rem_6rem_4.5rem_6rem_5rem] sm:gap-2">
-                            <div className="flex min-w-0 items-center gap-2.5">
+                          <div className="grid grid-cols-[1fr_auto_auto] items-center gap-2 sm:grid-cols-[1fr_5rem_auto]">
+                            <div className="flex min-w-0 items-center gap-2">
                               {l.icon_url ? (
-                                <img src={l.icon_url} alt="" className="size-9 shrink-0 rounded object-contain sm:size-10" />
+                                <img src={l.icon_url} alt="" className="size-8 shrink-0 rounded object-contain" />
                               ) : (
-                                <span className="flex size-9 shrink-0 items-center justify-center rounded bg-white/5 text-xs font-bold text-cyan-300 sm:size-10">{l.name[0]?.toUpperCase()}</span>
+                                <div className="size-8 shrink-0 rounded bg-white/5" />
                               )}
                               <div className="min-w-0">
-                                <p className="truncate text-sm font-semibold text-foreground sm:text-[0.95rem]">{l.name}</p>
-                                <p className="truncate text-xs text-muted-foreground">{formatSilver(Number(l.unit_price))} · {l.kind === "market" ? "Market" : "NPC"}</p>
+                                <p className="truncate text-sm font-semibold text-foreground">{l.name}</p>
+                                <p className="text-[0.65rem] text-muted-foreground">{formatSilver(Number(l.unit_price))} · {l.kind === "market" ? "Market" : "NPC"}</p>
                               </div>
                             </div>
                             <div className="flex justify-center">
                               <Input type="number" min={0} value={qty[l.id] || ""} onChange={(e) => setQty((prev) => ({ ...prev, [l.id]: e.target.value }))} placeholder="0" className="h-9 w-full max-w-[5rem] text-center text-sm font-semibold" />
                             </div>
                             <span className="text-right font-mono text-sm font-bold tabular-nums text-cyan-300 sm:text-base">{formatSilver(lineVal)}</span>
-                            <span className="text-right font-mono text-sm font-bold tabular-nums text-amber-300/95 sm:text-base">{sessionTotals.total > 0 ? `${((lineVal / sessionTotals.total) * 100).toFixed(1)}%` : "—"}</span>
-                            <span className="text-right font-mono text-sm font-bold tabular-nums text-emerald-300 sm:text-base">{formatSilver(lineSph)}</span>
-                            <div className="flex items-center justify-end gap-0.5">
-                              <button type="button" onClick={() => beginEditLoot(l)} className="flex size-8 items-center justify-center rounded text-muted-foreground hover:text-cyan-300">
-                                <Pencil className="size-3.5" strokeWidth={1.75} />
-                              </button>
-                              <button type="button" onClick={async () => { await deleteLoot(l.id); if (selectedId) setLoots(await listLoots(selectedId)); }} className="flex size-8 items-center justify-center rounded text-muted-foreground hover:text-rose-400">
-                                <Trash2 className="size-3.5" strokeWidth={1.75} />
-                              </button>
-                            </div>
+                          </div>
+                        )}
+                        {!editing && (
+                          <div className="mt-1.5 flex gap-1">
+                            <button type="button" onClick={() => beginEditLoot(l)} className="btn-ghost h-7 px-2 text-[0.65rem]">
+                              <Pencil className="size-3" /> Edit
+                            </button>
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                if (!confirm("Delete this loot item?")) return;
+                                setBusy(true);
+                                try {
+                                  await deleteLoot(l.id);
+                                  setLoots((p) => p.filter((x) => x.id !== l.id));
+                                  setQty((prev) => {
+                                    const next = { ...prev };
+                                    delete next[l.id];
+                                    return next;
+                                  });
+                                } catch (e) {
+                                  setError(e instanceof Error ? e.message : "Delete failed");
+                                } finally {
+                                  setBusy(false);
+                                }
+                              }}
+                              className="btn-ghost h-7 px-2 text-[0.65rem] text-rose-300"
+                            >
+                              <Trash2 className="size-3" />
+                            </button>
                           </div>
                         )}
                       </li>
@@ -828,7 +815,16 @@ export function GrindTracker() {
                     <li className="px-2 py-4 text-center text-sm text-muted-foreground">No Loot Yet. Add Items Above.</li>
                   )}
                 </ul>
-                <button type="button" onClick={onSaveSession} disabled={busy || sessionTotals.total <= 0} className="btn-primary mt-3 h-11 w-full text-sm">
+                {loots.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setImportOpen(true)}
+                    className="btn-ghost mt-3 h-10 w-full text-xs"
+                  >
+                    <ImagePlus className="size-3.5" /> Update Quantities
+                  </button>
+                )}
+                <button type="button" onClick={onSaveSession} disabled={busy || sessionTotals.total <= 0} className="btn-primary mt-2 h-11 w-full text-sm">
                   Save Session
                 </button>
               </div>
@@ -856,19 +852,36 @@ export function GrindTracker() {
                                 <span className="text-[0.7rem] text-muted-foreground">{savedLabel}</span>
                               </div>
                               <div className="flex flex-wrap gap-1.5">
-                                <span className="rounded-full bg-white/5 px-2 py-0.5 text-[0.7rem] font-medium text-muted-foreground ring-1 ring-white/10">{s.minutes} min</span>
-                                <span className="rounded-full bg-cyan-400/10 px-2 py-0.5 font-mono text-[0.7rem] font-semibold text-cyan-300 ring-1 ring-cyan-400/20">{formatSilver(Number(s.total_value))}</span>
-                                <span className="rounded-full bg-emerald-400/10 px-2 py-0.5 font-mono text-[0.7rem] font-semibold text-emerald-300 ring-1 ring-emerald-400/20">{formatSilver(Number(s.silver_per_hour))}/h</span>
-                                {s.drop_rate != null && Number.isFinite(Number(s.drop_rate)) && (
-                                  <span className="rounded-full bg-amber-400/10 px-2 py-0.5 font-mono text-[0.7rem] font-semibold text-amber-200 ring-1 ring-amber-400/25">DR {Number(s.drop_rate)}%</span>
-                                )}
+                                <span className="metric-pill bg-white/5 text-muted-foreground">{s.minutes}m</span>
+                                <span className="metric-pill bg-cyan-500/10 text-cyan-200">{formatSilver(Number(s.total_value))}</span>
+                                <span className="metric-pill bg-emerald-500/10 text-emerald-200">{formatSilver(Number(s.silver_per_hour))}/h</span>
                               </div>
                             </div>
-                            <div className="flex shrink-0 items-center gap-0.5">
-                              <button type="button" title="Share Report PNG" disabled={sharingId === s.id} onClick={() => onShareSession(s)} className="flex size-8 items-center justify-center rounded text-muted-foreground hover:text-cyan-300 disabled:opacity-50">
-                                {sharingId === s.id ? <Loader2 className="size-3.5 animate-spin" /> : <Share2 className="size-3.5" strokeWidth={1.75} />}
+                            <div className="flex shrink-0 gap-1">
+                              <button
+                                type="button"
+                                disabled={sharingId === s.id}
+                                onClick={() => onShareSession(s)}
+                                className="btn-ghost h-8 px-2 text-xs"
+                              >
+                                {sharingId === s.id ? <Loader2 className="size-3.5 animate-spin" /> : <Share2 className="size-3.5" />}
                               </button>
-                              <button type="button" title="Delete Session" onClick={async () => { await deleteSession(s.id); setSessions((p) => p.filter((x) => x.id !== s.id)); }} className="flex size-8 items-center justify-center rounded text-muted-foreground hover:text-rose-400">
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  if (!confirm("Delete this session?")) return;
+                                  setBusy(true);
+                                  try {
+                                    await deleteSession(s.id);
+                                    setSessions((p) => p.filter((x) => x.id !== s.id));
+                                  } catch (e) {
+                                    setError(e instanceof Error ? e.message : "Delete failed");
+                                  } finally {
+                                    setBusy(false);
+                                  }
+                                }}
+                                className="btn-ghost h-8 px-2 text-xs text-rose-300"
+                              >
                                 <Trash2 className="size-3.5" />
                               </button>
                             </div>
@@ -881,8 +894,23 @@ export function GrindTracker() {
               </div>
             </>
           )}
+
+          {!selectedSpot && (
+            <div className="glass flex flex-col items-center justify-center gap-2 py-20 text-sm text-muted-foreground">
+              <MapPin className="size-8 opacity-40" />
+              Select or create a spot to start tracking.
+            </div>
+          )}
         </div>
       </div>
+
+      <InventoryScreenshotImport
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        loots={loots}
+        currentQty={qty}
+        onApply={(next) => setQty(next)}
+      />
     </div>
   );
 }
