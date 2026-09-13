@@ -13,11 +13,11 @@ async function requireUserId(): Promise<string> {
 }
 
 export async function listSpots(): Promise<SpotRow[]> {
-  const uid = await requireUserId();
+  // Shared catalog — all signed-in users see the same spots
   const { data, error } = await getSupabase()
     .from("spots")
     .select("*")
-    .eq("user_id", uid)
+    .order("territory")
     .order("name");
   if (error) throw error;
   return data ?? [];
@@ -30,10 +30,10 @@ export async function createSpot(input: {
   icon_url?: string | null;
   mode?: string | null;
 }): Promise<SpotRow> {
-  const uid = await requireUserId();
+  // Shared catalog — no per-user ownership on spots
   const { data, error } = await getSupabase()
     .from("spots")
-    .insert({ ...input, user_id: uid })
+    .insert(input)
     .select()
     .single();
   if (error) throw error;
