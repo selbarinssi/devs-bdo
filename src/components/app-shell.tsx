@@ -1,12 +1,14 @@
 import { Link, useRouterState } from "@tanstack/react-router";
+import type { ReactNode } from "react";
 import { Anchor, FlaskConical, ListChecks, Swords } from "lucide-react";
 import { AuthPanel } from "@/components/auth-panel";
+import { LoginLanding, useSupabaseUser } from "@/components/login-landing";
 import { cn } from "@/lib/utils";
 
 const NAV = [
   { to: "/routines", label: "Routines", icon: ListChecks, exact: false },
   { to: "/grind", label: "Grind", icon: Swords, exact: false },
-  { to: "/", label: "Alchemy", icon: FlaskConical, exact: true },
+  { to: "/alchemy", label: "Alchemy", icon: FlaskConical, exact: false },
   { to: "/voyage", label: "Voyage", icon: Anchor, exact: false },
 ] as const;
 
@@ -80,11 +82,24 @@ export function AppShell({
   title,
   eyebrow,
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
   title?: string;
   eyebrow?: string;
 }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const { user, loading } = useSupabaseUser();
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center text-sm text-muted-foreground">
+        Loading…
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <LoginLanding />;
+  }
 
   return (
     <div className="min-h-screen pb-14 text-foreground">
@@ -155,7 +170,9 @@ export function AppShell({
               {eyebrow}
             </p>
           ) : null}
-          {title ? <h2 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">{title}</h2> : null}
+          {title ? (
+            <h2 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">{title}</h2>
+          ) : null}
         </div>
         {children}
       </div>
