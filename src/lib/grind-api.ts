@@ -257,14 +257,17 @@ export async function updateLoot(
 export async function findIconByLootName(name: string): Promise<string | null> {
   const trimmed = name.trim();
   if (!trimmed) return null;
+  // Prefer exact case-insensitive match (ilike without wildcards)
   const { data, error } = await getSupabase()
     .from("loots")
-    .select("icon_url")
+    .select("icon_url, name")
     .ilike("name", trimmed)
     .not("icon_url", "is", null)
-    .limit(1);
-  if (error) return null;
-  return data?.[0]?.icon_url ?? null;
+    .limit(20);
+  if (error || !data?.length) return null;
+  const lower = trimmed.toLowerCase();
+  const exact = data.find((r) => (r.name || "").toLowerCase() === lower && r.icon_url);
+  return exact?.icon_url ?? data[0]?.icon_url ?? null;
 }
 
 export type { SessionLootRow };
