@@ -6,10 +6,18 @@ import {
   type SpotRow,
 } from "@/lib/supabase";
 
+async function requireUserId(): Promise<string> {
+  const { data, error } = await getSupabase().auth.getUser();
+  if (error || !data.user) throw new Error("Sign in required");
+  return data.user.id;
+}
+
 export async function listSpots(): Promise<SpotRow[]> {
+  const uid = await requireUserId();
   const { data, error } = await getSupabase()
     .from("spots")
     .select("*")
+    .eq("user_id", uid)
     .order("name");
   if (error) throw error;
   return data ?? [];
@@ -22,9 +30,10 @@ export async function createSpot(input: {
   icon_url?: string | null;
   mode?: string | null;
 }): Promise<SpotRow> {
+  const uid = await requireUserId();
   const { data, error } = await getSupabase()
     .from("spots")
-    .insert(input)
+    .insert({ ...input, user_id: uid })
     .select()
     .single();
   if (error) throw error;
@@ -86,10 +95,23 @@ export async function uploadLootIcon(file: File): Promise<string> {
   return data.publicUrl;
 }
 
-export async function listSessions(limit = 50): Promise<(SessionRow & { spots?: { name: string } | null })[]> {
+export async function listSessionLoots(sessionId: string): Promise<SessionLootRow[]> {
+  const { data, error } = await getSupabase()
+    .from("session_loots")
+    .select("*")
+    .eq("session_id", sessionId);
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function listSessions(
+  limit = 50,
+): Promise<(SessionRow & { spots?: { name: string } | null })[]> {
+  const uid = await requireUserId();
   const { data, error } = await getSupabase()
     .from("sessions")
     .select("*, spots(name)")
+    .eq("user_id", uid)
     .order("created_at", { ascending: false })
     .limit(limit);
   if (error) throw error;
@@ -112,6 +134,7 @@ export async function createSession(input: {
   }[];
 }): Promise<SessionRow> {
   const sb = getSupabase();
+  const uid = await requireUserId();
   const { data: session, error } = await sb
     .from("sessions")
     .insert({
@@ -121,6 +144,7 @@ export async function createSession(input: {
       total_value: input.total_value,
       silver_per_hour: input.silver_per_hour,
       started_at: input.started_at ?? null,
+      user_id: uid,
     })
     .select()
     .single();
@@ -182,7 +206,6 @@ export async function updateLoot(
   if (error) throw error;
 }
 
-/** Reuse an existing icon when the same loot name already exists elsewhere. */
 export async function findIconByLootName(name: string): Promise<string | null> {
   const trimmed = name.trim();
   if (!trimmed) return null;

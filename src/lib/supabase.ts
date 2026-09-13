@@ -23,11 +23,11 @@ export function getSupabase(): SupabaseClient {
 
 export type SpotRow = {
   id: string;
+  user_id?: string | null;
   name: string;
   monsters: string;
   territory: string;
   icon_url: string | null;
-  /** pve | lifeskill — optional until SQL migration applied */
   mode?: string | null;
   created_at: string;
 };
@@ -45,6 +45,7 @@ export type LootRow = {
 
 export type SessionRow = {
   id: string;
+  user_id?: string | null;
   spot_id: string;
   character_name: string;
   minutes: number;
