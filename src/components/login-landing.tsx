@@ -1,34 +1,83 @@
 import { useEffect, useState } from "react";
-import { LogIn } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabase";
 import type { User } from "@supabase/supabase-js";
 
 function HubMark({ className }: { className?: string }) {
   return (
-    <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} aria-hidden>
+    <svg
+      viewBox="0 0 40 40"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+      aria-hidden
+    >
       <defs>
-        <radialGradient id="loginStar" cx="50%" cy="50%" r="50%">
+        <radialGradient id="hubStarLogin" cx="50%" cy="50%" r="50%">
           <stop offset="0%" stopColor="#ffffff" />
+          <stop offset="55%" stopColor="#f8fafc" />
           <stop offset="100%" stopColor="#e2e8f0" stopOpacity="0.85" />
         </radialGradient>
-        <radialGradient id="loginPlanet" cx="35%" cy="30%" r="65%">
+        <radialGradient id="hubPlanetALogin" cx="35%" cy="30%" r="65%">
           <stop offset="0%" stopColor="#f5f3ff" />
+          <stop offset="55%" stopColor="#a78bfa" />
           <stop offset="100%" stopColor="#7c3aed" />
         </radialGradient>
+        <radialGradient id="hubPlanetBLogin" cx="40%" cy="35%" r="60%">
+          <stop offset="0%" stopColor="#e9d5ff" />
+          <stop offset="100%" stopColor="#8b5cf6" />
+        </radialGradient>
+        <radialGradient id="hubPlanetCLogin" cx="30%" cy="30%" r="70%">
+          <stop offset="0%" stopColor="#ddd6fe" />
+          <stop offset="100%" stopColor="#6d28d9" />
+        </radialGradient>
+        <filter id="hubStarGlowLogin" x="-100%" y="-100%" width="300%" height="300%">
+          <feGaussianBlur stdDeviation="1.4" result="b" />
+          <feMerge>
+            <feMergeNode in="b" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
       </defs>
-      <circle cx="20" cy="20" r="11.5" stroke="rgba(139,92,246,0.25)" strokeWidth="0.4" fill="none" />
-      <circle cx="20" cy="20" r="15" stroke="rgba(124,58,237,0.15)" strokeWidth="0.35" fill="none" />
+      <circle cx="20" cy="20" r="8" stroke="rgba(167,139,250,0.28)" strokeWidth="0.45" fill="none" />
+      <circle cx="20" cy="20" r="11.5" stroke="rgba(139,92,246,0.2)" strokeWidth="0.4" fill="none" />
+      <circle cx="20" cy="20" r="15" stroke="rgba(124,58,237,0.14)" strokeWidth="0.35" fill="none" />
+      <circle cx="20" cy="20" r="18" stroke="rgba(167,139,250,0.1)" strokeWidth="0.3" fill="none" />
+      <g className="hub-orbit hub-orbit-xfast">
+        <circle cx="20" cy="12" r="1.9" fill="url(#hubPlanetALogin)" />
+      </g>
       <g className="hub-orbit hub-orbit-fast">
-        <circle cx="20" cy="9" r="1.8" fill="url(#loginPlanet)" />
+        <circle cx="31" cy="20" r="1.45" fill="url(#hubPlanetBLogin)" />
       </g>
       <g className="hub-orbit hub-orbit-med">
-        <circle cx="31" cy="20" r="1.3" fill="url(#loginPlanet)" />
+        <circle cx="20" cy="32" r="1.2" fill="url(#hubPlanetCLogin)" />
       </g>
-      <circle cx="20" cy="20" r="3.2" fill="url(#loginStar)" />
+      <g className="hub-orbit hub-orbit-slow">
+        <circle cx="9" cy="20" r="1.05" fill="url(#hubPlanetALogin)" />
+      </g>
+      <g className="hub-orbit hub-orbit-xslow">
+        <circle cx="26" cy="11" r="0.85" fill="url(#hubPlanetBLogin)" />
+      </g>
+      <g className="hub-orbit hub-orbit-med2">
+        <circle cx="12" cy="27" r="0.7" fill="url(#hubPlanetCLogin)" />
+      </g>
+      <circle cx="20" cy="20" r="3.2" fill="url(#hubStarLogin)" filter="url(#hubStarGlowLogin)" />
+      <circle cx="20" cy="20" r="1.1" fill="#ffffff" opacity="0.95" />
     </svg>
   );
+}
+
+/** Discord display name + avatar from Supabase user metadata */
+export function discordProfile(user: User) {
+  const m = user.user_metadata ?? {};
+  const name =
+    (m.full_name as string) ||
+    (m.name as string) ||
+    (m.custom_claims as { global_name?: string } | undefined)?.global_name ||
+    (m.preferred_username as string) ||
+    (m.user_name as string) ||
+    "Player";
+  const avatar = (m.avatar_url as string) || (m.picture as string) || null;
+  return { name, avatar };
 }
 
 export function useSupabaseUser() {
@@ -58,16 +107,13 @@ export function useSupabaseUser() {
 }
 
 export function LoginLanding() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
   const redirectTo =
     typeof window !== "undefined" ? `${window.location.origin}/routines` : undefined;
 
-  const oauth = async (provider: "google" | "discord") => {
+  const signInDiscord = async () => {
     if (!isSupabaseConfigured()) {
       setMsg("Supabase is not configured.");
       return;
@@ -75,40 +121,26 @@ export function LoginLanding() {
     setBusy(true);
     setMsg(null);
     try {
-      const { error } = await getSupabase().auth.signInWithOAuth({
-        provider,
-        options: { redirectTo },
+      const silent = await getSupabase().auth.signInWithOAuth({
+        provider: "discord",
+        options: {
+          redirectTo,
+          scopes: "identify",
+          queryParams: { prompt: "none" },
+        },
       });
-      if (error) throw error;
-    } catch (e) {
-      setMsg(e instanceof Error ? e.message : "OAuth failed");
-      setBusy(false);
-    }
-  };
-
-  const submit = async () => {
-    if (!isSupabaseConfigured()) {
-      setMsg("Supabase is not configured.");
-      return;
-    }
-    setBusy(true);
-    setMsg(null);
-    try {
-      if (mode === "signin") {
-        const { error } = await getSupabase().auth.signInWithPassword({ email, password });
-        if (error) throw error;
-      } else {
-        const { error } = await getSupabase().auth.signUp({
-          email,
-          password,
-          options: { emailRedirectTo: redirectTo },
+      if (silent.error) {
+        const full = await getSupabase().auth.signInWithOAuth({
+          provider: "discord",
+          options: {
+            redirectTo,
+            scopes: "identify",
+          },
         });
-        if (error) throw error;
-        setMsg("Check your email to confirm, then sign in.");
+        if (full.error) throw full.error;
       }
     } catch (e) {
-      setMsg(e instanceof Error ? e.message : "Auth failed");
-    } finally {
+      setMsg(e instanceof Error ? e.message : "Discord sign-in failed");
       setBusy(false);
     }
   };
@@ -131,78 +163,21 @@ export function LoginLanding() {
           Black Desert Online
         </p>
         <h1 className="text-2xl font-semibold tracking-wide text-foreground">Dev&apos;s Hub</h1>
-        <p className="max-w-sm text-sm text-muted-foreground">
-          Sign in to sync grind drafts, routines, Sailies, and alchemy across devices.
-        </p>
       </div>
 
       <div className="glass w-full max-w-sm p-5 sm:p-6">
-        <div className="mb-4 flex flex-col gap-2">
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => oauth("google")}
-            className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 text-sm font-semibold text-foreground transition hover:bg-white/10"
-          >
-            Continue With Google
-          </button>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => oauth("discord")}
-            className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-[#5865F2]/40 bg-[#5865F2]/15 text-sm font-semibold text-[#c5caff] transition hover:bg-[#5865F2]/25"
-          >
-            Continue With Discord
-          </button>
-        </div>
-
-        <div className="relative mb-4 text-center text-[0.65rem] font-bold uppercase tracking-wider text-muted-foreground">
-          <span className="relative z-10 bg-[rgba(8,12,22,0.95)] px-2">Or Email</span>
-          <span className="absolute left-0 right-0 top-1/2 h-px bg-white/10" />
-        </div>
-
-        <div className="flex flex-col gap-3">
-          <div>
-            <Label className="text-[0.65rem]">Email</Label>
-            <Input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="h-10 text-sm"
-              autoComplete="email"
-            />
-          </div>
-          <div>
-            <Label className="text-[0.65rem]">Password</Label>
-            <Input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="h-10 text-sm"
-              autoComplete={mode === "signin" ? "current-password" : "new-password"}
-            />
-          </div>
-          {msg && <p className="text-[0.75rem] text-amber-200">{msg}</p>}
-          <button
-            type="button"
-            disabled={busy || !email.trim() || password.length < 6}
-            onClick={submit}
-            className="btn-primary h-11 w-full text-sm"
-          >
-            <LogIn className="size-4" />
-            {mode === "signin" ? "Sign In" : "Create Account"}
-          </button>
-          <button
-            type="button"
-            className="text-center text-[0.75rem] text-muted-foreground hover:text-cyan-300"
-            onClick={() => {
-              setMode((m) => (m === "signin" ? "signup" : "signin"));
-              setMsg(null);
-            }}
-          >
-            {mode === "signin" ? "Need an account? Sign up" : "Have an account? Sign in"}
-          </button>
-        </div>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={signInDiscord}
+          className="flex h-12 w-full items-center justify-center gap-2.5 rounded-xl border border-[#5865F2]/45 bg-[#5865F2]/20 text-sm font-semibold text-[#e0e3ff] transition hover:bg-[#5865F2]/30 disabled:opacity-60"
+        >
+          <svg className="size-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+            <path d="M20.3 4.4A16.8 16.8 0 0 0 15.9 3l-.2.4a15.2 15.2 0 0 1 3.6 1.8 13.5 13.5 0 0 0-12.6 0A15 15 0 0 1 10.3 3l-.2-.4A16.8 16.8 0 0 0 5.7 4.4C2.6 9 1.8 13.4 2.1 17.8a17 17 0 0 0 5.1 2.6l.7-1.1a11 11 0 0 1-1.6-.8l.4-.3c3.2 1.5 6.7 1.5 9.8 0l.4.3c-.5.3-1 .6-1.6.8l.7 1.1a17 17 0 0 0 5.1-2.6c.5-5 .1-9.3-2.2-13.4ZM9.2 14.9c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2Zm5.6 0c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2Z" />
+          </svg>
+          {busy ? "Connecting…" : "Continue With Discord"}
+        </button>
+        {msg && <p className="mt-3 text-center text-[0.75rem] text-amber-200">{msg}</p>}
       </div>
     </div>
   );
