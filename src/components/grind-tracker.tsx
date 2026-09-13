@@ -5,6 +5,7 @@ import {
   Pencil,
   Plus,
   Search,
+  Share2,
   Trash2,
   X,
 } from "lucide-react";
@@ -19,6 +20,7 @@ import {
   deleteSession,
   deleteSpot,
   listLoots,
+  listSessionLoots,
   listSessions,
   listSpots,
   updateLoot,
@@ -26,6 +28,7 @@ import {
   uploadLootIcon,
 } from "@/lib/grind-api";
 import type { LootRow, SessionRow, SpotRow } from "@/lib/supabase";
+import { downloadSessionReportPng } from "@/lib/session-report";
 import { cn, formatSilverCompact } from "@/lib/utils";
 
 const formatSilver = formatSilverCompact;
@@ -119,6 +122,7 @@ export function GrindTracker() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [sharingId, setSharingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [chronoHydrated, setChronoHydrated] = useState(false);
 
@@ -416,6 +420,20 @@ export function GrindTracker() {
     }
   };
 
+  const onShareSession = async (s: SessionRow) => {
+    setSharingId(s.id);
+    setError(null);
+    try {
+      const lines = await listSessionLoots(s.id);
+      const spot = spots.find((x) => x.id === s.spot_id);
+      await downloadSessionReportPng({ session: s, spot, lines });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Share report failed");
+    } finally {
+      setSharingId(null);
+    }
+  };
+
   const onSaveSession = async () => {
     if (!selectedId || sessionTotals.total <= 0) return;
     setBusy(true);
@@ -442,7 +460,7 @@ export function GrindTracker() {
           })
           .filter((l) => l.quantity > 0),
       });
-      setSessions((prev) => [saved, ...prev.filter((s) => s.id !== saved.id)]);
+      setSessions((prev) => [saved, ...prev.filter((x) => x.id !== saved.id)]);
       try {
         setSessions(await listSessions());
       } catch {
@@ -845,16 +863,32 @@ export function GrindTracker() {
                               {formatSilver(Number(s.silver_per_hour))}/h
                             </p>
                           </div>
-                          <button
-                            type="button"
-                            onClick={async () => {
-                              await deleteSession(s.id);
-                              setSessions((p) => p.filter((x) => x.id !== s.id));
-                            }}
-                            className="text-muted-foreground hover:text-rose-400"
-                          >
-                            <Trash2 className="size-3.5" />
-                          </button>
+                          <div className="flex items-center gap-0.5">
+                            <button
+                              type="button"
+                              title="Share Report PNG"
+                              disabled={sharingId === s.id}
+                              onClick={() => onShareSession(s)}
+                              className="flex size-8 items-center justify-center rounded text-muted-foreground hover:text-cyan-300 disabled:opacity-50"
+                            >
+                              {sharingId === s.id ? (
+                                <Loader2 className="size-3.5 animate-spin" />
+                              ) : (
+                                <Share2 className="size-3.5" strokeWidth={1.75} />
+                              )}
+                            </button>
+                            <button
+                              type="button"
+                              title="Delete Session"
+                              onClick={async () => {
+                                await deleteSession(s.id);
+                                setSessions((p) => p.filter((x) => x.id !== s.id));
+                              }}
+                              className="flex size-8 items-center justify-center rounded text-muted-foreground hover:text-rose-400"
+                            >
+                              <Trash2 className="size-3.5" />
+                            </button>
+                          </div>
                         </div>
                       </li>
                     ))}
