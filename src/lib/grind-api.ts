@@ -36,12 +36,23 @@ export async function createSpot(input: {
   icon_url?: string | null;
   mode?: string | null;
 }): Promise<SpotRow> {
-  const { data, error } = await getSupabase()
-    .from("spots")
-    .insert(input)
-    .select()
-    .single();
-  if (error) throw error;
+  const sb = getSupabase();
+  let uid: string | null = null;
+  try {
+    uid = await requireUserId();
+  } catch {
+    /* shared spots may allow insert without user_id */
+  }
+  const payload = {
+    name: input.name,
+    monsters: input.monsters,
+    territory: input.territory,
+    icon_url: input.icon_url ?? null,
+    mode: input.mode ?? "pve",
+    ...(uid ? { user_id: uid } : {}),
+  };
+  const { data, error } = await sb.from("spots").insert(payload).select().single();
+  if (error) throw new Error(error.message || "Create spot failed");
   return data;
 }
 
@@ -135,6 +146,7 @@ export async function createSession(input: {
   minutes: number;
   total_value: number;
   silver_per_hour: number;
+  drop_rate?: number | null;
   started_at?: string | null;
   lines: {
     loot_id: string | null;
@@ -154,6 +166,7 @@ export async function createSession(input: {
       minutes: asInt(input.minutes),
       total_value: asInt(input.total_value),
       silver_per_hour: asInt(input.silver_per_hour),
+      drop_rate: input.drop_rate != null && Number.isFinite(input.drop_rate) ? input.drop_rate : null,
       started_at: input.started_at ?? null,
       user_id: uid,
     })
