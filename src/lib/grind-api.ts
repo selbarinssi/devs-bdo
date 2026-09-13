@@ -13,6 +13,12 @@ async function requireUserId(): Promise<string> {
   return data.user.id;
 }
 
+/** DB columns are bigint — never send floats */
+function asInt(n: number): number {
+  if (!Number.isFinite(n)) return 0;
+  return Math.round(n);
+}
+
 export async function listSpots(): Promise<SpotRow[]> {
   const { data, error } = await getSupabase()
     .from("spots")
@@ -64,7 +70,10 @@ export async function createLoot(input: {
 }): Promise<LootRow> {
   const { data, error } = await getSupabase()
     .from("loots")
-    .insert(input)
+    .insert({
+      ...input,
+      unit_price: asInt(input.unit_price),
+    })
     .select()
     .single();
   if (error) throw error;
@@ -72,7 +81,10 @@ export async function createLoot(input: {
 }
 
 export async function updateLootPrice(id: string, unit_price: number): Promise<void> {
-  const { error } = await getSupabase().from("loots").update({ unit_price }).eq("id", id);
+  const { error } = await getSupabase()
+    .from("loots")
+    .update({ unit_price: asInt(unit_price) })
+    .eq("id", id);
   if (error) throw error;
 }
 
@@ -139,9 +151,9 @@ export async function createSession(input: {
     .insert({
       spot_id: input.spot_id,
       character_name: input.character_name,
-      minutes: input.minutes,
-      total_value: input.total_value,
-      silver_per_hour: input.silver_per_hour,
+      minutes: asInt(input.minutes),
+      total_value: asInt(input.total_value),
+      silver_per_hour: asInt(input.silver_per_hour),
       started_at: input.started_at ?? null,
       user_id: uid,
     })
@@ -157,9 +169,9 @@ export async function createSession(input: {
         session_id: session.id,
         loot_id: l.loot_id,
         loot_name: l.loot_name,
-        unit_price: l.unit_price,
-        quantity: l.quantity,
-        line_value: l.line_value,
+        unit_price: asInt(l.unit_price),
+        quantity: asInt(l.quantity),
+        line_value: asInt(l.line_value),
       })),
     );
     if (lineErr) {
@@ -184,7 +196,11 @@ export async function updateSession(
     silver_per_hour?: number;
   },
 ): Promise<void> {
-  const { error } = await getSupabase().from("sessions").update(patch).eq("id", id);
+  const body: Record<string, unknown> = { ...patch };
+  if (patch.minutes != null) body.minutes = asInt(patch.minutes);
+  if (patch.total_value != null) body.total_value = asInt(patch.total_value);
+  if (patch.silver_per_hour != null) body.silver_per_hour = asInt(patch.silver_per_hour);
+  const { error } = await getSupabase().from("sessions").update(body).eq("id", id);
   if (error) throw error;
 }
 
@@ -211,9 +227,13 @@ export async function updateLoot(
     icon_url?: string | null;
   },
 ): Promise<LootRow> {
+  const body = {
+    ...patch,
+    ...(patch.unit_price != null ? { unit_price: asInt(patch.unit_price) } : {}),
+  };
   const { data, error } = await getSupabase()
     .from("loots")
-    .update(patch)
+    .update(body)
     .eq("id", id)
     .select()
     .single();
