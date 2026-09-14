@@ -58,7 +58,7 @@ export function HubFeed() {
         /relation .* does not exist|Could not find the table|schema cache/i.test(msg)
           ? " — run supabase/sql/006_roles_and_feed.sql in the Supabase SQL editor, then refresh."
           : /permission denied|RLS|row-level security/i.test(msg)
-            ? " — sign out/in, or check profiles RLS from 006_roles_and_feed.sql."
+            ? " — run GRANT statements for feed tables (see 006_roles_and_feed.sql)."
             : "";
       setError(msg + hint);
     } finally {
@@ -171,7 +171,7 @@ export function HubFeed() {
             <textarea
               value={body}
               onChange={(e) => setBody(e.target.value)}
-              placeholder="Share a flex, meme, or chaos… emoji welcome"
+              placeholder="Share a flex, meme, or chaos…"
               rows={3}
               maxLength={2000}
               className="w-full resize-none rounded-xl border border-white/10 bg-black/30 px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-cyan-400/40 focus:ring-1 focus:ring-cyan-400/30"
