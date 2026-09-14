@@ -91,7 +91,7 @@ export function AppShell({
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center text-sm text-muted-foreground">
+      <div className="flex min-h-screen items-center justify-center hub-body text-muted-foreground">
         Loading…
       </div>
     );
@@ -110,12 +110,8 @@ export function AppShell({
               <HubMark className="size-10" />
             </div>
             <div>
-              <p className="text-[0.55rem] font-semibold uppercase tracking-[0.35em] text-muted-foreground">
-                Black Desert Online
-              </p>
-              <h1 className="text-base font-semibold tracking-wide text-foreground sm:text-lg">
-                Dev&apos;s Hub
-              </h1>
+              <p className="hub-label-muted tracking-[0.28em]">Black Desert Online</p>
+              <h1 className="hub-title tracking-wide sm:text-lg">Dev&apos;s Hub</h1>
             </div>
           </div>
           <nav aria-label="Tools" className="hidden items-center gap-1 md:flex">
@@ -128,14 +124,14 @@ export function AppShell({
                   to={item.to}
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm transition-all",
+                    "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold transition-all",
                     active
                       ? "bg-cyan-400/15 text-cyan-300 ring-1 ring-cyan-400/40 shadow-[0_0_16px_rgba(34,211,238,0.2)]"
                       : "text-muted-foreground hover:bg-white/5 hover:text-foreground",
                   )}
                 >
                   <Icon className="size-3.5" strokeWidth={1.75} aria-hidden />
-                  <span className="font-semibold">{item.label}</span>
+                  <span>{item.label}</span>
                 </Link>
               );
             })}
@@ -151,7 +147,7 @@ export function AppShell({
                 key={item.to}
                 to={item.to}
                 className={cn(
-                  "flex flex-col items-center gap-0.5 rounded-lg py-1.5 text-[0.6rem] font-semibold",
+                  "flex flex-col items-center gap-0.5 rounded-lg py-1.5 hub-tiny font-semibold",
                   active ? "bg-cyan-400/10 text-cyan-300" : "text-muted-foreground",
                 )}
               >
@@ -164,15 +160,9 @@ export function AppShell({
       </header>
 
       <div className="mx-auto max-w-[1400px] px-4 py-5 sm:px-6 sm:py-6">
-        <div className="mb-4">
-          {eyebrow ? (
-            <p className="mb-1 text-[0.65rem] font-bold uppercase tracking-[0.24em] text-cyan-300/90">
-              {eyebrow}
-            </p>
-          ) : null}
-          {title ? (
-            <h2 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">{title}</h2>
-          ) : null}
+        <div className="mb-5">
+          {eyebrow ? <p className="hub-label mb-1.5">{eyebrow}</p> : null}
+          {title ? <h2 className="hub-page-title">{title}</h2> : null}
         </div>
         {children}
       </div>
