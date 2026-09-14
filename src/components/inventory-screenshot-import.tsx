@@ -1,7 +1,7 @@
 import { ImagePlus, Loader2, X, Upload, Check } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
-import { parseInventoryWithGemini } from "@/lib/parse-inventory.server";
+import { parseInventoryWithGemini } from "@/lib/parse-inventory";
 import type { LootRow } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
 
