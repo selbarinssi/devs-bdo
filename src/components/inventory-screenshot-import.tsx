@@ -37,12 +37,61 @@ function fileToDataUrl(file: File): Promise<string> {
   });
 }
 
+/** Shrink to maxSide and JPEG so the server fn payload stays under limits. */
+function compressDataUrl(dataUrl: string, maxSide = 1280, quality = 0.82): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      try {
+        let { naturalWidth: w, naturalHeight: h } = img;
+        if (w < 1 || h < 1) {
+          resolve(dataUrl);
+          return;
+        }
+        const scale = Math.min(1, maxSide / Math.max(w, h));
+        w = Math.round(w * scale);
+        h = Math.round(h * scale);
+        const c = document.createElement("canvas");
+        c.width = w;
+        c.height = h;
+        const ctx = c.getContext("2d");
+        if (!ctx) {
+          resolve(dataUrl);
+          return;
+        }
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(c.toDataURL("image/jpeg", quality));
+      } catch (e) {
+        reject(e);
+      }
+    };
+    img.onerror = () => reject(new Error("Could not decode image for compression"));
+    img.src = dataUrl;
+  });
+}
+
+function friendlyError(e: unknown): string {
+  if (!(e instanceof Error)) return "Processing failed";
+  const msg = e.message || "Processing failed";
+  if (/NetworkError|Failed to fetch|network/i.test(msg)) {
+    return (
+      "Network error talking to the server. Wait for the latest deploy to finish, " +
+      "then try again. If it persists, the screenshot may still be too large — crop to inventory only."
+    );
+  }
+  return msg;
+}
+
 async function runDetection(
   loots: LootRow[],
   normalDataUrl: string | null,
   enhanceDataUrl: string | null,
 ): Promise<DetectionRow[]> {
-  const images = [normalDataUrl, enhanceDataUrl].filter(Boolean) as string[];
+  const raw = [normalDataUrl, enhanceDataUrl].filter(Boolean) as string[];
+  const images: string[] = [];
+  for (const url of raw) {
+    images.push(await compressDataUrl(url));
+  }
 
   const result = await parseInventoryWithGemini({
     data: {
@@ -179,7 +228,7 @@ export function InventoryScreenshotImport({ open, onClose, loots, currentQty, on
       setRows(seeded);
       setStep("review");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Processing failed");
+      setError(friendlyError(e));
       setStep("upload");
     } finally {
       setBusy(false);
