@@ -70,6 +70,40 @@ function compressDataUrl(dataUrl: string, maxSide = 1024, quality = 0.72): Promi
   });
 }
 
+/** Load a public icon URL into a tiny JPEG data URL for Gemini reference matching. */
+function loadRefIcon(url: string, maxSide = 48, quality = 0.7): Promise<string | null> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      try {
+        let { naturalWidth: w, naturalHeight: h } = img;
+        if (w < 1 || h < 1) {
+          resolve(null);
+          return;
+        }
+        const scale = Math.min(1, maxSide / Math.max(w, h));
+        w = Math.max(1, Math.round(w * scale));
+        h = Math.max(1, Math.round(h * scale));
+        const c = document.createElement("canvas");
+        c.width = w;
+        c.height = h;
+        const ctx = c.getContext("2d");
+        if (!ctx) {
+          resolve(null);
+          return;
+        }
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(c.toDataURL("image/jpeg", quality));
+      } catch {
+        resolve(null);
+      }
+    };
+    img.onerror = () => resolve(null);
+    img.src = url;
+  });
+}
+
 function friendlyError(e: unknown): string {
   if (!(e instanceof Error)) return "Processing failed";
   const msg = e.message || "Processing failed";
@@ -94,12 +128,23 @@ async function runDetection(
     images.push(await compressDataUrl(url));
   }
 
+  // Tiny reference icons for this spot only (accuracy without full BDO catalog)
+  const lootPayload = await Promise.all(
+    loots.map(async (l) => {
+      let icon: string | null = null;
+      if (l.icon_url) {
+        icon = await loadRefIcon(l.icon_url);
+      }
+      return { id: l.id, name: l.name, icon };
+    }),
+  );
+
   let result;
   try {
     result = await parseInventoryWithGemini({
       data: {
         images,
-        loots: loots.map((l) => ({ id: l.id, name: l.name })),
+        loots: lootPayload,
       },
     });
   } catch (e) {
@@ -280,24 +325,15 @@ export function InventoryScreenshotImport({ open, onClose, loots, currentQty, on
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
-      <button
-        type="button"
-        aria-label="Close"
-        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-        onClick={onClose}
-      />
-
-      <div className="glass-strong relative z-10 flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden sm:max-w-xl sm:rounded-2xl">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-3 sm:items-center">
+      <div className="glass flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden shadow-2xl">
         <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
           <div>
-            <p className="text-[0.65rem] font-bold uppercase tracking-wider text-cyan-300/90">
-              Update Quantities
-            </p>
-            <p className="text-sm text-muted-foreground">
-              {step === "upload" && "Drop inventory screenshots"}
+            <p className="text-sm font-semibold text-foreground">Update Quantities</p>
+            <p className="text-[0.7rem] text-muted-foreground">
+              {step === "upload" && "Upload inventory screenshots"}
               {step === "processing" && "Gemini is reading your inventory…"}
-              {step === "review" && "Review & apply"}
+              {step === "review" && "Review detected stacks before applying"}
             </p>
           </div>
           <button type="button" onClick={onClose} className="btn-ghost h-8 px-2">
@@ -305,36 +341,33 @@ export function InventoryScreenshotImport({ open, onClose, loots, currentQty, on
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4">
+        <div className="flex-1 overflow-y-auto px-4 py-3">
           {error && (
-            <p className="mb-3 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-200">
+            <p className="mb-3 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-200">
               {error}
-              <button type="button" className="ml-2 underline" onClick={() => setError(null)}>
-                Dismiss
-              </button>
             </p>
           )}
 
           {step === "upload" && (
             <div className="flex flex-col gap-4">
+              <p className="text-xs text-muted-foreground">
+                Gemini matches bag icons to this spot’s loot icons and reads stack counts. Review the
+                results before applying. Items not in this spot’s loot list are ignored.
+              </p>
               <UploadSlot
                 label="Normal Inventory"
-                hint="Inventory screenshot"
+                hint="Drop or choose normal bag"
                 preview={normalPreview}
                 onFile={(f) => handleFile("normal", f)}
                 onClear={() => setNormalPreview(null)}
               />
               <UploadSlot
                 label="Enhancement Inventory"
-                hint="Black Spirit / enhancement window"
+                hint="Drop or choose enhancement bag"
                 preview={enhancePreview}
                 onFile={(f) => handleFile("enhance", f)}
                 onClear={() => setEnhancePreview(null)}
               />
-              <p className="text-[0.7rem] leading-relaxed text-muted-foreground">
-                Gemini reads the screenshot and matches items to this spot’s loot list. Review the
-                numbers before applying.
-              </p>
             </div>
           )}
 
@@ -348,57 +381,57 @@ export function InventoryScreenshotImport({ open, onClose, loots, currentQty, on
           {step === "review" && (
             <div className="flex flex-col gap-2">
               <p className="mb-1 text-[0.7rem] text-muted-foreground">
-                Override replaces the current qty. Add sums on top. You can type over any value.
+                Override replaces the current qty. Add stacks on top (e.g. after moving items to storage).
+                Ignore skips that row. Not detected leaves the current qty unless you type a value.
               </p>
-              <ul className="flex flex-col gap-1.5">
+              <ul className="flex flex-col gap-2">
                 {rows.map((r) => {
                   const before = parseFloat(currentQty[r.lootId] || "0") || 0;
-                  const detected = r.detectedQty;
-                  const shown = r.ignore
-                    ? before
-                    : r.mode === "add" && detected != null
-                      ? before + (parseFloat(r.editQty) || detected)
-                      : parseFloat(r.editQty) || detected || before;
-
+                  const edited = parseFloat(r.editQty);
+                  const value = Number.isFinite(edited)
+                    ? edited
+                    : r.detectedQty != null
+                      ? r.detectedQty
+                      : NaN;
+                  const shown =
+                    r.ignore
+                      ? before
+                      : r.mode === "add" && Number.isFinite(value)
+                        ? before + value
+                        : value;
                   return (
                     <li
                       key={r.lootId}
                       className={cn(
-                        "rounded-xl bg-white/[0.03] px-2.5 py-2.5",
+                        "rounded-xl bg-white/[0.03] px-3 py-2.5 ring-1 ring-white/5",
                         r.ignore && "opacity-50",
                       )}
                     >
-                      <div className="flex items-center gap-2.5">
+                      <div className="mb-2 flex items-center gap-2">
                         {r.iconUrl ? (
-                          <img
-                            src={r.iconUrl}
-                            alt=""
-                            className="size-9 shrink-0 rounded-md object-contain bg-black/30"
-                          />
+                          <img src={r.iconUrl} alt="" className="size-9 rounded object-contain" />
                         ) : (
-                          <div className="size-9 shrink-0 rounded-md bg-white/5" />
+                          <span className="flex size-9 items-center justify-center rounded bg-white/5 text-xs font-bold text-cyan-300">
+                            {r.name[0]?.toUpperCase()}
+                          </span>
                         )}
                         <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-semibold text-foreground">{r.name}</p>
-                          <p className="text-[0.65rem] text-muted-foreground">
-                            {detected == null
-                              ? "Not found in screenshot"
-                              : `Detected ${detected}`}
-                            {before > 0 && ` · was ${before}`}
+                          <p className="truncate text-sm font-semibold">{r.name}</p>
+                          <p className="text-[0.7rem] text-muted-foreground">
+                            Was {before}
+                            {r.detectedQty != null ? ` · Detected ${r.detectedQty}` : " · Not detected"}
                           </p>
                         </div>
                         <Input
                           type="number"
                           min={0}
-                          disabled={r.ignore}
                           value={r.editQty}
                           onChange={(e) => updateRow(r.lootId, { editQty: e.target.value })}
-                          placeholder="0"
-                          className="h-9 w-[4.5rem] text-center text-sm font-semibold"
+                          className="h-8 w-20 text-center text-sm"
+                          disabled={r.ignore}
                         />
                       </div>
-
-                      <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                      <div className="flex flex-wrap items-center gap-1.5">
                         <button
                           type="button"
                           onClick={() => updateRow(r.lootId, { mode: "override" })}
