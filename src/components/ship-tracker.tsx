@@ -1,4 +1,4 @@
-import { ChevronDown, Info, Minus, Plus, Ship } from "lucide-react";
+import { Info, Minus, Plus, Ship } from "lucide-react";
 import { useMemo, useState } from "react";
 import { ItemGlyph } from "@/components/item-glyph";
 import { Progress } from "@/components/ui/progress";
@@ -129,7 +129,7 @@ function StatusBadge({ owned, req }: { owned: number; req: number }) {
   return (
     <span
       className={cn(
-        "rounded-md px-1.5 py-0.5 hub-tiny font-semibold",
+        "hub-tiny rounded-md px-1.5 py-0.5 font-semibold",
         done && "bg-emerald-400/20 text-emerald-200",
         inProgress && "bg-cyan-400/15 text-cyan-200",
         !done && !inProgress && "bg-white/5 text-muted-foreground",
@@ -176,7 +176,7 @@ function MaterialRow({
         </button>
         <Stepper node={node} owned={owned} onOwned={(n) => onOwned(node.id, n)} />
       </div>
-      {showHow && node.how && <p className="mt-2 hub-meta">{node.how}</p>}
+      {showHow && node.how && <p className="hub-meta mt-2">{node.how}</p>}
       {hasChildren && (
         <div className="mt-2 space-y-2 border-t border-white/10 pt-2 pl-2">
           {node.children!.map((ch) => (
@@ -351,7 +351,7 @@ export function ShipTracker() {
           <div className="flex flex-col gap-2">
             {components.length > 0 && (
               <>
-                <h4 className="mt-2 hub-label">Components</h4>
+                <h4 className="hub-label mt-2">Components</h4>
                 {components.map((c) => (
                   <MaterialRow key={c.id} node={c} counts={counts} onOwned={setOwned} />
                 ))}
@@ -359,7 +359,7 @@ export function ShipTracker() {
             )}
             {materials.length > 0 && (
               <>
-                <h4 className="mt-2 hub-label">Materials</h4>
+                <h4 className="hub-label mt-2">Materials</h4>
                 {materials.map((c) => (
                   <MaterialRow key={c.id} node={c} counts={counts} onOwned={setOwned} />
                 ))}
@@ -367,7 +367,7 @@ export function ShipTracker() {
             )}
           </div>
 
-          <p className="mt-6 text-center hub-footer">Progress syncs to your account when signed in.</p>
+          <p className="hub-footer mt-6 text-center">Progress syncs to your account when signed in.</p>
         </>
       )}
     </div>
