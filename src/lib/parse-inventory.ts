@@ -34,12 +34,30 @@ function extractJson(text: string): unknown {
   return JSON.parse(candidate.slice(start));
 }
 
+function validateBody(data: unknown): Body {
+  if (!data || typeof data !== "object") throw new Error("Invalid request body");
+  const d = data as Record<string, unknown>;
+  if (!Array.isArray(d.images) || !d.images.every((x) => typeof x === "string")) {
+    throw new Error("images must be string[]");
+  }
+  if (!Array.isArray(d.loots)) throw new Error("loots must be an array");
+  const loots: ParseLootInput[] = [];
+  for (const row of d.loots) {
+    if (!row || typeof row !== "object") continue;
+    const r = row as Record<string, unknown>;
+    if (typeof r.id !== "string" || typeof r.name !== "string") continue;
+    loots.push({ id: r.id, name: r.name });
+  }
+  return { images: d.images as string[], loots };
+}
+
 /**
  * Server-only work lives inside the handler. The exported fn is a client-safe
  * RPC stub (safe to import from React components).
  */
-export const parseInventoryWithGemini = createServerFn({ method: "POST" }).handler(
-  async ({ data }: { data: Body }): Promise<ParseInventoryResult> => {
+export const parseInventoryWithGemini = createServerFn({ method: "POST" })
+  .inputValidator(validateBody)
+  .handler(async ({ data }): Promise<ParseInventoryResult> => {
     const apiKey = process.env.GEMINI_API_KEY?.trim();
     if (!apiKey) {
       throw new Error(
@@ -48,8 +66,8 @@ export const parseInventoryWithGemini = createServerFn({ method: "POST" }).handl
     }
 
     const { images, loots } = data;
-    if (!images?.length) throw new Error("At least one screenshot is required");
-    if (!loots?.length) throw new Error("No loot items to match");
+    if (!images.length) throw new Error("At least one screenshot is required");
+    if (!loots.length) throw new Error("No loot items to match");
 
     const inlineParts: { inline_data: { mime_type: string; data: string } }[] = [];
     for (const url of images.slice(0, 2)) {
@@ -86,22 +104,29 @@ Include every loot list item exactly once.`;
     const model = process.env.GEMINI_MODEL?.trim() || "gemini-3.6-flash";
     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
 
-    const res = await fetch(endpoint, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        contents: [
-          {
-            role: "user",
-            parts: [{ text: prompt }, ...inlineParts],
+    let res: Response;
+    try {
+      res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          contents: [
+            {
+              role: "user",
+              parts: [{ text: prompt }, ...inlineParts],
+            },
+          ],
+          generationConfig: {
+            temperature: 0.1,
+            maxOutputTokens: 2048,
           },
-        ],
-        generationConfig: {
-          temperature: 0.1,
-          maxOutputTokens: 2048,
-        },
-      }),
-    });
+        }),
+      });
+    } catch (e) {
+      throw new Error(
+        `Could not reach Gemini: ${e instanceof Error ? e.message : String(e)}`,
+      );
+    }
 
     if (!res.ok) {
       const errText = await res.text().catch(() => "");
@@ -164,5 +189,4 @@ Include every loot list item exactly once.`;
     });
 
     return { items };
-  },
-);
+  });
