@@ -1,11 +1,20 @@
 import type { SessionLootRow, SessionRow, SpotRow } from "@/lib/supabase";
 import { formatSilverCompact } from "@/lib/utils";
 
+export type SessionReportLootMeta = {
+  kind?: "market" | "npc" | null;
+  rarity?: "common" | "uncommon" | "rare" | "epic" | "legendary" | null;
+};
+
 export type SessionReportInput = {
   session: SessionRow;
   spot: SpotRow | null | undefined;
   lines: SessionLootRow[];
   iconByLootId?: Record<string, string | null | undefined>;
+  /** Current catalog meta (kind/rarity) keyed by loot id — preferred approach, no session schema change */
+  metaByLootId?: Record<string, SessionReportLootMeta | undefined>;
+  /** Fallback when loot_id is missing: lowercased loot name → meta */
+  metaByName?: Record<string, SessionReportLootMeta | undefined>;
 };
 
 function fmtSilver(n: number) {
@@ -25,6 +34,48 @@ function fmtDate(iso: string | null | undefined) {
   } catch {
     return iso;
   }
+}
+
+const RARITY_COLORS: Record<string, { bg: string; fg: string; ring: string }> = {
+  common: { bg: "rgba(113,113,122,0.35)", fg: "#d4d4d8", ring: "rgba(161,161,170,0.45)" },
+  uncommon: { bg: "rgba(16,185,129,0.28)", fg: "#6ee7b7", ring: "rgba(52,211,153,0.45)" },
+  rare: { bg: "rgba(14,165,233,0.28)", fg: "#7dd3fc", ring: "rgba(56,189,248,0.45)" },
+  epic: { bg: "rgba(245,158,11,0.28)", fg: "#fcd34d", ring: "rgba(251,191,36,0.5)" },
+  legendary: { bg: "rgba(244,63,94,0.28)", fg: "#fda4af", ring: "rgba(251,113,133,0.5)" },
+};
+
+function rarityLabel(r: string | null | undefined): string {
+  if (r === "uncommon") return "Uncommon";
+  if (r === "rare") return "Rare";
+  if (r === "epic") return "Epic";
+  if (r === "legendary") return "Legendary";
+  return "Common";
+}
+
+function drawTag(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  label: string,
+  bg: string,
+  fg: string,
+  ring: string,
+  font: string,
+): number {
+  ctx.font = `600 11px ${font}`;
+  const tw = ctx.measureText(label).width;
+  const padX = 7;
+  const h = 18;
+  const w = tw + padX * 2;
+  roundRect(ctx, x, y, w, h, 5);
+  ctx.fillStyle = bg;
+  ctx.fill();
+  ctx.strokeStyle = ring;
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  ctx.fillStyle = fg;
+  ctx.fillText(label, x + padX, y + 13);
+  return w;
 }
 
 function roundRect(
@@ -119,7 +170,7 @@ function drawHubLogo(ctx: CanvasRenderingContext2D, cx: number, cy: number, scal
 }
 
 export async function downloadSessionReportPng(input: SessionReportInput): Promise<void> {
-  const { session, spot, lines, iconByLootId = {} } = input;
+  const { session, spot, lines, iconByLootId = {}, metaByLootId = {}, metaByName = {} } = input;
   const sorted = [...lines].sort((a, b) => Number(b.line_value) - Number(a.line_value));
   const totalSilver = Number(session.total_value) || 0;
 
@@ -136,7 +187,7 @@ export async function downloadSessionReportPng(input: SessionReportInput): Promi
   const pad = 36;
   const headerH = 128;
   const metricsH = 110;
-  const rowH = 48;
+  const rowH = 58;
   const listHeaderH = 36;
   const footerH = 36;
   const maxRows = Math.max(sorted.length, 1);
@@ -179,87 +230,85 @@ export async function downloadSessionReportPng(input: SessionReportInput): Promi
   drawHubLogo(ctx, pad + 36, y + headerH / 2, 1.35);
 
   const nameX = pad + 72;
-  ctx.fillStyle = "#f0f7ff";
+  ctx.fillStyle = "#f1f5f9";
   ctx.font = `700 26px ${font}`;
   ctx.fillText(spot?.name || "Unknown Spot", nameX, y + 52);
 
-  const savedAt = fmtDate(session.created_at);
+  const sub = [
+    session.character_name || "Unknown",
+    `${session.minutes} min`,
+    fmtDate(session.created_at),
+  ]
+    .filter(Boolean)
+    .join("  ·  ");
   ctx.fillStyle = "rgba(148,163,184,0.95)";
   ctx.font = `500 14px ${font}`;
-  const sub = [session.character_name || "Unknown", `${session.minutes} min`, `Saved ${savedAt}`].join(
-    "  ·  ",
-  );
   ctx.fillText(sub, nameX, y + 80);
 
-  const rightX = W - pad - 24;
-  if (spot?.territory) {
-    ctx.fillStyle = "rgba(167,139,250,0.95)";
-    ctx.font = `600 12px ${font}`;
-    const region = String(spot.territory);
+  const region = (spot?.territory || "").trim();
+  if (region) {
+    ctx.fillStyle = "rgba(34,211,238,0.9)";
+    ctx.font = `600 13px ${font}`;
     const tw = ctx.measureText(region).width;
+    const rightX = W - pad - 20;
     ctx.fillText(region, rightX - tw, y + 40);
   }
+
   const dr = session.drop_rate;
   if (dr != null && Number.isFinite(Number(dr))) {
     const label = `Drop Rate  ${Number(dr)}%`;
-    ctx.font = `700 15px ${font}`;
+    ctx.font = `700 13px ${font}`;
     const tw = ctx.measureText(label).width;
-    const px = rightX - tw - 16;
-    const py = y + 52;
+    const px = W - pad - 20 - tw - 16;
+    const py = y + 58;
     roundRect(ctx, px, py, tw + 16, 28, 8);
-    ctx.fillStyle = "rgba(250,204,21,0.12)";
+    ctx.fillStyle = "rgba(251,191,36,0.15)";
     ctx.fill();
-    ctx.strokeStyle = "rgba(250,204,21,0.45)";
+    ctx.strokeStyle = "rgba(251,191,36,0.4)";
     ctx.stroke();
-    ctx.fillStyle = "rgba(253,224,71,0.98)";
+    ctx.fillStyle = "#fde68a";
     ctx.fillText(label, px + 8, py + 19);
   }
 
   y += headerH + 16;
 
-  const cardW = (W - pad * 2 - 16) / 2;
-  roundRect(ctx, pad, y, cardW, metricsH, 14);
+  const metricsW = (W - pad * 2 - 12) / 2;
+  roundRect(ctx, pad, y, metricsW, metricsH, 14);
   ctx.fillStyle = "rgba(34,211,238,0.08)";
   ctx.fill();
-  ctx.strokeStyle = "rgba(34,211,238,0.35)";
+  ctx.strokeStyle = "rgba(34,211,238,0.25)";
   ctx.stroke();
   ctx.fillStyle = "rgba(148,163,184,0.9)";
-  ctx.font = `700 11px ${font}`;
+  ctx.font = `600 12px ${font}`;
   ctx.fillText("TOTAL SILVER", pad + 20, y + 28);
   ctx.fillStyle = "#67e8f9";
-  ctx.font = `700 32px ${mono}`;
+  ctx.font = `700 36px ${mono}`;
   ctx.fillText(fmtSilver(totalSilver), pad + 20, y + 72);
 
-  const x2 = pad + cardW + 16;
-  roundRect(ctx, x2, y, cardW, metricsH, 14);
+  const x2 = pad + metricsW + 12;
+  roundRect(ctx, x2, y, metricsW, metricsH, 14);
   ctx.fillStyle = "rgba(16,185,129,0.08)";
   ctx.fill();
-  ctx.strokeStyle = "rgba(52,211,153,0.35)";
+  ctx.strokeStyle = "rgba(16,185,129,0.25)";
   ctx.stroke();
   ctx.fillStyle = "rgba(148,163,184,0.9)";
-  ctx.font = `700 11px ${font}`;
+  ctx.font = `600 12px ${font}`;
   ctx.fillText("SILVER / HOUR", x2 + 20, y + 28);
   ctx.fillStyle = "#6ee7b7";
-  ctx.font = `700 32px ${mono}`;
+  ctx.font = `700 36px ${mono}`;
   ctx.fillText(fmtSilver(Number(session.silver_per_hour)), x2 + 20, y + 72);
 
   y += metricsH + 24;
 
-  const listH = listHeaderH + maxRows * rowH + 12;
-  roundRect(ctx, pad, y, W - pad * 2, listH, 14);
-  ctx.fillStyle = "rgba(255,255,255,0.03)";
-  ctx.fill();
-  ctx.strokeStyle = "rgba(255,255,255,0.1)";
-  ctx.stroke();
-
   const col = {
-    name: pad + 24,
-    qty: W - pad - 340,
-    total: W - pad - 230,
-    pct: W - pad - 130,
-    sph: W - pad - 36,
+    name: pad + 16,
+    qty: W - pad - 280,
+    total: W - pad - 180,
+    pct: W - pad - 100,
+    sph: W - pad - 16,
   };
-  ctx.fillStyle = "rgba(148,163,184,0.85)";
+
+  ctx.fillStyle = "rgba(148,163,184,0.75)";
   ctx.font = `700 11px ${font}`;
   ctx.fillText("ITEM", col.name, y + 26);
   ctx.textAlign = "right";
@@ -303,24 +352,52 @@ export async function downloadSessionReportPng(input: SessionReportInput): Promi
         ctx.fillText((line.loot_name || "?")[0]?.toUpperCase() || "?", col.name + 9, rowY + 30);
       }
 
+      const meta =
+        (line.loot_id && metaByLootId[line.loot_id]) ||
+        metaByName[(line.loot_name || "").trim().toLowerCase()] ||
+        {};
+      const kind = meta.kind === "npc" ? "npc" : meta.kind === "market" ? "market" : null;
+      const rarity = meta.rarity || null;
+
       ctx.fillStyle = "#e2e8f0";
       ctx.font = `600 15px ${font}`;
       let display = line.loot_name || "Item";
       while (ctx.measureText(display).width > col.qty - textX - 20 && display.length > 4) {
         display = display.slice(0, -2) + "…";
       }
-      ctx.fillText(display, textX, rowY + 30);
+      ctx.fillText(display, textX, rowY + 24);
+
+      let tagX = textX;
+      const tagY = rowY + 32;
+      if (kind) {
+        tagX +=
+          drawTag(
+            ctx,
+            tagX,
+            tagY,
+            kind === "market" ? "Market" : "NPC",
+            "rgba(255,255,255,0.08)",
+            "rgba(148,163,184,0.95)",
+            "rgba(255,255,255,0.14)",
+            font,
+          ) + 6;
+      }
+      {
+        const key = rarity || "common";
+        const c = RARITY_COLORS[key] || RARITY_COLORS.common;
+        drawTag(ctx, tagX, tagY, rarityLabel(key), c.bg, c.fg, c.ring, font);
+      }
 
       ctx.font = `600 14px ${mono}`;
       ctx.textAlign = "right";
       ctx.fillStyle = "rgba(226,232,240,0.9)";
-      ctx.fillText(String(qty), col.qty, rowY + 30);
+      ctx.fillText(String(qty), col.qty, rowY + 34);
       ctx.fillStyle = "#67e8f9";
-      ctx.fillText(fmtSilver(lineVal), col.total, rowY + 30);
+      ctx.fillText(fmtSilver(lineVal), col.total, rowY + 34);
       ctx.fillStyle = "rgba(250,204,21,0.95)";
-      ctx.fillText(`${pct.toFixed(1)}%`, col.pct, rowY + 30);
+      ctx.fillText(`${pct.toFixed(1)}%`, col.pct, rowY + 34);
       ctx.fillStyle = "#6ee7b7";
-      ctx.fillText(fmtSilver(lineSph), col.sph, rowY + 30);
+      ctx.fillText(fmtSilver(lineSph), col.sph, rowY + 34);
       ctx.textAlign = "left";
 
       rowY += rowH;
@@ -338,15 +415,9 @@ export async function downloadSessionReportPng(input: SessionReportInput): Promi
   if (!blob) throw new Error("Failed to export PNG");
 
   const safeSpot = (spot?.name || "session").replace(/[^\w\-]+/g, "_").slice(0, 40);
-  const safeChar = (session.character_name || "char").replace(/[^\w\-]+/g, "_").slice(0, 24);
-  const filename = `devs-hub_${safeSpot}_${safeChar}_${session.minutes}m.png`;
-
-  const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
+  a.href = URL.createObjectURL(blob);
+  a.download = `devs-hub-grind-${safeSpot}-${session.id.slice(0, 8)}.png`;
   a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
+  URL.revokeObjectURL(a.href);
 }
