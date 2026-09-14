@@ -1,26 +1,55 @@
 @import "tailwindcss";
+@import "tw-animate-css";
 @import "@fontsource/lora/400.css";
 @import "@fontsource/lora/600.css";
 @import "@fontsource/lora/700.css";
 
 @theme {
+  --color-ivory: #0a0e1a;
+  --color-teal: #22d3ee;
+  --color-teal-deep: #06b6d4;
+  --color-stone: rgba(148, 163, 184, 0.22);
+  --color-paper: rgba(12, 18, 32, 0.65);
+  --color-ink: #f0f7ff;
+  --color-muted: #94a3b8;
+  --color-danger: #fb7185;
+
   --color-background: #04060c;
-  --color-foreground: #f1f5f9;
-  --color-muted: #0b1220;
-  --color-muted-foreground: #94a3b8;
-  --color-card: #0a101c;
-  --color-card-foreground: #f1f5f9;
-  --color-border: rgba(148, 163, 184, 0.18);
+  --color-foreground: #f0f7ff;
+  --color-card: rgba(10, 16, 28, 0.5);
+  --color-card-foreground: #f0f7ff;
   --color-primary: #22d3ee;
   --color-primary-foreground: #041018;
-  --color-accent: #a78bfa;
-  --color-accent-foreground: #f5f3ff;
-  --color-destructive: #f43f5e;
+  --color-secondary: rgba(15, 23, 42, 0.75);
+  --color-secondary-foreground: #f0f7ff;
+  --color-muted-foreground: #94a3b8;
+  --color-accent: #34d399;
+  --color-accent-foreground: #041018;
+  --color-border: rgba(148, 163, 184, 0.16);
+  --color-input: rgba(148, 163, 184, 0.16);
   --color-ring: #22d3ee;
+  --color-destructive: #fb7185;
+  --color-destructive-foreground: #0b0618;
+
   --font-serif: "Lora", Georgia, "Times New Roman", serif;
   --font-sans: "Lora", Georgia, "Times New Roman", serif;
+
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.25rem;
+  --radius-2xl: 1.5rem;
+
+  --shadow-border:
+    0 0 0 1px rgba(34, 211, 238, 0.1),
+    0 10px 40px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  --shadow-border-hover:
+    0 0 0 1px rgba(34, 211, 238, 0.35),
+    0 14px 48px rgba(34, 211, 238, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+
   --ease-out-smooth: cubic-bezier(0.22, 1, 0.36, 1);
-  --shadow-border: 0 0 0 1px rgba(34, 211, 238, 0.08), 0 12px 40px rgba(0, 0, 0, 0.45);
 }
 
 @layer base {
@@ -37,7 +66,7 @@
     background-image:
       radial-gradient(ellipse 80% 50% at 20% -10%, rgba(34, 211, 238, 0.12), transparent 50%),
       radial-gradient(ellipse 60% 40% at 90% 10%, rgba(167, 139, 250, 0.1), transparent 45%),
-      radial-gradient(ellipse 50% 30% at 50% 100%, rgba(52, 211, 153, 0.06), transparent 40%);
+      radial-gradient(ellipse 50% 30% at 100% 80%, rgba(52, 211, 153, 0.06), transparent 40%);
     background-attachment: fixed;
     color: var(--color-foreground);
     font-family: var(--font-serif);
@@ -59,8 +88,9 @@
     border: 1px solid rgba(148, 163, 184, 0.22);
     background: rgba(8, 14, 26, 0.7);
     padding: 0 0.75rem;
-    color: #f1f5f9;
+    color: #f0f7ff;
     font-size: 0.875rem;
+    font-family: var(--font-serif);
     outline: none;
     transition: border-color 150ms var(--ease-out-smooth), box-shadow 150ms var(--ease-out-smooth);
   }
@@ -79,8 +109,9 @@
     border: 1px solid rgba(148, 163, 184, 0.22);
     background: rgba(8, 14, 26, 0.7);
     padding: 0 2rem 0 0.75rem;
-    color: #f1f5f9;
+    color: #f0f7ff;
     font-size: 0.875rem;
+    font-family: var(--font-serif);
     outline: none;
     appearance: none;
     background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' fill='none'><path d='M2 4l5 5 5-5' stroke='%2394a3b8' stroke-width='1.5'/></svg>");
@@ -248,29 +279,80 @@
     height: 2.1rem;
     padding: 0 0.85rem;
     border-radius: 9999px;
-    border: 1px solid rgba(52, 211, 153, 0.35);
+    border: 1px solid rgba(52, 211, 153, 0.4);
     background: rgba(52, 211, 153, 0.14);
-    color: #a7f3d0;
+    color: #6ee7b7;
     font-size: 0.75rem;
-    font-weight: 600;
+    font-weight: 700;
+    box-shadow: 0 0 16px rgba(52, 211, 153, 0.15);
   }
 
   .tick-box {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+    display: grid;
+    place-items: center;
+    width: 1.35rem;
+    height: 1.35rem;
+    flex-shrink: 0;
     border-radius: 0.4rem;
-    border: 1.5px solid rgba(148, 163, 184, 0.35);
+    border: 2px solid rgba(148, 163, 184, 0.4);
     background: rgba(8, 14, 26, 0.55);
-    color: transparent;
     transition:
-      background 150ms var(--ease-out-smooth),
       border-color 150ms var(--ease-out-smooth),
-      color 150ms var(--ease-out-smooth);
+      background 150ms var(--ease-out-smooth),
+      box-shadow 150ms var(--ease-out-smooth);
   }
   .tick-box[data-checked="true"] {
+    border-color: #34d399;
     background: rgba(52, 211, 153, 0.22);
-    border-color: rgba(52, 211, 153, 0.65);
     color: #6ee7b7;
+    box-shadow:
+      0 0 0 1px rgba(52, 211, 153, 0.25),
+      0 0 16px rgba(52, 211, 153, 0.4);
+  }
+
+  .metric-pill {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 9999px;
+    padding: 0.15rem 0.55rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.01em;
+  }
+
+  /* Hub logo — orbiting planets around white star */
+  .hub-orbit {
+    transform-origin: 20px 20px;
+  }
+  .hub-orbit-xfast {
+    animation: hub-spin 2.8s linear infinite;
+  }
+  .hub-orbit-fast {
+    animation: hub-spin 4.2s linear infinite;
+  }
+  .hub-orbit-fast-rev {
+    animation: hub-spin 3.6s linear infinite reverse;
+  }
+  .hub-orbit-mid {
+    animation: hub-spin 6.5s linear infinite;
+  }
+  .hub-orbit-mid-rev {
+    animation: hub-spin 5.5s linear infinite reverse;
+  }
+  .hub-orbit-slow {
+    animation: hub-spin 9s linear infinite;
+  }
+  @keyframes hub-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
