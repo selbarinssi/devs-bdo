@@ -37,8 +37,8 @@ function fileToDataUrl(file: File): Promise<string> {
   });
 }
 
-/** Shrink to maxSide and JPEG so the server fn payload stays under limits. */
-function compressDataUrl(dataUrl: string, maxSide = 1280, quality = 0.82): Promise<string> {
+/** Shrink + JPEG so the server-fn POST stays under Vercel body limits. */
+function compressDataUrl(dataUrl: string, maxSide = 1024, quality = 0.72): Promise<string> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => {
@@ -49,8 +49,8 @@ function compressDataUrl(dataUrl: string, maxSide = 1280, quality = 0.82): Promi
           return;
         }
         const scale = Math.min(1, maxSide / Math.max(w, h));
-        w = Math.round(w * scale);
-        h = Math.round(h * scale);
+        w = Math.max(1, Math.round(w * scale));
+        h = Math.max(1, Math.round(h * scale));
         const c = document.createElement("canvas");
         c.width = w;
         c.height = h;
@@ -73,10 +73,11 @@ function compressDataUrl(dataUrl: string, maxSide = 1280, quality = 0.82): Promi
 function friendlyError(e: unknown): string {
   if (!(e instanceof Error)) return "Processing failed";
   const msg = e.message || "Processing failed";
-  if (/NetworkError|Failed to fetch|network/i.test(msg)) {
+  if (/NetworkError|Failed to fetch|Load failed|network/i.test(msg)) {
     return (
-      "Network error talking to the server. Wait for the latest deploy to finish, " +
-      "then try again. If it persists, the screenshot may still be too large — crop to inventory only."
+      "Could not reach the server function (network). " +
+      "Confirm the latest deploy is Ready on Vercel, hard-refresh the page, then try again. " +
+      "If it keeps failing, crop the screenshot to the inventory grid only."
     );
   }
   return msg;
@@ -93,12 +94,18 @@ async function runDetection(
     images.push(await compressDataUrl(url));
   }
 
-  const result = await parseInventoryWithGemini({
-    data: {
-      images,
-      loots: loots.map((l) => ({ id: l.id, name: l.name })),
-    },
-  });
+  let result;
+  try {
+    result = await parseInventoryWithGemini({
+      data: {
+        images,
+        loots: loots.map((l) => ({ id: l.id, name: l.name })),
+      },
+    });
+  } catch (e) {
+    // Re-throw with friendlier message for network failures
+    throw new Error(friendlyError(e));
+  }
 
   const byId = new Map(result.items.map((i) => [i.id, i.qty]));
 
