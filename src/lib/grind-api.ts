@@ -257,19 +257,51 @@ export async function updateLoot(
   return data;
 }
 
-export async function findIconByLootName(name: string): Promise<string | null> {
+export type LootNameDefaults = {
+  icon_url: string | null;
+  unit_price: number | null;
+  kind: "market" | "npc" | null;
+  rarity: "common" | "uncommon" | "rare" | "epic" | "legendary" | null;
+};
+
+/** Match another spot's loot by exact name (case-insensitive) for icon + price + kind + rarity. */
+export async function findLootDefaultsByName(name: string): Promise<LootNameDefaults | null> {
   const trimmed = name.trim();
   if (!trimmed) return null;
   const { data, error } = await getSupabase()
     .from("loots")
-    .select("icon_url, name")
+    .select("icon_url, name, unit_price, kind, rarity")
     .ilike("name", trimmed)
-    .not("icon_url", "is", null)
-    .limit(20);
+    .limit(30);
   if (error || !data?.length) return null;
   const lower = trimmed.toLowerCase();
-  const exact = data.find((r) => (r.name || "").toLowerCase() === lower && r.icon_url);
-  return exact?.icon_url ?? data[0]?.icon_url ?? null;
+  const exact = data.filter((r) => (r.name || "").toLowerCase() === lower);
+  const pool = exact.length ? exact : data;
+
+  const withIcon = pool.find((r) => r.icon_url);
+  const withPrice = pool.find((r) => r.unit_price != null && Number(r.unit_price) > 0);
+  const withKind = pool.find((r) => r.kind === "market" || r.kind === "npc");
+  const withRarity = pool.find(
+    (r) =>
+      r.rarity === "common" ||
+      r.rarity === "uncommon" ||
+      r.rarity === "rare" ||
+      r.rarity === "epic" ||
+      r.rarity === "legendary",
+  );
+
+  return {
+    icon_url: withIcon?.icon_url ?? null,
+    unit_price: withPrice != null ? Number(withPrice.unit_price) : null,
+    kind: withKind?.kind === "npc" ? "npc" : withKind?.kind === "market" ? "market" : null,
+    rarity: (withRarity?.rarity as LootNameDefaults["rarity"]) ?? null,
+  };
+}
+
+/** @deprecated prefer findLootDefaultsByName */
+export async function findIconByLootName(name: string): Promise<string | null> {
+  const d = await findLootDefaultsByName(name);
+  return d?.icon_url ?? null;
 }
 
 export type { SessionLootRow };
