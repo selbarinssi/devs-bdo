@@ -23,12 +23,11 @@ import { LIFESKILL_TYPES, MONSTER_TYPES, TERRITORIES } from "@/data/grind-meta";
 import {
   deleteLoot,
   deleteSession,
-  deleteSpot,
   listLoots,
 } from "@/lib/grind-api";
 import type { SpotRow } from "@/lib/supabase";
 import { cn, effectiveUnitSilver } from "@/lib/utils";
-import type { useGrindController } from "@/components/use-grind-controller";
+import { useGrindController } from "@/components/use-grind-controller";
 
 type G = ReturnType<typeof useGrindController>;
 
