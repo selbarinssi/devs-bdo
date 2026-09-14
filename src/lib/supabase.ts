@@ -32,6 +32,8 @@ export type SpotRow = {
   created_at: string;
 };
 
+export type LootRarity = "common" | "uncommon" | "rare" | "epic" | "legendary";
+
 export type LootRow = {
   id: string;
   spot_id: string;
@@ -40,6 +42,7 @@ export type LootRow = {
   unit_price: number;
   icon_url: string | null;
   market_item_id: number | null;
+  rarity?: LootRarity | null;
   created_at: string;
 };
 
