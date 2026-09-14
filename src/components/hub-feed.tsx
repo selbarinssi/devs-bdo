@@ -579,36 +579,34 @@ export function HubFeed() {
                         <SmilePlus className="size-4" />
                       </button>
                       {pickerPostId === post.id && (
-                        <div className="glass absolute bottom-full left-0 z-30 mb-2 w-[13.5rem] p-2 shadow-[0_0_28px_rgba(34,211,238,0.15)]">
-                          <div className="grid grid-cols-4 gap-1">
-                            {REACTION_EMOJIS.map((emoji) => (
-                              <button
-                                key={emoji}
-                                type="button"
-                                className="flex size-10 items-center justify-center rounded-lg text-xl transition hover:bg-cyan-400/15"
-                                onClick={() => {
-                                  void onReact(post.id, emoji);
-                                  setPickerPostId(null);
-                                }}
-                              >
-                                {emoji}
-                              </button>
-                            ))}
-                            {hubPack.map((em) => (
-                              <button
-                                key={em.id}
-                                type="button"
-                                title={em.name}
-                                className="flex size-10 items-center justify-center rounded-lg transition hover:bg-violet-400/15"
-                                onClick={() => {
-                                  void onReact(post.id, hubReactionToken(em.id));
-                                  setPickerPostId(null);
-                                }}
-                              >
-                                <img src={em.image_url} alt={em.name} className="size-6" />
-                              </button>
-                            ))}
-                          </div>
+                        <div className="glass absolute bottom-full left-0 z-30 mb-1.5 flex flex-row flex-wrap items-center gap-0.5 px-1.5 py-1 shadow-[0_0_20px_rgba(34,211,238,0.12)]">
+                          {REACTION_EMOJIS.map((emoji) => (
+                            <button
+                              key={emoji}
+                              type="button"
+                              className="flex size-7 items-center justify-center rounded-md text-sm leading-none transition hover:bg-cyan-400/15"
+                              onClick={() => {
+                                void onReact(post.id, emoji);
+                                setPickerPostId(null);
+                              }}
+                            >
+                              {emoji}
+                            </button>
+                          ))}
+                          {hubPack.map((em) => (
+                            <button
+                              key={em.id}
+                              type="button"
+                              title={em.name}
+                              className="flex size-7 items-center justify-center rounded-md transition hover:bg-violet-400/15"
+                              onClick={() => {
+                                void onReact(post.id, hubReactionToken(em.id));
+                                setPickerPostId(null);
+                              }}
+                            >
+                              <img src={em.image_url} alt={em.name} className="size-4" />
+                            </button>
+                          ))}
                         </div>
                       )}
                     </div>
