@@ -57,7 +57,6 @@ export function VoyageLog() {
       if (next === false || next === "") delete checks[id];
       else checks[id] = next;
 
-      // exclusive choice group: clear siblings when picking one
       if (owner) {
         for (const q of owner.quests) {
           if (q.choice?.some((c) => c.id === id)) {
@@ -86,39 +85,43 @@ export function VoyageLog() {
   };
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-4">
-      <div className="glass sticky top-2 z-20 p-4">
+    <div className="hub-wide flex flex-col gap-4">
+      <div className="glass sticky top-2 z-20 p-4 sm:p-5">
         <div className="mb-2 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <Compass className="size-4 text-cyan-300" />
-            <p className="text-sm font-semibold">Carrack Voyage · Sailies</p>
+            <p className="hub-title">Carrack Voyage · Sailies</p>
           </div>
-          <p className="font-mono text-sm tabular-nums text-cyan-300">
+          <p className="font-mono text-sm tabular-nums neon-text">
             {doneCount}/{STOPS.length} · {pct}%
           </p>
         </div>
         <Progress value={pct} />
         <div className="mt-3 flex flex-wrap gap-2">
-          <button type="button" onClick={() => setNotesOpen((v) => !v)} className="btn-ghost h-8 px-2.5 text-xs">
+          <button type="button" onClick={() => setNotesOpen((v) => !v)} className="btn-ghost h-8 text-xs">
             <BookOpen className="size-3.5" /> Captain Notes
           </button>
           {!confirmReset ? (
-            <button type="button" onClick={() => setConfirmReset(true)} className="btn-ghost h-8 px-2.5 text-xs text-rose-300">
+            <button
+              type="button"
+              onClick={() => setConfirmReset(true)}
+              className="btn-ghost h-8 text-xs text-rose-300"
+            >
               Reset Progress
             </button>
           ) : (
             <>
-              <button type="button" onClick={resetAll} className="btn-primary h-8 px-2.5 text-xs">
+              <button type="button" onClick={resetAll} className="btn-primary h-8 px-3 text-xs">
                 Confirm Reset
               </button>
-              <button type="button" onClick={() => setConfirmReset(false)} className="btn-ghost h-8 px-2.5 text-xs">
+              <button type="button" onClick={() => setConfirmReset(false)} className="btn-ghost h-8 text-xs">
                 Cancel
               </button>
             </>
           )}
         </div>
         {notesOpen && (
-          <ul className="mt-3 space-y-1.5 border-t border-white/10 pt-3 text-[0.75rem] text-muted-foreground">
+          <ul className="mt-3 space-y-1.5 border-t border-white/10 pt-3 hub-meta">
             {CAPTAIN_NOTES.map((n, i) => (
               <li key={i} className="flex gap-2">
                 <span className="text-cyan-400/80">•</span>
@@ -149,15 +152,15 @@ export function VoyageLog() {
               >
                 <span
                   className={cn(
-                    "flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-bold",
+                    "flex size-7 shrink-0 items-center justify-center rounded-full hub-tiny font-bold",
                     done ? "bg-emerald-500/20 text-emerald-300" : "bg-white/5 text-muted-foreground",
                   )}
                 >
                   {done ? <Check className="size-3.5" strokeWidth={3} /> : idx + 1}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold">{stop.title}</p>
-                  <p className="truncate text-[0.7rem] text-muted-foreground">{stop.loc}</p>
+                  <p className="truncate hub-body font-semibold">{stop.title}</p>
+                  <p className="truncate hub-meta">{stop.loc}</p>
                 </div>
                 <ChevronDown
                   className={cn("size-4 shrink-0 text-muted-foreground transition-transform", open && "rotate-180")}
@@ -166,10 +169,10 @@ export function VoyageLog() {
               {open && (
                 <div className="border-t border-white/5 px-3 py-3 sm:px-4">
                   {(stop.heading || stop.note) && (
-                    <p className="mb-2 text-[0.75rem] text-muted-foreground">{stop.heading || stop.note}</p>
+                    <p className="mb-2 hub-meta">{stop.heading || stop.note}</p>
                   )}
                   {stop.rewards && (
-                    <p className="mb-2 text-[0.7rem] font-medium text-cyan-300/80">Rewards: {stop.rewards}</p>
+                    <p className="mb-2 hub-tiny font-medium text-cyan-300/80">Rewards: {stop.rewards}</p>
                   )}
                   <ul className="flex flex-col gap-2">
                     {stop.quests.map((q) => {
@@ -177,7 +180,7 @@ export function VoyageLog() {
                         return (
                           <li key={q.id} className="rounded-lg bg-white/[0.03] p-2">
                             {q.heading || q.label || q.text ? (
-                              <p className="mb-1.5 text-sm font-medium">{q.heading || q.label || q.text}</p>
+                              <p className="mb-1.5 hub-body font-medium">{q.heading || q.label || q.text}</p>
                             ) : null}
                             <div className="flex flex-col gap-1.5">
                               {q.choice.map((c) => {
@@ -195,10 +198,10 @@ export function VoyageLog() {
                                     >
                                       {checked ? <Check className="size-3" strokeWidth={3} /> : null}
                                     </span>
-                                    <span className={cn("text-sm", checked && "text-muted-foreground line-through")}>
+                                    <span className={cn("hub-body", checked && "text-muted-foreground line-through")}>
                                       {c.text}
                                       {c.tag ? (
-                                        <span className="ml-1 text-[0.65rem] text-amber-300/90">· {c.tag}</span>
+                                        <span className="ml-1 hub-tiny text-amber-300/90">· {c.tag}</span>
                                       ) : null}
                                     </span>
                                   </button>
@@ -220,13 +223,13 @@ export function VoyageLog() {
                             {checked ? <Check className="size-3" strokeWidth={3} /> : null}
                           </button>
                           <div className="min-w-0 flex-1">
-                            <p className={cn("text-sm", checked && "text-muted-foreground line-through")}>
+                            <p className={cn("hub-body", checked && "text-muted-foreground line-through")}>
                               {q.text}
                               {q.optional ? (
-                                <span className="ml-1 text-[0.65rem] text-muted-foreground">(Optional)</span>
+                                <span className="ml-1 hub-tiny text-muted-foreground">(Optional)</span>
                               ) : null}
                               {q.tag ? (
-                                <span className="ml-1 text-[0.65rem] text-amber-300/90">· {q.tag}</span>
+                                <span className="ml-1 hub-tiny text-amber-300/90">· {q.tag}</span>
                               ) : null}
                             </p>
                           </div>

@@ -58,15 +58,15 @@ function RecipeCard({
   const totalSeconds = crafts * craftTime;
 
   return (
-    <article className="grid gap-3 rounded-xl border border-white/10 bg-[rgba(12,18,32,0.55)] p-3 shadow-[var(--shadow-border)] transition-[border-color,box-shadow] duration-150 hover:border-cyan-400/40 hover:shadow-[var(--shadow-border-hover)] sm:gap-5 sm:p-4 lg:grid-cols-[minmax(0,280px)_1fr_minmax(0,200px)] lg:items-center">
+    <article className="glass grid gap-3 p-3 transition-[border-color,box-shadow] duration-150 hover:border-cyan-400/40 sm:gap-5 sm:p-4 lg:grid-cols-[minmax(0,280px)_1fr_minmax(0,200px)] lg:items-center">
       <div className="flex items-center gap-3">
         <div className="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-[10px] border border-cyan-400/30 bg-[rgba(8,14,26,0.6)] sm:size-16">
           <ItemGlyph name={recipe.name} size={36} />
         </div>
         <div className="min-w-0">
-          <h3 className="text-[0.95rem] font-bold leading-snug text-foreground sm:text-[1.05rem]">{recipe.name}</h3>
+          <h3 className="hub-title leading-snug">{recipe.name}</h3>
           <div className="mt-1.5 flex items-center gap-2">
-            <label htmlFor={`crafts-${recipe.id}`} className="text-[0.7rem] font-semibold text-muted-foreground">
+            <label htmlFor={`crafts-${recipe.id}`} className="hub-label-muted">
               Batch
             </label>
             <Input
@@ -76,7 +76,7 @@ function RecipeCard({
               step={1}
               value={crafts}
               onChange={(e) => onCrafts(Math.max(0, Math.floor(Number(e.target.value) || 0)))}
-              className="h-9 w-24 text-sm"
+              className="h-9 w-24"
             />
           </div>
         </div>
@@ -86,7 +86,7 @@ function RecipeCard({
         {recipe.ingredients.map((ing) => (
           <li
             key={ing.name}
-            className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-2.5 py-1.5 text-[0.8rem] text-muted-foreground"
+            className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-2.5 py-1.5 hub-meta"
           >
             <ItemGlyph name={ing.name} size={28} />
             <span className="text-foreground/90">{ing.name}</span>
@@ -97,14 +97,14 @@ function RecipeCard({
         ))}
       </ul>
 
-      <div className="flex flex-row gap-4 text-sm sm:flex-col sm:gap-1 sm:text-right">
+      <div className="flex flex-row gap-4 sm:flex-col sm:gap-1 sm:text-right">
         <div>
-          <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground">Yield</p>
-          <p className="font-mono text-base font-bold tabular-nums text-cyan-300">{formatNumber(totalYield)}</p>
+          <p className="hub-label-muted">Yield</p>
+          <p className="font-mono text-base font-bold tabular-nums neon-text">{formatNumber(totalYield)}</p>
         </div>
         <div>
-          <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground">Time</p>
-          <p className="font-mono text-base font-bold tabular-nums text-emerald-300">{formatTime(totalSeconds)}</p>
+          <p className="hub-label-muted">Time</p>
+          <p className="font-mono text-base font-bold tabular-nums neon-emerald">{formatTime(totalSeconds)}</p>
         </div>
       </div>
     </article>
@@ -124,7 +124,7 @@ export function AlchemyPlanner() {
   }, [recipes, query]);
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="hub-wide flex flex-col gap-4">
       <div className="glass flex flex-col gap-3 p-3 sm:flex-row sm:items-end sm:p-4">
         <div className="grid flex-1 grid-cols-2 gap-3 sm:max-w-xs">
           <div className="flex flex-col gap-1.5">
@@ -138,7 +138,6 @@ export function AlchemyPlanner() {
               onChange={(e) =>
                 setValue((prev) => ({ ...prev, craftTime: parseFloat(e.target.value) || 0 }))
               }
-              className="h-10"
             />
           </div>
           <div className="flex flex-col gap-1.5">
@@ -152,7 +151,6 @@ export function AlchemyPlanner() {
               onChange={(e) =>
                 setValue((prev) => ({ ...prev, proc: parseFloat(e.target.value) || 0 }))
               }
-              className="h-10"
             />
           </div>
         </div>
@@ -167,16 +165,12 @@ export function AlchemyPlanner() {
               type="button"
               role="tab"
               aria-selected={active}
+              data-active={active ? "true" : "false"}
               onClick={() => {
                 setTab(cat.id);
                 setQuery("");
               }}
-              className={cn(
-                "flex min-h-11 min-w-[6.5rem] flex-1 items-center justify-center gap-1.5 rounded-[10px] border px-2.5 py-2.5 text-sm font-bold transition-[background-color,color,border-color,box-shadow] duration-150",
-                active
-                  ? "border-cyan-400 bg-cyan-400/20 text-cyan-200 shadow-[0_0_16px_rgba(34,211,238,0.25)]"
-                  : "border-white/10 bg-[rgba(12,18,32,0.4)] text-muted-foreground hover:border-cyan-400/40 hover:text-foreground",
-              )}
+              className="hub-tab-block"
             >
               <span>{cat.label}</span>
               <small className={cn("hidden font-medium italic sm:inline", active ? "text-cyan-200/70" : "text-muted-foreground")}>
@@ -194,16 +188,14 @@ export function AlchemyPlanner() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Filter Recipes On This Tab By Name…"
-          className="bg-[rgba(12,18,32,0.55)] pl-10"
+          className="pl-10"
           aria-label="Filter recipes"
         />
       </div>
 
       <div className="flex flex-col gap-3" role="tabpanel">
         {filtered.length === 0 ? (
-          <p className="rounded-xl border border-white/10 bg-[rgba(12,18,32,0.4)] px-4 py-10 text-center text-sm text-muted-foreground">
-            No Recipes Match "{query}".
-          </p>
+          <p className="hub-empty">No Recipes Match "{query}".</p>
         ) : (
           filtered.map((recipe) => (
             <RecipeCard

@@ -108,7 +108,7 @@ function Stepper({
       >
         <Minus className="size-3.5" />
       </button>
-      <span className="min-w-[3rem] text-center text-xs tabular-nums">
+      <span className="min-w-[3rem] text-center hub-tiny tabular-nums">
         {owned}/{node.req}
       </span>
       <button
@@ -129,7 +129,7 @@ function StatusBadge({ owned, req }: { owned: number; req: number }) {
   return (
     <span
       className={cn(
-        "hub-tiny rounded-md px-1.5 py-0.5 font-semibold",
+        "metric-pill",
         done && "bg-emerald-400/20 text-emerald-200",
         inProgress && "bg-cyan-400/15 text-cyan-200",
         !done && !inProgress && "bg-white/5 text-muted-foreground",
@@ -155,12 +155,12 @@ function MaterialRow({
   const done = owned >= node.req;
 
   return (
-    <div className="rounded-lg border border-white/10 bg-[rgba(8,14,26,0.4)] p-2.5">
+    <div className="glass-soft p-2.5">
       <div className="flex items-center gap-2">
         <ItemGlyph name={node.name} size={30} />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <span className={cn("text-sm font-medium", done ? "text-emerald-200" : "text-foreground")}>
+            <span className={cn("hub-body font-medium", done ? "text-emerald-200" : "text-foreground")}>
               {node.name}
             </span>
             <StatusBadge owned={owned} req={node.req} />
@@ -250,8 +250,8 @@ export function ShipTracker() {
   const finalDone = activeTree ? finalOwned >= activeTree.req : false;
 
   return (
-    <div className="mx-auto max-w-4xl">
-      <div className="mb-5 grid gap-4 rounded-xl border border-white/10 bg-[rgba(12,18,32,0.55)] p-4 shadow-[var(--shadow-border)] sm:grid-cols-2 sm:p-5">
+    <div className="hub-wide">
+      <div className="glass mb-5 grid gap-4 p-4 sm:grid-cols-2 sm:p-5">
         <div className="flex flex-col gap-1.5">
           <label htmlFor="current-ship" className="hub-label">
             Current Base Ship
@@ -296,18 +296,16 @@ export function ShipTracker() {
       </div>
 
       {!activeTree ? (
-        <div className="rounded-xl border border-white/10 bg-[rgba(12,18,32,0.4)] px-6 py-16 text-center shadow-[var(--shadow-border)]">
-          <Ship className="mx-auto mb-3 size-10 text-cyan-300" strokeWidth={1.5} aria-hidden />
-          <p className="text-sm text-muted-foreground">
-            Select A Base Ship And Target Upgrade Above To Begin Tracking.
-          </p>
+        <div className="hub-empty flex flex-col items-center gap-3 py-16">
+          <Ship className="size-10 text-cyan-300" strokeWidth={1.5} aria-hidden />
+          <p>Select A Base Ship And Target Upgrade Above To Begin Tracking.</p>
         </div>
       ) : (
         <>
-          <div className="mb-5 rounded-xl border border-white/10 bg-[rgba(12,18,32,0.55)] p-4 shadow-[var(--shadow-border)] sm:p-5">
+          <div className="glass mb-5 p-4 sm:p-5">
             <div className="mb-2.5 flex items-baseline justify-between gap-3">
-              <span className="text-sm font-medium text-muted-foreground">Overall Upgrade Completion</span>
-              <span className="font-semibold tabular-nums text-emerald-300">
+              <span className="hub-body text-muted-foreground">Overall Upgrade Completion</span>
+              <span className="font-semibold tabular-nums neon-emerald">
                 {progress.pct}% ({formatNumber(progress.owned)} / {formatNumber(progress.req)})
               </span>
             </div>
@@ -321,7 +319,7 @@ export function ShipTracker() {
               </button>
             ) : (
               <>
-                <span className="text-xs text-muted-foreground">Reset Owned Stock Only For {activeTree.name}?</span>
+                <span className="hub-meta">Reset Owned Stock Only For {activeTree.name}?</span>
                 <button type="button" className="btn-primary h-8 text-xs" onClick={reset}>
                   Confirm
                 </button>
@@ -332,11 +330,11 @@ export function ShipTracker() {
             )}
           </div>
 
-          <div className="mb-4 rounded-xl border border-white/10 bg-[rgba(12,18,32,0.55)] p-4">
+          <div className="glass mb-4 p-4">
             <div className="flex flex-wrap items-center gap-3">
               <ItemGlyph name={activeTree.name} size={40} />
               <div className="min-w-0 flex-1">
-                <p className="font-semibold text-foreground">{activeTree.name}</p>
+                <p className="hub-title">{activeTree.name}</p>
                 <StatusBadge owned={finalOwned} req={activeTree.req} />
               </div>
               <ToggleSwitch
@@ -345,7 +343,7 @@ export function ShipTracker() {
                 onChange={(v) => setOwned(activeTree.id, v ? activeTree.req : 0)}
               />
             </div>
-            <p className="mt-3 text-sm text-muted-foreground">{activeTree.how}</p>
+            <p className="mt-3 hub-body text-muted-foreground">{activeTree.how}</p>
           </div>
 
           <div className="flex flex-col gap-2">

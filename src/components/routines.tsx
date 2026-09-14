@@ -90,7 +90,7 @@ function ProgressBlock({
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-baseline justify-between gap-3">
-        <p className="text-sm font-medium text-foreground">
+        <p className="hub-body font-medium">
           {label}
           {total === 0 ? (
             <span className="font-normal text-muted-foreground"> · None</span>
@@ -175,25 +175,20 @@ export function Routines() {
   };
 
   return (
-    <div className="mx-auto max-w-2xl">
-      <div className="glass sticky top-2 z-20 mb-4 flex flex-col gap-4 p-4">
+    <div className="hub-narrow">
+      <div className="glass sticky top-2 z-20 mb-4 flex flex-col gap-4 p-4 sm:p-5">
         <ProgressBlock label="Daily" done={dailyDone} total={dailyTasks.length} />
         <ProgressBlock label="Weekly" done={weeklyDone} total={weeklyTasks.length} />
       </div>
 
       <div className="mb-5 flex min-h-[12rem] flex-col gap-2">
         {sorted.length === 0 ? (
-          <p className="glass px-4 py-10 text-center text-sm text-muted-foreground">
-            Add Daily Or Weekly Tasks To Track Here.
-          </p>
+          <p className="hub-empty">Add Daily Or Weekly Tasks To Track Here.</p>
         ) : (
           sorted.map((task) => (
             <div
               key={task.id}
-              className={cn(
-                "glass flex items-center gap-3 px-3 py-3 sm:px-4",
-                task.done && "opacity-55",
-              )}
+              className={cn("glass flex items-center gap-3 px-3 py-3 sm:px-4", task.done && "opacity-55")}
             >
               <button
                 type="button"
@@ -205,20 +200,15 @@ export function Routines() {
                 {task.done ? <Check className="block size-3.5" strokeWidth={3} /> : null}
               </button>
               <div className="min-w-0 flex-1">
-                <p
-                  className={cn(
-                    "text-sm font-medium text-foreground",
-                    task.done && "text-muted-foreground line-through",
-                  )}
-                >
+                <p className={cn("hub-body font-medium", task.done && "text-muted-foreground line-through")}>
                   {task.title}
                 </p>
-                <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[0.72rem] text-muted-foreground">
+                <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 hub-meta">
                   <span className="capitalize">{task.type}</span>
                   <span>·</span>
                   <span
                     className={cn(
-                      "rounded px-1.5 py-0.5 text-[0.65rem] font-bold uppercase tracking-wide",
+                      "metric-pill uppercase tracking-wide",
                       task.priority === "high" && "bg-rose-500/20 text-rose-300",
                       task.priority === "medium" && "bg-amber-500/20 text-amber-300",
                       task.priority === "low" && "bg-emerald-500/20 text-emerald-300",
@@ -248,7 +238,7 @@ export function Routines() {
       </div>
 
       <div className="glass p-4 sm:p-5">
-        <p className="mb-3 text-xs font-bold uppercase tracking-wider neon-text">Add Routine</p>
+        <p className="hub-label mb-3 neon-text">Add Routine</p>
         <div className="flex flex-col gap-3">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="routine-title">Task</Label>

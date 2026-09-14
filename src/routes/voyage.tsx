@@ -3,7 +3,6 @@ import { useNavigate } from "@tanstack/react-router";
 import { AppShell } from "@/components/app-shell";
 import { VoyageLog } from "@/components/voyage-log";
 import { ShipTracker } from "@/components/ship-tracker";
-import { cn } from "@/lib/utils";
 
 type VoyageSearch = {
   tab?: "sailies" | "carrack";
@@ -26,28 +25,20 @@ function VoyagePage() {
       eyebrow={active === "carrack" ? "Epheria Carrack" : "Daily Sailies & Bartering"}
       title="Voyage"
     >
-      <div className="mb-4 flex w-fit gap-1 rounded-full border border-white/10 bg-black/25 p-1">
+      <div className="hub-tab-rail mb-5">
         <button
           type="button"
+          data-active={active === "sailies" ? "true" : "false"}
           onClick={() => navigate({ search: { tab: "sailies" } })}
-          className={cn(
-            "rounded-full px-4 py-1.5 text-sm font-semibold transition-all",
-            active === "sailies"
-              ? "bg-cyan-400/15 text-cyan-300 ring-1 ring-cyan-400/40 shadow-[0_0_14px_rgba(34,211,238,0.2)]"
-              : "text-muted-foreground hover:text-foreground",
-          )}
+          className="hub-tab"
         >
           Sailies
         </button>
         <button
           type="button"
+          data-active={active === "carrack" ? "true" : "false"}
           onClick={() => navigate({ search: { tab: "carrack" } })}
-          className={cn(
-            "rounded-full px-4 py-1.5 text-sm font-semibold transition-all",
-            active === "carrack"
-              ? "bg-cyan-400/15 text-cyan-300 ring-1 ring-cyan-400/40 shadow-[0_0_14px_rgba(34,211,238,0.2)]"
-              : "text-muted-foreground hover:text-foreground",
-          )}
+          className="hub-tab"
         >
           Carrack
         </button>
