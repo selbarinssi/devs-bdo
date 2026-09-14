@@ -579,12 +579,12 @@ export function HubFeed() {
                         <SmilePlus className="size-4" />
                       </button>
                       {pickerPostId === post.id && (
-                        <div className="glass absolute bottom-full left-0 z-30 mb-1.5 flex flex-row flex-wrap items-center gap-0.5 px-1.5 py-1 shadow-[0_0_20px_rgba(34,211,238,0.12)]">
+                        <div className="glass absolute bottom-full left-0 z-30 mb-1.5 flex w-max flex-nowrap items-center gap-0.5 px-1.5 py-1 shadow-[0_0_20px_rgba(34,211,238,0.12)]">
                           {REACTION_EMOJIS.map((emoji) => (
                             <button
                               key={emoji}
                               type="button"
-                              className="flex size-7 items-center justify-center rounded-md text-sm leading-none transition hover:bg-cyan-400/15"
+                              className="flex size-7 shrink-0 items-center justify-center rounded-md text-sm leading-none transition hover:bg-cyan-400/15"
                               onClick={() => {
                                 void onReact(post.id, emoji);
                                 setPickerPostId(null);
@@ -598,7 +598,7 @@ export function HubFeed() {
                               key={em.id}
                               type="button"
                               title={em.name}
-                              className="flex size-7 items-center justify-center rounded-md transition hover:bg-violet-400/15"
+                              className="flex size-7 shrink-0 items-center justify-center rounded-md transition hover:bg-violet-400/15"
                               onClick={() => {
                                 void onReact(post.id, hubReactionToken(em.id));
                                 setPickerPostId(null);
