@@ -58,10 +58,19 @@ export async function saveUserState<T>(key: string, value: T): Promise<void> {
   }
 }
 
+function hasLocal(key: string) {
+  if (typeof window === "undefined") return false;
+  try {
+    return localStorage.getItem(key) != null;
+  } catch {
+    return false;
+  }
+}
+
 /** localStorage + Supabase cloud when signed in. Debounces cloud writes. */
 export function useCloudStorage<T>(key: string, initial: T) {
-  const [value, setValueState] = useState<T>(initial);
-  const [hydrated, setHydrated] = useState(false);
+  const [value, setValueState] = useState<T>(() => readStorage(key, initial));
+  const [hydrated, setHydrated] = useState(() => hasLocal(key));
   const [userId, setUserId] = useState<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latest = useRef(value);
@@ -85,6 +94,7 @@ export function useCloudStorage<T>(key: string, initial: T) {
       setUserId(user?.id ?? null);
       const v = await loadUserState(key, initial);
       setValueState(v);
+      setHydrated(true);
     });
     return () => {
       cancelled = true;
