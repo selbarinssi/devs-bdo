@@ -78,12 +78,14 @@ export async function createLoot(input: {
   unit_price: number;
   icon_url?: string | null;
   market_item_id?: number | null;
+  rarity?: "common" | "uncommon" | "rare" | "epic" | "legendary" | null;
 }): Promise<LootRow> {
   const { data, error } = await getSupabase()
     .from("loots")
     .insert({
       ...input,
       unit_price: asInt(input.unit_price),
+      rarity: input.rarity ?? "common",
     })
     .select()
     .single();
@@ -238,6 +240,7 @@ export async function updateLoot(
     kind?: "market" | "npc";
     unit_price?: number;
     icon_url?: string | null;
+    rarity?: "common" | "uncommon" | "rare" | "epic" | "legendary" | null;
   },
 ): Promise<LootRow> {
   const body = {
@@ -257,7 +260,6 @@ export async function updateLoot(
 export async function findIconByLootName(name: string): Promise<string | null> {
   const trimmed = name.trim();
   if (!trimmed) return null;
-  // Prefer exact case-insensitive match (ilike without wildcards)
   const { data, error } = await getSupabase()
     .from("loots")
     .select("icon_url, name")
