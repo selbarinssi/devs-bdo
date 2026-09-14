@@ -15,7 +15,13 @@ const NAV = [
 
 function HubMark({ className }: { className?: string }) {
   return (
-    <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} aria-hidden>
+    <svg
+      viewBox="0 0 40 40"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+      aria-hidden
+    >
       <defs>
         <radialGradient id="hubStar" cx="50%" cy="50%" r="50%">
           <stop offset="0%" stopColor="#ffffff" />
@@ -77,7 +83,7 @@ export function AppShell({
   eyebrow,
 }: {
   children: ReactNode;
-  title: string;
+  title?: string;
   eyebrow?: string;
 }) {
   const { user, loading } = useSupabaseUser();
@@ -96,22 +102,27 @@ export function AppShell({
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <header className="sticky top-0 z-40 border-b border-white/10 bg-[#04060c]/85 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-3 py-3 sm:px-4">
-          <div className="flex min-w-0 items-center gap-2.5">
+    <div className="min-h-screen">
+      <header className="sticky top-0 z-40 border-b border-white/10 bg-[#04060c]/80 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-6xl items-center gap-3 px-3 py-2.5 sm:px-4">
+          <Link to="/routines" className="flex min-w-0 items-center gap-2.5">
             <HubMark className="size-9 shrink-0 sm:size-10" />
-            <div className="min-w-0">
+            <div className="min-w-0 leading-tight">
               <p className="truncate text-[0.65rem] font-bold uppercase tracking-[0.14em] text-cyan-300/90">
                 Dev&apos;s Hub
               </p>
-              <p className="truncate text-sm font-semibold text-foreground sm:text-base">{title}</p>
-              {eyebrow && <p className="truncate text-[0.65rem] text-muted-foreground">{eyebrow}</p>}
+              <p className="truncate text-sm font-semibold text-foreground">
+                {title || "Black Desert Online"}
+              </p>
+              {eyebrow ? (
+                <p className="truncate text-[0.65rem] text-muted-foreground">{eyebrow}</p>
+              ) : null}
             </div>
-          </div>
-          <nav className="hidden items-center gap-1 md:flex">
+          </Link>
+
+          <nav className="ml-auto hidden items-center gap-1 md:flex">
             {NAV.map((item) => {
-              const active = item.exact ? pathname === item.to : pathname.startsWith(item.to);
+              const active = pathname === item.to || pathname.startsWith(item.to + "/");
               const Icon = item.icon;
               return (
                 <Link
@@ -130,11 +141,13 @@ export function AppShell({
               );
             })}
           </nav>
-          <AuthPanel />
+
+          <AuthPanel className="shrink-0" />
         </div>
+
         <nav className="flex gap-1 overflow-x-auto border-t border-white/5 px-2 py-1.5 md:hidden">
           {NAV.map((item) => {
-            const active = item.exact ? pathname === item.to : pathname.startsWith(item.to);
+            const active = pathname === item.to || pathname.startsWith(item.to + "/");
             const Icon = item.icon;
             return (
               <Link
@@ -142,9 +155,7 @@ export function AppShell({
                 to={item.to}
                 className={cn(
                   "flex shrink-0 items-center gap-1 rounded-lg px-2.5 py-1.5 text-[0.7rem] font-semibold",
-                  active
-                    ? "bg-cyan-400/15 text-cyan-200"
-                    : "text-muted-foreground",
+                  active ? "bg-cyan-400/15 text-cyan-200" : "text-muted-foreground",
                 )}
               >
                 <Icon className="size-3.5" />
@@ -154,6 +165,7 @@ export function AppShell({
           })}
         </nav>
       </header>
+
       <main className="mx-auto max-w-6xl px-3 py-4 sm:px-4 sm:py-6">{children}</main>
     </div>
   );
