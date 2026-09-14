@@ -110,8 +110,8 @@ export function AppShell({
               <HubMark className="size-10" />
             </div>
             <div>
-              <p className="hub-label-muted tracking-[0.28em]">Black Desert Online</p>
-              <h1 className="hub-title tracking-wide sm:text-lg">Dev&apos;s Hub</h1>
+              <p className="hub-label-muted tracking-[0.22em]">Black Desert Online</p>
+              <h1 className="hub-title tracking-wide">Dev&apos;s Hub</h1>
             </div>
           </div>
           <nav aria-label="Tools" className="hidden items-center gap-1 md:flex">
@@ -124,9 +124,9 @@ export function AppShell({
                   to={item.to}
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold transition-all",
+                    "inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[0.9rem] font-semibold transition-all",
                     active
-                      ? "bg-cyan-400/15 text-cyan-300 ring-1 ring-cyan-400/40 shadow-[0_0_16px_rgba(34,211,238,0.2)]"
+                      ? "bg-cyan-400/20 text-cyan-200 ring-1 ring-cyan-400/50 shadow-[0_0_18px_rgba(34,211,238,0.28)]"
                       : "text-muted-foreground hover:bg-white/5 hover:text-foreground",
                   )}
                 >
@@ -148,7 +148,7 @@ export function AppShell({
                 to={item.to}
                 className={cn(
                   "flex flex-col items-center gap-0.5 rounded-lg py-1.5 hub-tiny font-semibold",
-                  active ? "bg-cyan-400/10 text-cyan-300" : "text-muted-foreground",
+                  active ? "bg-cyan-400/15 text-cyan-200" : "text-muted-foreground",
                 )}
               >
                 <Icon className="size-3.5" strokeWidth={1.75} />

@@ -58,15 +58,15 @@ function RecipeCard({
   const totalSeconds = crafts * craftTime;
 
   return (
-    <article className="glass grid gap-3 p-3 transition-[border-color,box-shadow] duration-150 hover:border-cyan-400/40 sm:gap-5 sm:p-4 lg:grid-cols-[minmax(0,280px)_1fr_minmax(0,200px)] lg:items-center">
-      <div className="flex items-center gap-3">
-        <div className="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-[10px] border border-cyan-400/30 bg-[rgba(8,14,26,0.6)] sm:size-16">
-          <ItemGlyph name={recipe.name} size={36} />
+    <article className="glass grid grid-cols-1 items-center gap-3 p-3 md:grid-cols-[220px_1fr_auto] md:gap-4 md:p-3.5">
+      <div className="flex min-w-0 items-center gap-2.5">
+        <div className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-cyan-400/30 bg-[rgba(8,14,26,0.6)]">
+          <ItemGlyph name={recipe.name} size={32} />
         </div>
-        <div className="min-w-0">
-          <h3 className="hub-title leading-snug">{recipe.name}</h3>
-          <div className="mt-1.5 flex items-center gap-2">
-            <label htmlFor={`crafts-${recipe.id}`} className="hub-label-muted">
+        <div className="min-w-0 flex-1">
+          <h3 className="hub-title truncate leading-snug">{recipe.name}</h3>
+          <div className="mt-1 flex items-center gap-2">
+            <label htmlFor={`crafts-${recipe.id}`} className="hub-label-muted shrink-0">
               Batch
             </label>
             <Input
@@ -76,19 +76,19 @@ function RecipeCard({
               step={1}
               value={crafts}
               onChange={(e) => onCrafts(Math.max(0, Math.floor(Number(e.target.value) || 0)))}
-              className="h-9 w-24"
+              className="h-8 w-20 text-sm"
             />
           </div>
         </div>
       </div>
 
-      <ul className="flex flex-wrap gap-2">
+      <ul className="flex flex-wrap gap-1.5">
         {recipe.ingredients.map((ing) => (
           <li
             key={ing.name}
-            className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-2.5 py-1.5 hub-meta"
+            className="inline-flex items-center gap-1.5 rounded-md border border-white/10 bg-white/[0.04] px-2 py-1 hub-meta"
           >
-            <ItemGlyph name={ing.name} size={28} />
+            <ItemGlyph name={ing.name} size={22} />
             <span className="text-foreground/90">{ing.name}</span>
             <span className="font-mono tabular-nums text-cyan-300/90">
               ×{formatNumber(ing.qty * Math.max(crafts, 1))}
@@ -97,14 +97,14 @@ function RecipeCard({
         ))}
       </ul>
 
-      <div className="flex flex-row gap-4 sm:flex-col sm:gap-1 sm:text-right">
+      <div className="flex shrink-0 items-center gap-4 md:flex-col md:items-end md:gap-0.5 md:text-right">
         <div>
           <p className="hub-label-muted">Yield</p>
-          <p className="font-mono text-base font-bold tabular-nums neon-text">{formatNumber(totalYield)}</p>
+          <p className="font-mono text-sm font-bold tabular-nums neon-text">{formatNumber(totalYield)}</p>
         </div>
         <div>
           <p className="hub-label-muted">Time</p>
-          <p className="font-mono text-base font-bold tabular-nums neon-emerald">{formatTime(totalSeconds)}</p>
+          <p className="font-mono text-sm font-bold tabular-nums neon-emerald">{formatTime(totalSeconds)}</p>
         </div>
       </div>
     </article>
@@ -124,8 +124,8 @@ export function AlchemyPlanner() {
   }, [recipes, query]);
 
   return (
-    <div className="hub-wide flex flex-col gap-4">
-      <div className="glass flex flex-col gap-3 p-3 sm:flex-row sm:items-end sm:p-4">
+    <div className="hub-wide flex flex-col gap-3">
+      <div className="glass flex flex-col gap-3 p-3 sm:flex-row sm:items-end">
         <div className="grid flex-1 grid-cols-2 gap-3 sm:max-w-xs">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="craft-time">Craft Time (s)</Label>
@@ -156,7 +156,7 @@ export function AlchemyPlanner() {
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2 sm:gap-3" role="tablist" aria-label="Recipe tiers">
+      <div className="flex flex-wrap gap-2" role="tablist" aria-label="Recipe tiers">
         {ALCHEMY_CATEGORIES.map((cat) => {
           const active = tab === cat.id;
           return (
@@ -173,7 +173,12 @@ export function AlchemyPlanner() {
               className="hub-tab-block"
             >
               <span>{cat.label}</span>
-              <small className={cn("hidden font-medium italic sm:inline", active ? "text-cyan-200/70" : "text-muted-foreground")}>
+              <small
+                className={cn(
+                  "hidden font-medium italic sm:inline",
+                  active ? "text-cyan-200/80" : "text-muted-foreground",
+                )}
+              >
                 ({cat.hint})
               </small>
             </button>
@@ -187,13 +192,13 @@ export function AlchemyPlanner() {
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Filter Recipes On This Tab By Name…"
+          placeholder="Filter recipes…"
           className="pl-10"
           aria-label="Filter recipes"
         />
       </div>
 
-      <div className="flex flex-col gap-3" role="tabpanel">
+      <div className="flex flex-col gap-2" role="tabpanel">
         {filtered.length === 0 ? (
           <p className="hub-empty">No Recipes Match "{query}".</p>
         ) : (
