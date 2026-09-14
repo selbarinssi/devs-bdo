@@ -53,7 +53,14 @@ export function HubFeed() {
     try {
       setPosts(await listFeedPosts());
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load feed");
+      const msg = e instanceof Error ? e.message : "Failed to load feed";
+      const hint =
+        /relation .* does not exist|Could not find the table|schema cache/i.test(msg)
+          ? " — run supabase/sql/006_roles_and_feed.sql in the Supabase SQL editor, then refresh."
+          : /permission denied|RLS|row-level security/i.test(msg)
+            ? " — sign out/in, or check profiles RLS from 006_roles_and_feed.sql."
+            : "";
+      setError(msg + hint);
     } finally {
       setLoading(false);
     }
@@ -73,20 +80,18 @@ export function HubFeed() {
   const onPickFiles = (list: FileList | null) => {
     if (!list?.length) return;
     const next: File[] = [...files];
-    const errs: string[] = [];
     for (const f of Array.from(list)) {
       if (next.length >= 4) {
-        errs.push("Max 4 images per post");
+        setError("Max 4 images per post");
         break;
       }
       const err = validateFeedFile(f);
       if (err) {
-        errs.push(err);
+        setError(err);
         continue;
       }
       next.push(f);
     }
-    if (errs.length) setError(errs[0]!);
     setFiles(next);
     setPreviews(next.map((f) => URL.createObjectURL(f)));
   };
@@ -295,9 +300,7 @@ export function HubFeed() {
                       </button>
                     )}
                   </div>
-                  {post.body && (
-                    <p className="mt-1.5 whitespace-pre-wrap text-[0.95rem] leading-relaxed text-foreground/95">{post.body}</p>
-                  )}
+                  {post.body && <p className="mt-1.5 whitespace-pre-wrap text-[0.95rem] leading-relaxed text-foreground/95">{post.body}</p>}
                   {post.images.length > 0 && (
                     <div className={cn("mt-3 grid gap-1.5 overflow-hidden rounded-xl ring-1 ring-white/10", post.images.length === 1 ? "grid-cols-1" : "grid-cols-2")}>
                       {post.images.map((img) => (
@@ -322,9 +325,7 @@ export function HubFeed() {
                           )}
                         >
                           <span>{emoji}</span>
-                          {count > 0 && (
-                            <span className="text-[0.65rem] font-semibold tabular-nums text-muted-foreground">{count}</span>
-                          )}
+                          {count > 0 && <span className="text-[0.65rem] font-semibold tabular-nums text-muted-foreground">{count}</span>}
                         </button>
                       );
                     })}
@@ -334,7 +335,7 @@ export function HubFeed() {
             </li>
           );
         })}
-        {posts.length === 0 && (
+        {posts.length === 0 && !error && (
           <li className="glass py-16 text-center text-sm text-muted-foreground">Nothing here yet. Drop the first meme.</li>
         )}
       </ul>
