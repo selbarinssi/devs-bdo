@@ -1,8 +1,9 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Anchor, FlaskConical, ListChecks, Radio, Swords } from "lucide-react";
 import { AuthPanel } from "@/components/auth-panel";
 import { LoginLanding, useSupabaseUser } from "@/components/login-landing";
+import { TabLoader } from "@/components/tab-loader";
 import { cn } from "@/lib/utils";
 
 const NAV = [
@@ -87,12 +88,22 @@ export function AppShell({
   eyebrow?: string;
 }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const isPending = useRouterState({ select: (s) => s.status === "pending" });
   const { user, loading } = useSupabaseUser();
+  const [veil, setVeil] = useState(true);
+
+  useEffect(() => {
+    setVeil(true);
+    const id = window.setTimeout(() => setVeil(false), 280);
+    return () => clearTimeout(id);
+  }, [pathname]);
+
+  const showVeil = veil || isPending;
 
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center hub-body text-muted-foreground">
-        Loading…
+        <TabLoader label="Signing you in…" />
       </div>
     );
   }
@@ -164,7 +175,14 @@ export function AppShell({
           {eyebrow ? <p className="hub-label mb-1.5">{eyebrow}</p> : null}
           {title ? <h2 className="hub-page-title">{title}</h2> : null}
         </div>
-        {children}
+        <div className="relative min-h-[42vh]">
+          <div className={cn(showVeil && "pointer-events-none invisible")}>{children}</div>
+          {showVeil ? (
+            <div className="absolute inset-0 z-10 bg-[#04060c]/40 backdrop-blur-[2px]">
+              <TabLoader label={title ? `Loading ${title}…` : "Loading…"} />
+            </div>
+          ) : null}
+        </div>
       </div>
     </div>
   );
