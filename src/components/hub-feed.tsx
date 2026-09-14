@@ -1,4 +1,4 @@
-import { ImagePlus, Loader2, Trash2, Users } from "lucide-react";
+import { ImagePlus, Loader2, Sparkles, Trash2, Users } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   createFeedPost,
@@ -32,9 +32,11 @@ function timeAgo(iso: string) {
 }
 
 function roleBadge(role: HubRole) {
-  if (role === "admin") return "bg-rose-500/20 text-rose-200 ring-rose-400/40";
-  if (role === "moderator") return "bg-amber-500/20 text-amber-100 ring-amber-400/35";
-  return "bg-white/10 text-muted-foreground ring-white/10";
+  if (role === "admin")
+    return "bg-rose-500/25 text-rose-100 ring-1 ring-rose-400/50 shadow-[0_0_12px_rgba(244,63,94,0.25)]";
+  if (role === "moderator")
+    return "bg-amber-500/20 text-amber-100 ring-1 ring-amber-400/40 shadow-[0_0_12px_rgba(251,191,36,0.2)]";
+  return "bg-white/5 text-muted-foreground ring-1 ring-white/10";
 }
 
 function renderPostBody(body: string, pack: HubEmoji[]) {
@@ -46,7 +48,13 @@ function renderPostBody(body: string, pack: HubEmoji[]) {
       const em = byName.get(m[1]!.toLowerCase());
       if (em) {
         return (
-          <img key={i} src={em.image_url} alt={em.name} title={`:${em.name}:`} className="inline-block size-6 align-text-bottom" />
+          <img
+            key={i}
+            src={em.image_url}
+            alt={em.name}
+            title={`:${em.name}:`}
+            className="inline-block size-6 align-text-bottom drop-shadow-[0_0_6px_rgba(34,211,238,0.35)]"
+          />
         );
       }
     }
@@ -60,22 +68,22 @@ function LinkPreviewCard({ p }: { p: LinkPreview }) {
       href={p.url}
       target="_blank"
       rel="noreferrer"
-      className="mt-2 flex overflow-hidden rounded-xl border border-white/10 bg-black/30 transition hover:border-cyan-400/30"
+      className="mt-3 flex overflow-hidden rounded-xl border border-cyan-400/20 bg-gradient-to-br from-cyan-500/10 via-black/40 to-violet-500/10 shadow-[0_0_24px_rgba(34,211,238,0.08)] transition hover:border-cyan-400/45 hover:shadow-[0_0_28px_rgba(34,211,238,0.18)]"
     >
       {p.image ? (
         <img src={p.image} alt="" className="h-24 w-28 shrink-0 object-cover sm:h-28 sm:w-36" />
       ) : (
-        <div className="flex h-24 w-28 shrink-0 items-center justify-center bg-white/5 text-[0.65rem] text-muted-foreground sm:h-28 sm:w-36">
+        <div className="flex h-24 w-28 shrink-0 items-center justify-center bg-cyan-500/10 text-[0.65rem] font-semibold uppercase tracking-wide text-cyan-300/80 sm:h-28 sm:w-36">
           Link
         </div>
       )}
-      <div className="min-w-0 flex-1 p-2.5">
+      <div className="min-w-0 flex-1 p-3">
         {p.site && (
-          <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-cyan-300/80">{p.site}</p>
+          <p className="text-[0.65rem] font-bold uppercase tracking-[0.14em] text-cyan-300/90">{p.site}</p>
         )}
-        <p className="line-clamp-2 text-sm font-semibold text-foreground">{p.title || p.url}</p>
+        <p className="mt-0.5 line-clamp-2 text-sm font-semibold text-foreground">{p.title || p.url}</p>
         {p.description && (
-          <p className="mt-0.5 line-clamp-2 text-[0.7rem] text-muted-foreground">{p.description}</p>
+          <p className="mt-1 line-clamp-2 text-[0.7rem] text-muted-foreground">{p.description}</p>
         )}
       </div>
     </a>
@@ -104,8 +112,7 @@ export function HubFeed() {
     try {
       setPosts(await listFeedPosts());
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Failed to load feed";
-      setError(msg);
+      setError(e instanceof Error ? e.message : "Failed to load feed");
     } finally {
       setLoading(false);
     }
@@ -213,30 +220,43 @@ export function HubFeed() {
 
   if (profileLoading || loading) {
     return (
-      <div className="flex items-center justify-center gap-2 py-20 text-sm text-muted-foreground">
-        <Loader2 className="size-4 animate-spin" /> Loading Hub Feed…
+      <div className="flex items-center justify-center gap-2 py-24 text-sm text-muted-foreground">
+        <Loader2 className="size-4 animate-spin text-cyan-300" />
+        <span className="neon-text">Loading Hub Feed…</span>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-5">
       {error && (
-        <p className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-200">
+        <p className="glass rounded-xl border border-rose-500/40 bg-rose-500/10 px-3 py-2.5 text-sm text-rose-100 shadow-[0_0_20px_rgba(244,63,94,0.15)]">
           {error}
-          <button type="button" className="ml-2 underline" onClick={() => setError(null)}>
+          <button type="button" className="ml-2 font-semibold text-rose-200 underline" onClick={() => setError(null)}>
             Dismiss
           </button>
         </p>
       )}
 
-      <div className="glass relative overflow-hidden p-4">
-        <div className="pointer-events-none absolute -right-10 -top-10 size-40 rounded-full bg-violet-500/20 blur-3xl" />
+      <div className="glass-strong relative overflow-hidden p-4 sm:p-5">
+        <div className="pointer-events-none absolute -right-16 -top-16 size-48 rounded-full bg-cyan-400/15 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-12 -left-10 size-40 rounded-full bg-violet-500/20 blur-3xl" />
+        <div className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-cyan-300/50 to-transparent" />
+
+        <div className="relative mb-3 flex items-center gap-2">
+          <Sparkles className="size-4 text-cyan-300" />
+          <p className="text-[0.65rem] font-bold uppercase tracking-[0.22em] neon-text">New Post</p>
+        </div>
+
         <div className="relative flex gap-3">
           {profile?.avatar_url ? (
-            <img src={profile.avatar_url} alt="" className="size-11 shrink-0 rounded-full object-cover ring-2 ring-violet-400/30" />
+            <img
+              src={profile.avatar_url}
+              alt=""
+              className="size-12 shrink-0 rounded-full object-cover ring-2 ring-cyan-400/40 shadow-[0_0_16px_rgba(34,211,238,0.25)]"
+            />
           ) : (
-            <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-violet-500/20 text-sm font-bold text-violet-200">
+            <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-500/40 to-cyan-500/30 text-sm font-bold text-cyan-100 ring-2 ring-violet-400/30">
               {(profile?.display_name || "?")[0]?.toUpperCase()}
             </span>
           )}
@@ -247,8 +267,9 @@ export function HubFeed() {
               placeholder="Share a flex, meme, or chaos…"
               rows={3}
               maxLength={2000}
-              className="w-full resize-none rounded-xl border border-white/10 bg-black/30 px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-cyan-400/40 focus:ring-1 focus:ring-cyan-400/30"
+              className="w-full resize-none rounded-xl border border-cyan-400/20 bg-[rgba(4,10,20,0.55)] px-3.5 py-3 text-sm text-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] placeholder:text-slate-500 outline-none transition focus:border-cyan-400/50 focus:shadow-[0_0_0_1px_rgba(34,211,238,0.25),0_0_24px_rgba(34,211,238,0.12)]"
             />
+
             {composePreviews.length > 0 && (
               <div className="mt-2 flex flex-col gap-1.5">
                 {composePreviews.map((pv) => (
@@ -256,10 +277,11 @@ export function HubFeed() {
                 ))}
               </div>
             )}
+
             {showEmojiPicker && (
-              <div className="mt-2 max-h-40 overflow-y-auto rounded-xl border border-white/10 bg-black/50 p-2">
-                <p className="mb-1.5 text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground">Hub Emojis</p>
-                <div className="flex flex-wrap gap-1.5">
+              <div className="glass mt-3 max-h-44 overflow-y-auto border border-violet-400/25 p-3 shadow-[0_0_28px_rgba(167,139,250,0.12)]">
+                <p className="mb-2 text-[0.65rem] font-bold uppercase tracking-[0.18em] neon-violet">Hub Emojis</p>
+                <div className="flex flex-wrap gap-2">
                   {hubPack.length === 0 && (
                     <span className="text-xs text-muted-foreground">No pack yet — staff can upload below.</span>
                   )}
@@ -268,18 +290,18 @@ export function HubFeed() {
                       key={em.id}
                       type="button"
                       title={`:${em.name}:`}
-                      className="rounded-lg bg-white/5 p-1.5 ring-1 ring-white/10 hover:bg-white/10"
+                      className="rounded-xl bg-white/5 p-1.5 ring-1 ring-white/15 transition hover:bg-cyan-400/15 hover:ring-cyan-400/40"
                       onClick={() => {
                         setBody((b) => `${b}${b && !b.endsWith(" ") ? " " : ""}:${em.name}: `);
                         setShowEmojiPicker(false);
                       }}
                     >
-                      <img src={em.image_url} alt={em.name} className="size-7" />
+                      <img src={em.image_url} alt={em.name} className="size-8" />
                     </button>
                   ))}
                 </div>
                 {isStaff && (
-                  <label className="mt-2 flex cursor-pointer items-center gap-2 text-[0.7rem] text-cyan-300/90">
+                  <label className="mt-3 flex w-fit cursor-pointer items-center gap-2 rounded-full border border-cyan-400/30 bg-cyan-400/10 px-3 py-1.5 text-[0.7rem] font-semibold text-cyan-200 hover:bg-cyan-400/20">
                     <input
                       type="file"
                       accept="image/png,image/webp,image/gif,image/jpeg"
@@ -303,14 +325,18 @@ export function HubFeed() {
                 )}
               </div>
             )}
+
             {previews.length > 0 && (
-              <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
                 {previews.map((src, i) => (
-                  <div key={src} className="relative aspect-square overflow-hidden rounded-lg ring-1 ring-white/10">
+                  <div
+                    key={src}
+                    className="relative aspect-square overflow-hidden rounded-xl ring-1 ring-cyan-400/25 shadow-[0_0_16px_rgba(34,211,238,0.1)]"
+                  >
                     <img src={src} alt="" className="size-full object-cover" />
                     <button
                       type="button"
-                      className="absolute right-1 top-1 rounded bg-black/70 px-1.5 text-[0.65rem] text-white"
+                      className="absolute right-1.5 top-1.5 rounded-full bg-black/75 px-2 py-0.5 text-[0.65rem] font-bold text-white ring-1 ring-white/20"
                       onClick={() => {
                         const nf = files.filter((_, j) => j !== i);
                         setFiles(nf);
@@ -324,12 +350,17 @@ export function HubFeed() {
                 ))}
               </div>
             )}
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              <button type="button" onClick={() => fileRef.current?.click()} className="btn-ghost flex h-9 items-center gap-1.5 px-2.5 text-xs">
+
+            <div className="mt-3.5 flex flex-wrap items-center gap-2">
+              <button type="button" onClick={() => fileRef.current?.click()} className="btn-ghost">
                 <ImagePlus className="size-3.5" /> Photo / GIF
               </button>
-              <button type="button" onClick={() => setShowEmojiPicker((v) => !v)} className="btn-ghost flex h-9 items-center gap-1.5 px-2.5 text-xs">
-                Emojis
+              <button
+                type="button"
+                onClick={() => setShowEmojiPicker((v) => !v)}
+                className={cn("btn-ghost", showEmojiPicker && "border-violet-400/50 bg-violet-500/15 text-violet-100")}
+              >
+                <Sparkles className="size-3.5" /> Emojis
               </button>
               <input
                 ref={fileRef}
@@ -342,8 +373,13 @@ export function HubFeed() {
                   e.target.value = "";
                 }}
               />
-              <span className="text-[0.65rem] text-muted-foreground">Max 4 · 2 MB · GIF ok</span>
-              <button type="button" disabled={busy || (!body.trim() && files.length === 0)} onClick={onPost} className="btn-primary ml-auto h-9 px-4 text-sm">
+              <span className="text-[0.65rem] text-slate-500">Max 4 · 2 MB · GIF ok</span>
+              <button
+                type="button"
+                disabled={busy || (!body.trim() && files.length === 0)}
+                onClick={onPost}
+                className="btn-primary ml-auto"
+              >
                 {busy ? <Loader2 className="size-4 animate-spin" /> : "Post"}
               </button>
             </div>
@@ -352,25 +388,34 @@ export function HubFeed() {
       </div>
 
       {isAdmin && (
-        <div className="glass p-3">
-          <button type="button" onClick={() => setShowRoles((v) => !v)} className="btn-ghost flex h-9 w-full items-center justify-center gap-2 text-xs">
+        <div className="glass border border-amber-400/20 p-3 shadow-[0_0_24px_rgba(251,191,36,0.08)]">
+          <button
+            type="button"
+            onClick={() => setShowRoles((v) => !v)}
+            className="btn-ghost flex h-9 w-full items-center justify-center gap-2 text-xs"
+          >
             <Users className="size-3.5" />
             {showRoles ? "Hide Roles" : "Manage Roles"}
           </button>
           {showRoles && (
             <ul className="mt-3 flex flex-col gap-2">
               {profiles.map((p) => (
-                <li key={p.id} className="flex items-center justify-between gap-2 rounded-lg bg-white/[0.04] px-2.5 py-2">
+                <li
+                  key={p.id}
+                  className="flex items-center justify-between gap-2 rounded-xl border border-white/10 bg-black/25 px-2.5 py-2"
+                >
                   <div className="flex min-w-0 items-center gap-2">
                     {p.avatar_url ? (
-                      <img src={p.avatar_url} alt="" className="size-8 rounded-full object-cover" />
+                      <img src={p.avatar_url} alt="" className="size-8 rounded-full object-cover ring-1 ring-white/20" />
                     ) : (
                       <span className="flex size-8 items-center justify-center rounded-full bg-white/10 text-xs font-bold">
                         {(p.display_name || "?")[0]?.toUpperCase()}
                       </span>
                     )}
                     <span className="truncate text-sm font-medium">{p.display_name || p.id.slice(0, 8)}</span>
-                    <span className={cn("rounded-md px-1.5 py-0.5 text-[0.6rem] font-semibold ring-1", roleBadge(p.role))}>{p.role}</span>
+                    <span className={cn("rounded-md px-1.5 py-0.5 text-[0.6rem] font-bold uppercase", roleBadge(p.role))}>
+                      {p.role}
+                    </span>
                   </div>
                   <select
                     className="field-select h-8 max-w-[8rem] text-xs"
@@ -397,7 +442,7 @@ export function HubFeed() {
         </div>
       )}
 
-      <ul className="flex flex-col gap-3">
+      <ul className="flex flex-col gap-4">
         {posts.map((post) => {
           const reactionCounts = new Map<string, number>();
           for (const r of post.reactions) {
@@ -405,12 +450,22 @@ export function HubFeed() {
           }
           const mine = post.user_id === user?.id;
           return (
-            <li key={post.id} className="glass group relative overflow-hidden p-4 transition hover:ring-1 hover:ring-violet-400/20">
-              <div className="flex items-start gap-3">
+            <li
+              key={post.id}
+              className="glass group relative overflow-hidden p-4 transition duration-200 hover:border-cyan-400/25 hover:shadow-[0_0_36px_rgba(34,211,238,0.12)] sm:p-5"
+            >
+              <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-violet-400/45 to-transparent" />
+              <div className="pointer-events-none absolute -right-10 top-1/2 size-32 -translate-y-1/2 rounded-full bg-violet-500/10 blur-3xl" />
+
+              <div className="relative flex items-start gap-3">
                 {post.author?.avatar_url ? (
-                  <img src={post.author.avatar_url} alt="" className="size-11 shrink-0 rounded-full object-cover ring-2 ring-white/10" />
+                  <img
+                    src={post.author.avatar_url}
+                    alt=""
+                    className="size-11 shrink-0 rounded-full object-cover ring-2 ring-white/15 shadow-[0_0_12px_rgba(167,139,250,0.2)]"
+                  />
                 ) : (
-                  <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-cyan-500/15 text-sm font-bold text-cyan-200">
+                  <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-cyan-500/25 to-violet-500/30 text-sm font-bold text-cyan-100 ring-1 ring-cyan-400/30">
                     {(post.author?.display_name || "?")[0]?.toUpperCase()}
                   </span>
                 )}
@@ -418,19 +473,24 @@ export function HubFeed() {
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="text-sm font-semibold text-foreground">{post.author?.display_name || "Player"}</span>
                     {post.author?.role && post.author.role !== "member" && (
-                      <span className={cn("rounded-md px-1.5 py-0.5 text-[0.6rem] font-bold uppercase ring-1", roleBadge(post.author.role))}>
+                      <span className={cn("rounded-md px-1.5 py-0.5 text-[0.6rem] font-bold uppercase", roleBadge(post.author.role))}>
                         {post.author.role}
                       </span>
                     )}
-                    <span className="text-[0.7rem] text-muted-foreground">{timeAgo(post.created_at)}</span>
+                    <span className="text-[0.7rem] text-slate-500">{timeAgo(post.created_at)}</span>
                     {(mine || isStaff) && (
-                      <button type="button" onClick={() => onDelete(post.id)} className="ml-auto rounded p-1.5 text-muted-foreground opacity-0 transition hover:text-rose-300 group-hover:opacity-100" title="Delete">
+                      <button
+                        type="button"
+                        onClick={() => onDelete(post.id)}
+                        className="ml-auto rounded-lg p-1.5 text-muted-foreground opacity-0 transition hover:bg-rose-500/15 hover:text-rose-300 group-hover:opacity-100"
+                        title="Delete"
+                      >
                         <Trash2 className="size-3.5" />
                       </button>
                     )}
                   </div>
                   {post.body && (
-                    <p className="mt-1.5 whitespace-pre-wrap text-[0.95rem] leading-relaxed text-foreground/95">
+                    <p className="mt-2 whitespace-pre-wrap text-[0.95rem] leading-relaxed text-foreground/95">
                       {renderPostBody(post.body, hubPack)}
                     </p>
                   )}
@@ -438,15 +498,24 @@ export function HubFeed() {
                     <LinkPreviewCard key={pv.url} p={pv} />
                   ))}
                   {post.images.length > 0 && (
-                    <div className={cn("mt-3 grid gap-1.5 overflow-hidden rounded-xl ring-1 ring-white/10", post.images.length === 1 ? "grid-cols-1" : "grid-cols-2")}>
+                    <div
+                      className={cn(
+                        "mt-3 grid gap-1.5 overflow-hidden rounded-xl ring-1 ring-cyan-400/20 shadow-[0_0_20px_rgba(34,211,238,0.08)]",
+                        post.images.length === 1 ? "grid-cols-1" : "grid-cols-2",
+                      )}
+                    >
                       {post.images.map((img) => (
                         <a key={img.id} href={img.url} target="_blank" rel="noreferrer" className="block">
-                          <img src={img.url} alt="" className={cn("w-full object-cover", post.images.length === 1 ? "max-h-96" : "aspect-square")} />
+                          <img
+                            src={img.url}
+                            alt=""
+                            className={cn("w-full object-cover", post.images.length === 1 ? "max-h-96" : "aspect-square")}
+                          />
                         </a>
                       ))}
                     </div>
                   )}
-                  <div className="mt-3 flex flex-wrap gap-1.5">
+                  <div className="mt-3.5 flex flex-wrap gap-1.5">
                     {REACTION_EMOJIS.map((emoji) => {
                       const count = reactionCounts.get(emoji) || 0;
                       const active = post.reactions.some((r) => r.user_id === user?.id && r.emoji === emoji);
@@ -456,12 +525,16 @@ export function HubFeed() {
                           type="button"
                           onClick={() => onReact(post.id, emoji)}
                           className={cn(
-                            "inline-flex h-8 items-center gap-1 rounded-full px-2 text-sm transition ring-1",
-                            active ? "bg-violet-500/25 ring-violet-400/40" : "bg-white/[0.04] ring-white/10 hover:bg-white/[0.08]",
+                            "inline-flex h-8 items-center gap-1 rounded-full px-2.5 text-sm transition ring-1",
+                            active
+                              ? "bg-cyan-400/20 ring-cyan-400/50 shadow-[0_0_14px_rgba(34,211,238,0.25)]"
+                              : "bg-white/[0.04] ring-white/12 hover:bg-white/[0.08] hover:ring-cyan-400/30",
                           )}
                         >
                           <span>{emoji}</span>
-                          {count > 0 && <span className="text-[0.65rem] font-semibold tabular-nums text-muted-foreground">{count}</span>}
+                          {count > 0 && (
+                            <span className="text-[0.65rem] font-semibold tabular-nums text-cyan-200/80">{count}</span>
+                          )}
                         </button>
                       );
                     })}
@@ -477,11 +550,15 @@ export function HubFeed() {
                           onClick={() => onReact(post.id, token)}
                           className={cn(
                             "inline-flex h-8 items-center gap-1 rounded-full px-1.5 transition ring-1",
-                            active ? "bg-violet-500/25 ring-violet-400/40" : "bg-white/[0.04] ring-white/10 hover:bg-white/[0.08]",
+                            active
+                              ? "bg-violet-500/25 ring-violet-400/50 shadow-[0_0_14px_rgba(167,139,250,0.3)]"
+                              : "bg-white/[0.04] ring-white/12 hover:bg-white/[0.08]",
                           )}
                         >
                           <img src={em.image_url} alt={em.name} className="size-5" />
-                          {count > 0 && <span className="pr-1 text-[0.65rem] font-semibold tabular-nums text-muted-foreground">{count}</span>}
+                          {count > 0 && (
+                            <span className="pr-1 text-[0.65rem] font-semibold tabular-nums text-violet-200/80">{count}</span>
+                          )}
                         </button>
                       );
                     })}
@@ -492,7 +569,10 @@ export function HubFeed() {
           );
         })}
         {posts.length === 0 && !error && (
-          <li className="glass py-16 text-center text-sm text-muted-foreground">Nothing here yet. Drop the first meme.</li>
+          <li className="glass-strong px-6 py-16 text-center">
+            <Sparkles className="mx-auto mb-3 size-8 text-cyan-300/80" />
+            <p className="text-sm text-muted-foreground">Nothing here yet. Drop the first meme.</p>
+          </li>
         )}
       </ul>
     </div>
