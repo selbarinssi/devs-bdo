@@ -21,17 +21,37 @@ function dataUrlToInline(dataUrl: string): { mime: string; data: string } | null
   return { mime, data: m[2] };
 }
 
-function extractJson(text: string): unknown {
+/** Parse full JSON, or salvage complete objects from a truncated array. */
+function extractJsonArray(text: string): unknown[] {
   const trimmed = text.trim();
   const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
-  const candidate = fenced ? fenced[1].trim() : trimmed;
-  const startArr = candidate.indexOf("[");
-  const startObj = candidate.indexOf("{");
-  let start = -1;
-  if (startArr >= 0 && (startObj < 0 || startArr < startObj)) start = startArr;
-  else if (startObj >= 0) start = startObj;
-  if (start < 0) throw new Error("No JSON in model response");
-  return JSON.parse(candidate.slice(start));
+  let candidate = (fenced ? fenced[1] : trimmed).trim();
+
+  const start = candidate.indexOf("[");
+  if (start < 0) throw new Error("No JSON array in model response");
+  candidate = candidate.slice(start);
+
+  try {
+    const full = JSON.parse(candidate);
+    if (Array.isArray(full)) return full;
+  } catch {
+    /* try salvage */
+  }
+
+  // Truncated response: pull every complete {...} object we can
+  const objects: unknown[] = [];
+  const re = /\{[^{}]*\}/g;
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(candidate)) !== null) {
+    try {
+      objects.push(JSON.parse(match[0]));
+    } catch {
+      /* skip broken fragment */
+    }
+  }
+  if (objects.length) return objects;
+
+  throw new Error(`Could not parse Gemini JSON: ${text.slice(0, 180)}`);
 }
 
 function validateBody(data: unknown): Body {
@@ -78,28 +98,19 @@ export const parseInventoryWithGemini = createServerFn({ method: "POST" })
       });
     }
 
-    const lootList = loots
-      .map((l, i) => `${i + 1}. id="${l.id}" name="${l.name}"`)
-      .join("\n");
+    // Compact list — model only needs id + name to match
+    const lootList = loots.map((l) => `${l.id}|${l.name}`).join("\n");
 
-    const prompt = `You are analyzing Black Desert Online (BDO) inventory / enhancement inventory screenshots.
+    const prompt = `BDO inventory screenshot analysis.
+For each LOOT line (format id|name), find that item in the image(s) and read its stack number (white digits on the slot).
+Rules: qty = integer on slot, or 1 if present with no number, or null if not in image. Only these items. Ignore everything else.
 
-Your job: for each item in the LOOT LIST below, find it in the screenshot(s) and read its stack quantity (the white number on the item slot).
-
-Rules:
-- Only report items from the LOOT LIST (match by name / icon appearance).
-- qty must be the integer stack count visible on that slot. If the item is present but no number is shown, qty is 1.
-- If the item is not visible in any screenshot, qty must be null.
-- Do not invent items that are not in the LOOT LIST.
-- Ignore potions/food/gear that are not in the LOOT LIST.
-- Prefer the enhancement inventory screenshot for enhancement materials when both are provided.
-
-LOOT LIST:
+LOOT:
 ${lootList}
 
-Respond with ONLY a JSON array (no markdown, no commentary), one object per loot list item:
-[{"id":"<exact id from list>","name":"<exact name>","qty":<number or null>}]
-Include every loot list item exactly once.`;
+Reply with a JSON array only, compact, no markdown:
+[{"id":"...","qty":123},{"id":"...","qty":null}]
+One entry per LOOT id.`;
 
     const model = process.env.GEMINI_MODEL?.trim() || "gemini-3.6-flash";
     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
@@ -118,7 +129,8 @@ Include every loot list item exactly once.`;
           ],
           generationConfig: {
             temperature: 0.1,
-            maxOutputTokens: 2048,
+            maxOutputTokens: 8192,
+            responseMimeType: "application/json",
           },
         }),
       });
@@ -130,13 +142,18 @@ Include every loot list item exactly once.`;
 
     if (!res.ok) {
       const errText = await res.text().catch(() => "");
+      // If responseMimeType unsupported, retry without it once would be ideal;
+      // surface the error clearly for now.
       throw new Error(
-        `Gemini API error ${res.status}: ${errText.slice(0, 300) || res.statusText}`,
+        `Gemini API error ${res.status}: ${errText.slice(0, 400) || res.statusText}`,
       );
     }
 
     const json = (await res.json()) as {
-      candidates?: { content?: { parts?: { text?: string }[] } }[];
+      candidates?: {
+        content?: { parts?: { text?: string }[] };
+        finishReason?: string;
+      }[];
       error?: { message?: string };
     };
 
@@ -146,20 +163,7 @@ Include every loot list item exactly once.`;
       json.candidates?.[0]?.content?.parts?.map((p) => p.text || "").join("") || "";
     if (!text.trim()) throw new Error("Empty response from Gemini");
 
-    let parsed: unknown;
-    try {
-      parsed = extractJson(text);
-    } catch {
-      throw new Error(`Could not parse Gemini JSON: ${text.slice(0, 200)}`);
-    }
-
-    const arr = Array.isArray(parsed)
-      ? parsed
-      : Array.isArray((parsed as { items?: unknown })?.items)
-        ? (parsed as { items: unknown[] }).items
-        : null;
-
-    if (!arr) throw new Error("Gemini response was not a JSON array");
+    const arr = extractJsonArray(text);
 
     const byId = new Map<string, number | null>();
     const byName = new Map<string, number | null>();
@@ -174,6 +178,8 @@ Include every loot list item exactly once.`;
         qty = Math.round(r.qty);
       } else if (typeof r.qty === "string" && /^\d+$/.test(r.qty.trim())) {
         qty = parseInt(r.qty.trim(), 10);
+      } else if (r.qty === null) {
+        qty = null;
       }
       if (id) byId.set(id, qty);
       if (name) byName.set(name, qty);
