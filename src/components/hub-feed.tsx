@@ -41,7 +41,6 @@ function roleBadge(role: HubRole) {
 
 const URL_IN_TEXT = /https?:\/\/[^\s<>\[\]()"']+/gi;
 
-/** Remove URLs that already have a rich preview so only the card shows. */
 function stripPreviewedUrls(body: string, previews: LinkPreview[]): string {
   if (!previews.length) return body;
   const urls = new Set(previews.map((p) => p.url.replace(/[.,);:]+$/, "")));
@@ -297,7 +296,7 @@ export function HubFeed() {
 
             {showEmojiPicker && (
               <div className="glass mt-3 max-h-44 overflow-y-auto border border-violet-400/25 p-3 shadow-[0_0_28px_rgba(167,139,250,0.12)]">
-                <p className="hub-label mb-2 mb-2 neon-violet">Hub Emojis</p>
+                <p className="hub-label mb-2 neon-violet">Hub Emojis</p>
                 <div className="flex flex-wrap gap-2">
                   {hubPack.length === 0 && (
                     <span className="text-xs text-muted-foreground">No pack yet — staff can upload below.</span>
@@ -580,34 +579,36 @@ export function HubFeed() {
                         <SmilePlus className="size-4" />
                       </button>
                       {pickerPostId === post.id && (
-                        <div className="glass absolute bottom-full left-0 z-20 mb-2 flex max-w-[16rem] flex-wrap gap-1 p-2 shadow-[0_0_28px_rgba(34,211,238,0.15)]">
-                          {REACTION_EMOJIS.map((emoji) => (
-                            <button
-                              key={emoji}
-                              type="button"
-                              className="flex size-9 items-center justify-center rounded-lg text-lg transition hover:bg-cyan-400/15"
-                              onClick={() => {
-                                void onReact(post.id, emoji);
-                                setPickerPostId(null);
-                              }}
-                            >
-                              {emoji}
-                            </button>
-                          ))}
-                          {hubPack.map((em) => (
-                            <button
-                              key={em.id}
-                              type="button"
-                              title={em.name}
-                              className="flex size-9 items-center justify-center rounded-lg transition hover:bg-violet-400/15"
-                              onClick={() => {
-                                void onReact(post.id, hubReactionToken(em.id));
-                                setPickerPostId(null);
-                              }}
-                            >
-                              <img src={em.image_url} alt={em.name} className="size-6" />
-                            </button>
-                          ))}
+                        <div className="glass absolute bottom-full left-0 z-30 mb-2 w-[13.5rem] p-2 shadow-[0_0_28px_rgba(34,211,238,0.15)]">
+                          <div className="grid grid-cols-4 gap-1">
+                            {REACTION_EMOJIS.map((emoji) => (
+                              <button
+                                key={emoji}
+                                type="button"
+                                className="flex size-10 items-center justify-center rounded-lg text-xl transition hover:bg-cyan-400/15"
+                                onClick={() => {
+                                  void onReact(post.id, emoji);
+                                  setPickerPostId(null);
+                                }}
+                              >
+                                {emoji}
+                              </button>
+                            ))}
+                            {hubPack.map((em) => (
+                              <button
+                                key={em.id}
+                                type="button"
+                                title={em.name}
+                                className="flex size-10 items-center justify-center rounded-lg transition hover:bg-violet-400/15"
+                                onClick={() => {
+                                  void onReact(post.id, hubReactionToken(em.id));
+                                  setPickerPostId(null);
+                                }}
+                              >
+                                <img src={em.image_url} alt={em.name} className="size-6" />
+                              </button>
+                            ))}
+                          </div>
                         </div>
                       )}
                     </div>
