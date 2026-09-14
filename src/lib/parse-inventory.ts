@@ -3,6 +3,8 @@ import { createServerFn } from "@tanstack/react-start";
 export type ParseLootInput = {
   id: string;
   name: string;
+  /** Optional tiny reference icon (data URL). Spot loot only — keeps matching accurate without full BDO catalog. */
+  icon?: string | null;
 };
 
 export type ParseInventoryResult = {
@@ -13,6 +15,13 @@ type Body = {
   images: string[];
   loots: ParseLootInput[];
 };
+
+type InlinePart = { inline_data: { mime_type: string; data: string } };
+type TextPart = { text: string };
+type Part = TextPart | InlinePart;
+
+const MAX_INV_IMAGES = 2;
+const MAX_REF_ICONS = 20;
 
 function dataUrlToInline(dataUrl: string): { mime: string; data: string } | null {
   const m = /^data:(image\/(?:png|jpeg|jpg|webp));base64,(.+)$/i.exec(dataUrl);
@@ -38,7 +47,6 @@ function extractJsonArray(text: string): unknown[] {
     /* try salvage */
   }
 
-  // Truncated response: pull every complete {...} object we can
   const objects: unknown[] = [];
   const re = /\{[^{}]*\}/g;
   let match: RegExpExecArray | null;
@@ -66,7 +74,9 @@ function validateBody(data: unknown): Body {
     if (!row || typeof row !== "object") continue;
     const r = row as Record<string, unknown>;
     if (typeof r.id !== "string" || typeof r.name !== "string") continue;
-    loots.push({ id: r.id, name: r.name });
+    const icon =
+      typeof r.icon === "string" && r.icon.startsWith("data:image/") ? r.icon : null;
+    loots.push({ id: r.id, name: r.name, icon });
   }
   return { images: d.images as string[], loots };
 }
@@ -74,6 +84,9 @@ function validateBody(data: unknown): Body {
 /**
  * Server-only work lives inside the handler. The exported fn is a client-safe
  * RPC stub (safe to import from React components).
+ *
+ * Strategy: inventory screenshot(s) + tiny reference icons for this spot's loot only.
+ * Names alone are unreliable (BDO slots show icons, not text). Full catalog icons are not sent.
  */
 export const parseInventoryWithGemini = createServerFn({ method: "POST" })
   .inputValidator(validateBody)
@@ -89,30 +102,79 @@ export const parseInventoryWithGemini = createServerFn({ method: "POST" })
     if (!images.length) throw new Error("At least one screenshot is required");
     if (!loots.length) throw new Error("No loot items to match");
 
-    const inlineParts: { inline_data: { mime_type: string; data: string } }[] = [];
-    for (const url of images.slice(0, 2)) {
+    const invParts: InlinePart[] = [];
+    for (const url of images.slice(0, MAX_INV_IMAGES)) {
       const parsed = dataUrlToInline(url);
       if (!parsed) throw new Error("Invalid image data URL (expected png/jpeg/webp base64)");
-      inlineParts.push({
+      invParts.push({
         inline_data: { mime_type: parsed.mime, data: parsed.data },
       });
     }
 
-    // Compact list — model only needs id + name to match
-    const lootList = loots.map((l) => `${l.id}|${l.name}`).join("\n");
+    // Reference icons: small chips only, capped to control tokens
+    const refLoots = loots.slice(0, 60);
+    const refParts: Part[] = [];
+    let iconCount = 0;
+    for (let i = 0; i < refLoots.length; i++) {
+      const l = refLoots[i];
+      const label = `REF ${i + 1}: id=${l.id} | name=${l.name}`;
+      if (l.icon && iconCount < MAX_REF_ICONS) {
+        const parsed = dataUrlToInline(l.icon);
+        if (parsed) {
+          refParts.push({ text: `${label} (icon follows)` });
+          refParts.push({
+            inline_data: { mime_type: parsed.mime, data: parsed.data },
+          });
+          iconCount++;
+          continue;
+        }
+      }
+      refParts.push({ text: `${label} (no icon — match by name only if obvious, else null)` });
+    }
 
-    const prompt = `BDO inventory screenshot analysis.
-For each LOOT line (format id|name), find that item in the image(s) and read its stack number (white digits on the slot).
-Rules: qty = integer on slot, or 1 if present with no number, or null if not in image. Only these items. Ignore everything else.
+    const promptHead = `Black Desert Online (BDO) inventory analysis.
 
-LOOT:
-${lootList}
+CONTEXT:
+- Inventory slots show ITEM ICONS + a stack number. Item names are usually NOT written on the slot.
+- You are given REFERENCE icons/names for THIS grind spot's loot list only.
+- Match inventory slots to those references by VISUAL similarity to the reference icons when provided.
+- Ignore every other item in the bag (not in the reference list).
 
-Reply with a JSON array only, compact, no markdown:
-[{"id":"...","qty":123},{"id":"...","qty":null}]
-One entry per LOOT id.`;
+STACK NUMBERS:
+- Small digits on the item slot (often bottom-right / corner of the icon).
+- qty = that integer when readable.
+- qty = 1 if the item is clearly present but no number is visible.
+- qty = null if the item is not clearly present OR you are unsure (never guess).
 
-    const model = process.env.GEMINI_MODEL?.trim() || "gemini-3.6-flash";
+IMAGES AFTER THIS TEXT:
+1) REFERENCE section: labeled REF lines, each optionally followed by a tiny reference icon.
+2) INVENTORY screenshot(s): normal bag and/or enhancement bag (up to 2).
+
+RULES:
+- Only return quantities for the given reference ids.
+- If the same reference item appears in multiple inventory images, use the MAXIMUM stack count (do not sum unless stacks are clearly separate unrelated piles of the same id — prefer max).
+- Never invent ids. Never include items not in the reference list.
+- When icons look similar and you cannot tell them apart → null.
+- Output JSON array only, no markdown, no commentary:
+[{"id":"<exact id>","qty":123},{"id":"<exact id>","qty":null}]
+- Exactly one object per reference id listed below.
+
+REFERENCE LIST (id|name):
+${refLoots.map((l) => `${l.id}|${l.name}`).join("\n")}
+`;
+
+    const promptTail = `
+INVENTORY SCREENSHOT(S) follow. Analyze them against the references above.
+Return the JSON array now.`;
+
+    const parts: Part[] = [
+      { text: promptHead },
+      ...refParts,
+      { text: promptTail },
+      ...invParts,
+    ];
+
+    const model = process.env.GEMINI_MODEL?.trim() || "gemini-2.0-flash";
     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
 
     let res: Response;
@@ -124,7 +186,7 @@ One entry per LOOT id.`;
           contents: [
             {
               role: "user",
-              parts: [{ text: prompt }, ...inlineParts],
+              parts,
             },
           ],
           generationConfig: {
@@ -142,8 +204,6 @@ One entry per LOOT id.`;
 
     if (!res.ok) {
       const errText = await res.text().catch(() => "");
-      // If responseMimeType unsupported, retry without it once would be ideal;
-      // surface the error clearly for now.
       throw new Error(
         `Gemini API error ${res.status}: ${errText.slice(0, 400) || res.statusText}`,
       );
