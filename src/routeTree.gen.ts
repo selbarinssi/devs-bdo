@@ -10,6 +10,7 @@ import { Route as ShipsRouteImport } from './routes/ships'
 import { Route as VoyageRouteImport } from './routes/voyage'
 import { Route as RoutinesRouteImport } from './routes/routines'
 import { Route as GrindRouteImport } from './routes/grind'
+import { Route as FeedRouteImport } from './routes/feed'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -36,6 +37,11 @@ const GrindRoute = GrindRouteImport.update({
   path: '/grind',
   getParentRoute: () => rootRouteImport,
 } as any)
+const FeedRoute = FeedRouteImport.update({
+  id: '/feed',
+  path: '/feed',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -43,6 +49,7 @@ export interface FileRoutesByFullPath {
   '/voyage': typeof VoyageRoute
   '/routines': typeof RoutinesRoute
   '/grind': typeof GrindRoute
+  '/feed': typeof FeedRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -50,6 +57,7 @@ export interface FileRoutesByTo {
   '/voyage': typeof VoyageRoute
   '/routines': typeof RoutinesRoute
   '/grind': typeof GrindRoute
+  '/feed': typeof FeedRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -58,13 +66,14 @@ export interface FileRoutesById {
   '/voyage': typeof VoyageRoute
   '/routines': typeof RoutinesRoute
   '/grind': typeof GrindRoute
+  '/feed': typeof FeedRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/ships' | '/voyage' | '/routines' | '/grind'
+  fullPaths: '/' | '/ships' | '/voyage' | '/routines' | '/grind' | '/feed'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/ships' | '/voyage' | '/routines' | '/grind'
-  id: '__root__' | '/' | '/ships' | '/voyage' | '/routines' | '/grind'
+  to: '/' | '/ships' | '/voyage' | '/routines' | '/grind' | '/feed'
+  id: '__root__' | '/' | '/ships' | '/voyage' | '/routines' | '/grind' | '/feed'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -73,6 +82,7 @@ export interface RootRouteChildren {
   VoyageRoute: typeof VoyageRoute
   RoutinesRoute: typeof RoutinesRoute
   GrindRoute: typeof GrindRoute
+  FeedRoute: typeof FeedRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -112,6 +122,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof GrindRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/feed': {
+      id: '/feed'
+      path: '/feed'
+      fullPath: '/feed'
+      preLoaderRoute: typeof FeedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -121,6 +138,7 @@ const rootRouteChildren: RootRouteChildren = {
   VoyageRoute: VoyageRoute,
   RoutinesRoute: RoutinesRoute,
   GrindRoute: GrindRoute,
+  FeedRoute: FeedRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
