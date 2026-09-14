@@ -70,7 +70,7 @@ function compressDataUrl(dataUrl: string, maxSide = 1024, quality = 0.72): Promi
   });
 }
 
-/** Load a public icon URL into a tiny JPEG data URL for Gemini reference matching. */
+/** Load a public icon URL into a tiny JPEG data URL for AI reference matching. */
 function loadRefIcon(url: string, maxSide = 48, quality = 0.7): Promise<string | null> {
   return new Promise((resolve) => {
     const img = new Image();
@@ -128,7 +128,6 @@ async function runDetection(
     images.push(await compressDataUrl(url));
   }
 
-  // Tiny reference icons for this spot only (accuracy without full BDO catalog)
   const lootPayload = await Promise.all(
     loots.map(async (l) => {
       let icon: string | null = null;
@@ -148,7 +147,6 @@ async function runDetection(
       },
     });
   } catch (e) {
-    // Re-throw with friendlier message for network failures
     throw new Error(friendlyError(e));
   }
 
@@ -195,14 +193,14 @@ function UploadSlot({
 
   return (
     <div className="flex flex-col gap-1.5">
-      <p className="text-[0.65rem] font-bold uppercase tracking-wider text-muted-foreground">{label}</p>
+      <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{label}</p>
       {preview ? (
         <div className="relative overflow-hidden rounded-xl border border-white/10 bg-black/40">
-          <img src={preview} alt={label} className="max-h-40 w-full object-contain" />
+          <img src={preview} alt={label} className="max-h-44 w-full object-contain" />
           <button
             type="button"
             onClick={onClear}
-            className="btn-ghost absolute right-2 top-2 h-7 px-2 text-[0.65rem]"
+            className="btn-ghost absolute right-2 top-2 h-8 px-2 text-xs"
           >
             <X className="size-3.5" /> Clear
           </button>
@@ -217,7 +215,7 @@ function UploadSlot({
         >
           <Upload className="size-6 text-muted-foreground" />
           <span className="text-sm font-semibold text-foreground">{hint}</span>
-          <span className="text-[0.7rem] text-muted-foreground">PNG / JPG · drag & drop or click</span>
+          <span className="text-xs text-muted-foreground">PNG / JPG · drag & drop or click</span>
           <input
             ref={inputRef}
             type="file"
@@ -325,14 +323,14 @@ export function InventoryScreenshotImport({ open, onClose, loots, currentQty, on
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-3 sm:items-center">
-      <div className="glass flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/75 p-3 backdrop-blur-md sm:items-center sm:p-4">
+      <div className="glass flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden bg-[#0b1220]/98 shadow-2xl ring-1 ring-white/10">
         <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
           <div>
-            <p className="text-sm font-semibold text-foreground">Update Quantities</p>
-            <p className="text-[0.7rem] text-muted-foreground">
+            <p className="text-base font-semibold text-foreground">Update Quantities</p>
+            <p className="text-xs text-muted-foreground">
               {step === "upload" && "Upload inventory screenshots"}
-              {step === "processing" && "Gemini is reading your inventory…"}
+              {step === "processing" && "Our AI Agent is reading your inventory…"}
               {step === "review" && "Review detected stacks before applying"}
             </p>
           </div>
@@ -343,17 +341,13 @@ export function InventoryScreenshotImport({ open, onClose, loots, currentQty, on
 
         <div className="flex-1 overflow-y-auto px-4 py-3">
           {error && (
-            <p className="mb-3 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-200">
+            <p className="mb-3 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-200">
               {error}
             </p>
           )}
 
           {step === "upload" && (
             <div className="flex flex-col gap-4">
-              <p className="text-xs text-muted-foreground">
-                Gemini matches bag icons to this spot’s loot icons and reads stack counts. Review the
-                results before applying. Items not in this spot’s loot list are ignored.
-              </p>
               <UploadSlot
                 label="Normal Inventory"
                 hint="Drop or choose normal bag"
@@ -374,17 +368,13 @@ export function InventoryScreenshotImport({ open, onClose, loots, currentQty, on
           {step === "processing" && (
             <div className="flex flex-col items-center justify-center gap-3 py-16 text-sm text-muted-foreground">
               <Loader2 className="size-8 animate-spin text-cyan-300" />
-              Gemini is reading stack counts…
+              Our AI Agent is reading stack counts…
             </div>
           )}
 
           {step === "review" && (
             <div className="flex flex-col gap-2">
-              <p className="mb-1 text-[0.7rem] text-muted-foreground">
-                Override replaces the current qty. Add stacks on top (e.g. after moving items to storage).
-                Ignore skips that row. Not detected leaves the current qty unless you type a value.
-              </p>
-              <ul className="flex flex-col gap-2">
+              <ul className="flex flex-col gap-1.5">
                 {rows.map((r) => {
                   const before = parseFloat(currentQty[r.lootId] || "0") || 0;
                   const edited = parseFloat(r.editQty);
@@ -403,7 +393,7 @@ export function InventoryScreenshotImport({ open, onClose, loots, currentQty, on
                     <li
                       key={r.lootId}
                       className={cn(
-                        "rounded-xl bg-white/[0.03] px-3 py-2.5 ring-1 ring-white/5",
+                        "rounded-xl bg-white/[0.04] px-3 py-2 ring-1 ring-white/10",
                         r.ignore && "opacity-50",
                       )}
                     >
@@ -417,7 +407,7 @@ export function InventoryScreenshotImport({ open, onClose, loots, currentQty, on
                         )}
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-sm font-semibold">{r.name}</p>
-                          <p className="text-[0.7rem] text-muted-foreground">
+                          <p className="text-xs text-muted-foreground">
                             Was {before}
                             {r.detectedQty != null ? ` · Detected ${r.detectedQty}` : " · Not detected"}
                           </p>
@@ -427,7 +417,7 @@ export function InventoryScreenshotImport({ open, onClose, loots, currentQty, on
                           min={0}
                           value={r.editQty}
                           onChange={(e) => updateRow(r.lootId, { editQty: e.target.value })}
-                          className="h-8 w-20 text-center text-sm"
+                          className="h-9 w-20 text-center text-sm"
                           disabled={r.ignore}
                         />
                       </div>
@@ -436,7 +426,7 @@ export function InventoryScreenshotImport({ open, onClose, loots, currentQty, on
                           type="button"
                           onClick={() => updateRow(r.lootId, { mode: "override" })}
                           className={cn(
-                            "btn-ghost h-7 px-2.5 text-[0.65rem]",
+                            "btn-ghost h-8 px-2.5 text-xs",
                             r.mode === "override" && !r.ignore && "border-cyan-400/50 text-cyan-200",
                           )}
                         >
@@ -446,7 +436,7 @@ export function InventoryScreenshotImport({ open, onClose, loots, currentQty, on
                           type="button"
                           onClick={() => updateRow(r.lootId, { mode: "add" })}
                           className={cn(
-                            "btn-ghost h-7 px-2.5 text-[0.65rem]",
+                            "btn-ghost h-8 px-2.5 text-xs",
                             r.mode === "add" && !r.ignore && "border-emerald-400/50 text-emerald-200",
                           )}
                         >
@@ -456,13 +446,13 @@ export function InventoryScreenshotImport({ open, onClose, loots, currentQty, on
                           type="button"
                           onClick={() => updateRow(r.lootId, { ignore: !r.ignore })}
                           className={cn(
-                            "btn-ghost h-7 px-2.5 text-[0.65rem]",
+                            "btn-ghost h-8 px-2.5 text-xs",
                             r.ignore && "border-rose-400/40 text-rose-200",
                           )}
                         >
                           {r.ignore ? "Ignored" : "Ignore"}
                         </button>
-                        <span className="ml-auto font-mono text-xs tabular-nums text-cyan-300/90">
+                        <span className="ml-auto font-mono text-base font-bold tabular-nums text-cyan-300 sm:text-lg">
                           → {Number.isFinite(shown) ? Math.round(shown) : "—"}
                         </span>
                       </div>
@@ -477,16 +467,16 @@ export function InventoryScreenshotImport({ open, onClose, loots, currentQty, on
         <div className="flex items-center justify-end gap-2 border-t border-white/10 px-4 py-3">
           {step === "upload" && (
             <>
-              <button type="button" onClick={onClose} className="btn-ghost h-9 px-3 text-xs">
+              <button type="button" onClick={onClose} className="btn-ghost h-10 px-3 text-sm">
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={onProcess}
                 disabled={busy || (!normalPreview && !enhancePreview)}
-                className="btn-primary h-9 px-4 text-xs"
+                className="btn-primary h-10 px-4 text-sm"
               >
-                <ImagePlus className="size-3.5" /> Process
+                <ImagePlus className="size-4" /> Process
               </button>
             </>
           )}
@@ -495,12 +485,12 @@ export function InventoryScreenshotImport({ open, onClose, loots, currentQty, on
               <button
                 type="button"
                 onClick={() => setStep("upload")}
-                className="btn-ghost h-9 px-3 text-xs"
+                className="btn-ghost h-10 px-3 text-sm"
               >
                 Back
               </button>
-              <button type="button" onClick={onConfirmApply} className="btn-primary h-9 px-4 text-xs">
-                <Check className="size-3.5" /> Apply Quantities
+              <button type="button" onClick={onConfirmApply} className="btn-primary h-10 px-4 text-sm">
+                <Check className="size-4" /> Apply Quantities
               </button>
             </>
           )}
