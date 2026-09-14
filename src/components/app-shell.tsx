@@ -65,14 +65,14 @@ function HubMark({ className }: { className?: string }) {
       <g className="hub-orbit hub-orbit-slow">
         <circle cx="9" cy="20" r="1.05" fill="url(#hubPlanetA)" />
       </g>
-      <g className="hub-orbit hub-orbit-xfast">
+      <g className="hub-orbit hub-orbit-xslow">
         <circle cx="26" cy="11" r="0.85" fill="url(#hubPlanetB)" />
       </g>
-      <g className="hub-orbit hub-orbit-med">
+      <g className="hub-orbit hub-orbit-med2">
         <circle cx="12" cy="27" r="0.7" fill="url(#hubPlanetC)" />
       </g>
       <circle cx="20" cy="20" r="3.2" fill="url(#hubStar)" filter="url(#hubStarGlow)" />
-      <circle cx="20" cy="20" r="1.1" fill="#ffffff" />
+      <circle cx="20" cy="20" r="1.1" fill="#ffffff" opacity="0.95" />
     </svg>
   );
 }
@@ -86,12 +86,12 @@ export function AppShell({
   title?: string;
   eyebrow?: string;
 }) {
-  const { user, loading } = useSupabaseUser();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const { user, loading } = useSupabaseUser();
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background text-sm text-muted-foreground">
+      <div className="flex min-h-screen items-center justify-center text-sm text-muted-foreground">
         Loading…
       </div>
     );
@@ -102,63 +102,60 @@ export function AppShell({
   }
 
   return (
-    <div className="min-h-screen">
-      <header className="sticky top-0 z-40 border-b border-white/10 bg-[#04060c]/80 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-6xl items-center gap-3 px-3 py-2.5 sm:px-4">
-          <Link to="/routines" className="flex min-w-0 items-center gap-2.5">
-            <HubMark className="size-9 shrink-0 sm:size-10" />
-            <div className="min-w-0 leading-tight">
-              <p className="truncate text-[0.65rem] font-bold uppercase tracking-[0.14em] text-cyan-300/90">
-                Dev&apos;s Hub
-              </p>
-              <p className="truncate text-sm font-semibold text-foreground">
-                {title || "Black Desert Online"}
-              </p>
-              {eyebrow ? (
-                <p className="truncate text-[0.65rem] text-muted-foreground">{eyebrow}</p>
-              ) : null}
+    <div className="min-h-screen pb-14 text-foreground">
+      <header className="sticky top-0 z-30 border-b border-white/10 bg-[#04060c]/65 backdrop-blur-2xl">
+        <div className="mx-auto flex max-w-[1400px] items-center justify-between gap-4 px-4 py-3 sm:px-6">
+          <div className="flex items-center gap-3">
+            <div className="relative flex size-10 shrink-0 items-center justify-center">
+              <HubMark className="size-10" />
             </div>
-          </Link>
-
-          <nav className="ml-auto hidden items-center gap-1 md:flex">
+            <div>
+              <p className="text-[0.55rem] font-semibold uppercase tracking-[0.35em] text-muted-foreground">
+                Black Desert Online
+              </p>
+              <h1 className="text-base font-semibold tracking-wide text-foreground sm:text-lg">
+                Dev&apos;s Hub
+              </h1>
+            </div>
+          </div>
+          <nav aria-label="Tools" className="hidden items-center gap-1 md:flex">
             {NAV.map((item) => {
-              const active = pathname === item.to || pathname.startsWith(item.to + "/");
+              const active = item.exact ? pathname === item.to : pathname.startsWith(item.to);
               const Icon = item.icon;
               return (
                 <Link
                   key={item.to}
                   to={item.to}
+                  aria-current={active ? "page" : undefined}
                   className={cn(
-                    "flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition",
+                    "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm transition-all",
                     active
-                      ? "bg-cyan-400/15 text-cyan-200 ring-1 ring-cyan-400/30"
+                      ? "bg-cyan-400/15 text-cyan-300 ring-1 ring-cyan-400/40 shadow-[0_0_16px_rgba(34,211,238,0.2)]"
                       : "text-muted-foreground hover:bg-white/5 hover:text-foreground",
                   )}
                 >
-                  <Icon className="size-3.5" />
-                  {item.label}
+                  <Icon className="size-3.5" strokeWidth={1.75} aria-hidden />
+                  <span className="font-semibold">{item.label}</span>
                 </Link>
               );
             })}
           </nav>
-
           <AuthPanel className="shrink-0" />
         </div>
-
-        <nav className="flex gap-1 overflow-x-auto border-t border-white/5 px-2 py-1.5 md:hidden">
+        <nav className="grid grid-cols-5 gap-0.5 border-t border-white/5 px-2 py-1.5 md:hidden">
           {NAV.map((item) => {
-            const active = pathname === item.to || pathname.startsWith(item.to + "/");
+            const active = item.exact ? pathname === item.to : pathname.startsWith(item.to);
             const Icon = item.icon;
             return (
               <Link
                 key={item.to}
                 to={item.to}
                 className={cn(
-                  "flex shrink-0 items-center gap-1 rounded-lg px-2.5 py-1.5 text-[0.7rem] font-semibold",
-                  active ? "bg-cyan-400/15 text-cyan-200" : "text-muted-foreground",
+                  "flex flex-col items-center gap-0.5 rounded-lg py-1.5 text-[0.6rem] font-semibold",
+                  active ? "bg-cyan-400/10 text-cyan-300" : "text-muted-foreground",
                 )}
               >
-                <Icon className="size-3.5" />
+                <Icon className="size-3.5" strokeWidth={1.75} />
                 {item.label}
               </Link>
             );
@@ -166,7 +163,19 @@ export function AppShell({
         </nav>
       </header>
 
-      <main className="mx-auto max-w-6xl px-3 py-4 sm:px-4 sm:py-6">{children}</main>
+      <div className="mx-auto max-w-[1400px] px-4 py-5 sm:px-6 sm:py-6">
+        <div className="mb-4">
+          {eyebrow ? (
+            <p className="mb-1 text-[0.65rem] font-bold uppercase tracking-[0.24em] text-cyan-300/90">
+              {eyebrow}
+            </p>
+          ) : null}
+          {title ? (
+            <h2 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">{title}</h2>
+          ) : null}
+        </div>
+        {children}
+      </div>
     </div>
   );
 }

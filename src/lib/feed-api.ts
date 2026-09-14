@@ -31,17 +31,25 @@ export async function listFeedPosts(limit = 40): Promise<FeedPost[]> {
     .select("*")
     .order("created_at", { ascending: false })
     .limit(limit);
-  if (error) throw error;
+  if (error) {
+    throw new Error(error.message || error.code || "Feed query failed");
+  }
   if (!posts?.length) return [];
 
   const ids = posts.map((p) => p.id);
   const userIds = [...new Set(posts.map((p) => p.user_id))];
 
-  const [{ data: images }, { data: reactions }, { data: profiles }] = await Promise.all([
+  const [imgRes, rxRes, profRes] = await Promise.all([
     sb.from("feed_images").select("*").in("post_id", ids).order("sort"),
     sb.from("feed_reactions").select("*").in("post_id", ids),
     sb.from("profiles").select("*").in("id", userIds),
   ]);
+  if (imgRes.error) throw new Error(imgRes.error.message || "Feed images failed");
+  if (rxRes.error) throw new Error(rxRes.error.message || "Feed reactions failed");
+  if (profRes.error) throw new Error(profRes.error.message || "Feed profiles failed");
+  const images = imgRes.data;
+  const reactions = rxRes.data;
+  const profiles = profRes.data;
 
   const profileMap = new Map((profiles ?? []).map((p) => [p.id, p as ProfileRow]));
   const imgsBy = new Map<string, FeedImage[]>();
@@ -79,7 +87,7 @@ export async function createFeedPost(body: string, files: File[]): Promise<void>
     .insert({ user_id: uid, body: body.trim() })
     .select()
     .single();
-  if (error) throw error;
+  if (error) throw new Error(error.message || "Create post failed");
 
   for (let i = 0; i < files.length; i++) {
     const file = files[i]!;
@@ -90,20 +98,20 @@ export async function createFeedPost(body: string, files: File[]): Promise<void>
       upsert: false,
       contentType: file.type || "image/jpeg",
     });
-    if (upErr) throw upErr;
+    if (upErr) throw new Error(upErr.message || "Upload failed");
     const { data: pub } = sb.storage.from("feed-media").getPublicUrl(path);
     const { error: imgErr } = await sb.from("feed_images").insert({
       post_id: post.id,
       url: pub.publicUrl,
       sort: i,
     });
-    if (imgErr) throw imgErr;
+    if (imgErr) throw new Error(imgErr.message || "Save image failed");
   }
 }
 
 export async function deleteFeedPost(id: string): Promise<void> {
   const { error } = await getSupabase().from("feed_posts").delete().eq("id", id);
-  if (error) throw error;
+  if (error) throw new Error(error.message || "Delete failed");
 }
 
 export async function toggleReaction(postId: string, emoji: string): Promise<void> {
@@ -127,14 +135,14 @@ export async function toggleReaction(postId: string, emoji: string): Promise<voi
       .eq("post_id", postId)
       .eq("user_id", uid)
       .eq("emoji", emoji);
-    if (error) throw error;
+    if (error) throw new Error(error.message || "Unreact failed");
   } else {
     const { error } = await sb.from("feed_reactions").insert({
       post_id: postId,
       user_id: uid,
       emoji,
     });
-    if (error) throw error;
+    if (error) throw new Error(error.message || "React failed");
   }
 }
 
