@@ -214,3 +214,13 @@ create policy "feed_media_delete"
       or public.is_staff()
     )
   );
+
+-- Privileges for PostgREST (authenticated role)
+grant usage on schema public to authenticated;
+
+grant select, insert, update, delete on public.profiles to authenticated;
+grant select, insert, update, delete on public.feed_posts to authenticated;
+grant select, insert, update, delete on public.feed_images to authenticated;
+grant select, insert, update, delete on public.feed_reactions to authenticated;
+
+grant usage, select on all sequences in schema public to authenticated;
