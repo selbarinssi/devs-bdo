@@ -20,7 +20,7 @@ import {
   deleteLoot,
   deleteSession,
   deleteSpot,
-  findIconByLootName,
+  findLootDefaultsByName,
   listLoots,
   listSessionLoots,
   listSessions,
@@ -443,17 +443,24 @@ export function GrindTracker() {
     setBusy(true);
     try {
       const name = lootName.trim();
-      let icon = lootIconUrl;
-      if (!icon) {
-        icon = await findIconByLootName(name);
-      }
+      const defaults = await findLootDefaultsByName(name);
+      const icon = lootIconUrl || defaults?.icon_url || null;
+      const priceParsed = parseFloat(lootPrice);
+      const unit_price =
+        lootPrice.trim() !== "" && Number.isFinite(priceParsed)
+          ? priceParsed
+          : defaults?.unit_price != null
+            ? Number(defaults.unit_price)
+            : 0;
+      const kind = defaults?.kind ?? lootKind;
+      const rarity = defaults?.rarity ?? lootRarity;
       const row = await createLoot({
         spot_id: selectedId,
         name,
-        kind: lootKind,
-        unit_price: parseFloat(lootPrice) || 0,
+        kind,
+        unit_price,
         icon_url: icon,
-        rarity: lootRarity,
+        rarity,
       });
       setLoots((p) => sortLootsByRarity([...p, row]));
       setLootName("");
