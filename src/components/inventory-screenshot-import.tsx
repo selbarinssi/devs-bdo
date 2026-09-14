@@ -154,14 +154,15 @@ async function runDetection(
 
   return loots.map((l) => {
     const qty = byId.has(l.id) ? (byId.get(l.id) ?? null) : null;
+    const detected = qty != null;
     return {
       lootId: l.id,
       name: l.name,
       iconUrl: l.icon_url,
       detectedQty: qty,
       mode: "override" as QtyMode,
-      ignore: false,
-      confidence: qty != null ? 0.9 : null,
+      ignore: !detected,
+      confidence: detected ? 0.9 : null,
       editQty: "",
     };
   });
@@ -393,15 +394,19 @@ export function InventoryScreenshotImport({ open, onClose, loots, currentQty, on
                     <li
                       key={r.lootId}
                       className={cn(
-                        "rounded-xl bg-white/[0.04] px-3 py-2 ring-1 ring-white/10",
-                        r.ignore && "opacity-50",
+                        "rounded-xl px-3 py-2.5 ring-1 transition",
+                        r.detectedQty != null && !r.ignore
+                          ? "bg-emerald-500/10 ring-emerald-400/40"
+                          : r.ignore
+                            ? "bg-white/[0.03] ring-white/10 opacity-55"
+                            : "bg-white/[0.04] ring-white/10",
                       )}
                     >
                       <div className="mb-2 flex items-center gap-2">
                         {r.iconUrl ? (
-                          <img src={r.iconUrl} alt="" className="size-9 rounded object-contain" />
+                          <img src={r.iconUrl} alt="" className="size-9 shrink-0 rounded object-contain" />
                         ) : (
-                          <span className="flex size-9 items-center justify-center rounded bg-white/5 text-xs font-bold text-cyan-300">
+                          <span className="flex size-9 shrink-0 items-center justify-center rounded bg-white/5 text-xs font-bold text-cyan-300">
                             {r.name[0]?.toUpperCase()}
                           </span>
                         )}
@@ -412,19 +417,36 @@ export function InventoryScreenshotImport({ open, onClose, loots, currentQty, on
                             {r.detectedQty != null ? ` · Detected ${r.detectedQty}` : " · Not detected"}
                           </p>
                         </div>
-                        <Input
-                          type="number"
-                          min={0}
-                          value={r.editQty}
-                          onChange={(e) => updateRow(r.lootId, { editQty: e.target.value })}
-                          className="h-9 w-20 text-center text-sm"
-                          disabled={r.ignore}
-                        />
+                        <div className="flex shrink-0 items-center gap-1.5">
+                          <Input
+                            type="number"
+                            min={0}
+                            value={r.editQty}
+                            onChange={(e) => updateRow(r.lootId, { editQty: e.target.value })}
+                            className="h-9 w-[4.75rem] text-center text-sm font-semibold"
+                            disabled={r.ignore}
+                            title="Edit quantity"
+                          />
+                          <span className="text-muted-foreground" aria-hidden>
+                            →
+                          </span>
+                          <div
+                            className={cn(
+                              "flex h-9 w-[4.75rem] items-center justify-center rounded-md font-serif text-sm font-bold tabular-nums ring-1",
+                              r.ignore
+                                ? "bg-white/5 text-muted-foreground ring-white/10"
+                                : "bg-emerald-400/15 text-emerald-200 ring-emerald-400/35",
+                            )}
+                            title="Final quantity"
+                          >
+                            {Number.isFinite(shown) ? Math.round(shown) : "—"}
+                          </div>
+                        </div>
                       </div>
                       <div className="flex flex-wrap items-center gap-1.5">
                         <button
                           type="button"
-                          onClick={() => updateRow(r.lootId, { mode: "override" })}
+                          onClick={() => updateRow(r.lootId, { mode: "override", ignore: false })}
                           className={cn(
                             "btn-ghost h-8 px-2.5 text-xs",
                             r.mode === "override" && !r.ignore && "border-cyan-400/50 text-cyan-200",
@@ -434,7 +456,7 @@ export function InventoryScreenshotImport({ open, onClose, loots, currentQty, on
                         </button>
                         <button
                           type="button"
-                          onClick={() => updateRow(r.lootId, { mode: "add" })}
+                          onClick={() => updateRow(r.lootId, { mode: "add", ignore: false })}
                           className={cn(
                             "btn-ghost h-8 px-2.5 text-xs",
                             r.mode === "add" && !r.ignore && "border-emerald-400/50 text-emerald-200",
@@ -452,9 +474,6 @@ export function InventoryScreenshotImport({ open, onClose, loots, currentQty, on
                         >
                           {r.ignore ? "Ignored" : "Ignore"}
                         </button>
-                        <span className="ml-auto font-mono text-base font-bold tabular-nums text-cyan-300 sm:text-lg">
-                          → {Number.isFinite(shown) ? Math.round(shown) : "—"}
-                        </span>
                       </div>
                     </li>
                   );
