@@ -150,6 +150,7 @@ export async function createSession(input: {
   silver_per_hour: number;
   drop_rate?: number | null;
   started_at?: string | null;
+  agris?: number | null;
   lines: {
     loot_id: string | null;
     loot_name: string;
@@ -163,6 +164,7 @@ export async function createSession(input: {
   const { data: session, error } = await sb
     .from("sessions")
     .insert({
+      agris: input.agris != null && Number.isFinite(input.agris) ? input.agris : null,
       spot_id: input.spot_id,
       character_name: input.character_name,
       minutes: asInt(input.minutes),
