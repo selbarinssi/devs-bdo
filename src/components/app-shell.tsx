@@ -90,15 +90,14 @@ export function AppShell({
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const isPending = useRouterState({ select: (s) => s.status === "pending" });
   const { user, loading } = useSupabaseUser();
-  const [veil, setVeil] = useState(true);
+  // Brief opacity settle after route change — content stays visible (no second full-page loader).
+  const [entering, setEntering] = useState(false);
 
   useEffect(() => {
-    setVeil(true);
-    const id = window.setTimeout(() => setVeil(false), 280);
+    setEntering(true);
+    const id = window.setTimeout(() => setEntering(false), 160);
     return () => clearTimeout(id);
   }, [pathname]);
-
-  const showVeil = veil || isPending;
 
   if (loading) {
     return (
@@ -114,6 +113,16 @@ export function AppShell({
 
   return (
     <div className="min-h-screen pb-14 text-foreground">
+      {/* Single thin progress indicator while router is pending */}
+      <div
+        className={cn(
+          "pointer-events-none fixed inset-x-0 top-0 z-50 h-0.5 origin-left bg-gradient-to-r from-cyan-400 via-violet-400 to-cyan-300 transition-transform duration-300 ease-out",
+          isPending ? "scale-x-100 opacity-100" : "scale-x-0 opacity-0",
+        )}
+        style={{ transformOrigin: "left" }}
+        aria-hidden
+      />
+
       <header className="sticky top-0 z-30 border-b border-white/10 bg-[#04060c]/65 backdrop-blur-2xl">
         <div className="mx-auto flex max-w-[1400px] items-center justify-between gap-4 px-4 py-3 sm:px-6">
           <div className="flex items-center gap-3">
@@ -175,13 +184,13 @@ export function AppShell({
           {eyebrow ? <p className="hub-label mb-1.5">{eyebrow}</p> : null}
           {title ? <h2 className="hub-page-title">{title}</h2> : null}
         </div>
-        <div className="relative min-h-[42vh]">
-          <div className={cn(showVeil && "pointer-events-none invisible")}>{children}</div>
-          {showVeil ? (
-            <div className="absolute inset-0 z-10 bg-[#04060c]/40 backdrop-blur-[2px]">
-              <TabLoader label={title ? `Loading ${title}…` : "Loading…"} />
-            </div>
-          ) : null}
+        <div
+          className={cn(
+            "min-h-[42vh] transition-opacity duration-200 ease-out",
+            entering || isPending ? "opacity-60" : "opacity-100",
+          )}
+        >
+          {children}
         </div>
       </div>
     </div>
