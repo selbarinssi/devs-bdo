@@ -477,11 +477,11 @@ export function HubFeed() {
                   {(postPreviews[post.id] ?? []).map((pv) => (
                     <LinkPreviewCard key={pv.url} p={pv} />
                   ))}
-                  {(post.images?.length ?? 0) > 0 && (
-                    <div className={cn("mt-3 grid gap-2", post.images!.length === 1 ? "grid-cols-1" : "grid-cols-2")}>
-                      {post.images!.map((url) => (
-                        <a key={url} href={url} target="_blank" rel="noreferrer" className="overflow-hidden rounded-xl ring-1 ring-white/10">
-                          <img src={url} alt="" className="max-h-80 w-full object-cover" />
+                  {post.images.length > 0 && (
+                    <div className={cn("mt-3 grid gap-2", post.images.length === 1 ? "grid-cols-1" : "grid-cols-2")}>
+                      {post.images.map((img) => (
+                        <a key={img.id} href={img.url} target="_blank" rel="noreferrer" className="overflow-hidden rounded-xl ring-1 ring-white/10">
+                          <img src={img.url} alt="" className="max-h-80 w-full object-cover" />
                         </a>
                       ))}
                     </div>
