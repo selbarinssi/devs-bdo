@@ -28,6 +28,8 @@ import {
 import { useCloudStorage } from "@/lib/user-sync";
 import { effectiveUnitSilver, formatSilverCompact } from "@/lib/utils";
 
+let grindCache: { spots: SpotRow[]; sessions: SessionRow[] } | null = null;
+
 const formatSilver = formatSilverCompact;
 
 async function pickIconFile(): Promise<string | null> {
@@ -52,11 +54,11 @@ async function pickIconFile(): Promise<string | null> {
 }
 
 export function useGrindController() {
-  const [spots, setSpots] = useState<SpotRow[]>([]);
+  const [spots, setSpots] = useState<SpotRow[]>(() => grindCache?.spots ?? []);
   const [loots, setLoots] = useState<LootRow[]>([]);
-  const [sessions, setSessions] = useState<SessionRow[]>([]);
+  const [sessions, setSessions] = useState<SessionRow[]>(() => grindCache?.sessions ?? []);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => grindCache == null);
   const [busy, setBusy] = useState(false);
   const [sharingId, setSharingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -102,25 +104,27 @@ export function useGrindController() {
   const [editLootIconUrl, setEditLootIconUrl] = useState<string | null>(null);
 
   useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    (async () => {
-      try {
-        const [sp, se] = await Promise.all([listSpots(), listSessions()]);
-        if (cancelled) return;
-        setSpots(sp);
-        setSessions(se);
-      } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : "Failed to load");
-      } finally {
-        // Always clear spinner for this mount (Strict Mode cancel must not leave a stuck true).
-        setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  let cancelled = false;
+  setLoading(true);
+  (async () => {
+    try {
+      const [sp, se] = await Promise.all([listSpots(), listSessions()]);
+      if (cancelled) return;
+      
+      grindCache = { spots: sp, sessions: se };
+      setSpots(sp);
+      setSessions(se);
+    } catch (e) {
+      if (!cancelled) setError(e instanceof Error ? e.message : "Failed to load");
+    } finally {
+      // Always clear spinner for this mount (Strict Mode cancel must not leave a stuck true).
+      setLoading(false);
+    }
+  })();
+  return () => {
+    cancelled = true;
+  };
+}, []);
 
   useEffect(() => {
     if (!chronoHydrated || loading || selectedId) return;
