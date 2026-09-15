@@ -57,6 +57,7 @@ export type SessionRow = {
   drop_rate?: number | null;
   started_at: string | null;
   created_at: string;
+  agris?: number | null;
 };
 
 export type SessionLootRow = {
