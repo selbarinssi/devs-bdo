@@ -1,3 +1,4 @@
+import { TabLoader } from "@/components/tab-loader";
 import { ImagePlus, Loader2, SmilePlus, Sparkles, Trash2, Users } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -232,13 +233,8 @@ export function HubFeed() {
     }
   };
 
-  if (profileLoading || loading) {
-    return (
-      <div className="flex items-center justify-center gap-2 py-24 hub-body text-muted-foreground">
-        <Loader2 className="size-4 animate-spin text-cyan-300" />
-        <span className="neon-text">Loading Hub Feed…</span>
-      </div>
-    );
+    if (profileLoading || loading) {
+    return <TabLoader label="Feed" />;
   }
 
   return (
