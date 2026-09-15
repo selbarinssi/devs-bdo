@@ -6,7 +6,7 @@ type VoyageSearch = {
   tab?: "sailies" | "carrack";
 };
 
-export const Route = createFileRoute("/voyage")({
+export const Route = createFileRoute("/_hub/voyage")({
   validateSearch: (s: Record<string, unknown>): VoyageSearch => ({
     tab: s.tab === "carrack" ? "carrack" : "sailies",
   }),
