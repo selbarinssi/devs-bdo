@@ -1,9 +1,9 @@
-import { Check, Plus, Trash2 } from "lucide-react";
+import { Check, Loader2, Plus, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useCloudStorage } from "@/lib/user-sync";
+import { useCloudOnlyStorage } from "@/lib/user-sync";
 import { cn } from "@/lib/utils";
 
 const STORAGE_KEY = "bdo_routines_v1";
@@ -112,7 +112,7 @@ function ProgressBlock({
 }
 
 export function Routines() {
-  const { value, setValue } = useCloudStorage<RoutinesState>(STORAGE_KEY, DEFAULT_STATE);
+  const { value, setValue, hydrated, error: cloudError } = useCloudOnlyStorage<RoutinesState>(STORAGE_KEY, DEFAULT_STATE);
   const [title, setTitle] = useState("");
   const [type, setType] = useState<RoutineType>("daily");
   const [resetDay, setResetDay] = useState(1);
@@ -174,8 +174,21 @@ export function Routines() {
     setValue((prev) => ({ tasks: prev.tasks.filter((t) => t.id !== id) }));
   };
 
+  if (!hydrated) {
+    return (
+      <div className="flex items-center justify-center gap-2 py-20 text-sm text-muted-foreground">
+        <Loader2 className="size-4 animate-spin text-cyan-300" /> Loading Routines…
+      </div>
+    );
+  }
+
   return (
     <div className="hub-narrow">
+      {cloudError ? (
+        <p className="mb-3 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-200">
+          {cloudError}
+        </p>
+      ) : null}
       <div className="glass sticky top-2 z-20 mb-4 flex flex-col gap-4 p-4 sm:p-5">
         <ProgressBlock label="Daily" done={dailyDone} total={dailyTasks.length} />
         <ProgressBlock label="Weekly" done={weeklyDone} total={weeklyTasks.length} />
