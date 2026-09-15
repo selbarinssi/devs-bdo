@@ -30,9 +30,6 @@ import { effectiveUnitSilver, formatSilverCompact } from "@/lib/utils";
 
 const formatSilver = formatSilverCompact;
 
-/** Survives tab unmount so Grind doesn't full-screen spin on every visit. */
-let grindCache: { spots: SpotRow[]; sessions: SessionRow[] } | null = null;
-
 async function pickIconFile(): Promise<string | null> {
   return new Promise((resolve) => {
     const input = document.createElement("input");
@@ -55,11 +52,11 @@ async function pickIconFile(): Promise<string | null> {
 }
 
 export function useGrindController() {
-  const [spots, setSpots] = useState<SpotRow[]>(() => grindCache?.spots ?? []);
+  const [spots, setSpots] = useState<SpotRow[]>([]);
   const [loots, setLoots] = useState<LootRow[]>([]);
-  const [sessions, setSessions] = useState<SessionRow[]>(() => grindCache?.sessions ?? []);
+  const [sessions, setSessions] = useState<SessionRow[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(() => grindCache == null);
+  const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [sharingId, setSharingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -106,17 +103,18 @@ export function useGrindController() {
 
   useEffect(() => {
     let cancelled = false;
+    setLoading(true);
     (async () => {
       try {
         const [sp, se] = await Promise.all([listSpots(), listSessions()]);
         if (cancelled) return;
-        grindCache = { spots: sp, sessions: se };
         setSpots(sp);
         setSessions(se);
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : "Failed to load");
       } finally {
-        if (!cancelled) setLoading(false);
+        // Always clear spinner for this mount (Strict Mode cancel must not leave a stuck true).
+        setLoading(false);
       }
     })();
     return () => {
@@ -475,11 +473,7 @@ export function useGrindController() {
           })
           .filter((l) => l.quantity > 0),
       });
-      setSessions((prev) => {
-        const next = [saved, ...prev.filter((x) => x.id !== saved.id)];
-        if (grindCache) grindCache = { ...grindCache, sessions: next };
-        return next;
-      });
+      setSessions((prev) => [saved, ...prev.filter((x) => x.id !== saved.id)]);
       setQty({});
       setTimerOn(false);
       timerStart.current = null;
