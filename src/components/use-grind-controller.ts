@@ -355,6 +355,20 @@ export function useGrindController() {
     }
   };
 
+    const onFetchMarketPrice = async () => {
+    if (!lootName.trim()) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const hit = await fetchMarketPriceByName(lootName.trim());
+      if (hit) setLootPrice(String(hit.basePrice));
+      else setError("No market match for that name");
+    } catch {
+      setError("Market fetch failed");
+    } finally {
+      setBusy(false);
+    }
+  };
   const onCreateLoot = async () => {
     if (!selectedId || !lootName.trim()) return;
     setBusy(true);
@@ -635,6 +649,7 @@ export function useGrindController() {
     beginEditSpot,
     onSaveSpot,
     onCreateLoot,
+    onFetchMarketPrice,
     beginEditLoot,
     saveLootEdit,
     onShareSession,
