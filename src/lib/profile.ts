@@ -84,15 +84,32 @@ export async function setProfileRole(userId: string, role: HubRole): Promise<Pro
   return data as ProfileRow;
 }
 
+/** Survives tab remounts within the session. */
+let cachedProfile: ProfileRow | null = null;
+let profileResolvedFor: string | null = null;
+
 export function useHubProfile() {
   const { user, loading: authLoading } = useSupabaseUser();
-  const [profile, setProfile] = useState<ProfileRow | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [profile, setProfile] = useState<ProfileRow | null>(() =>
+    user && profileResolvedFor === user.id ? cachedProfile : null,
+  );
+  const [loading, setLoading] = useState(() => {
+    if (authLoading) return true;
+    if (!user) return false;
+    return profileResolvedFor !== user.id;
+  });
 
   useEffect(() => {
     if (authLoading) return;
     if (!user) {
+      cachedProfile = null;
+      profileResolvedFor = null;
       setProfile(null);
+      setLoading(false);
+      return;
+    }
+    if (profileResolvedFor === user.id && cachedProfile) {
+      setProfile(cachedProfile);
       setLoading(false);
       return;
     }
@@ -100,13 +117,17 @@ export function useHubProfile() {
     setLoading(true);
     ensureProfile()
       .then((p) => {
-        if (!cancelled) setProfile(p);
+        if (cancelled) return;
+        cachedProfile = p;
+        profileResolvedFor = user.id;
+        setProfile(p);
       })
       .catch(() => {
-        if (!cancelled) setProfile(null);
+        if (cancelled) return;
+        setProfile(null);
       })
       .finally(() => {
-        if (!cancelled) setLoading(false);
+        setLoading(false);
       });
     return () => {
       cancelled = true;
@@ -118,13 +139,7 @@ export function useHubProfile() {
     profile,
     loading: authLoading || loading,
     role: (profile?.role ?? "member") as HubRole,
-    canEditCatalog: isStaffRole(profile?.role),
-    isAdmin: isAdminRole(profile?.role),
     isStaff: isStaffRole(profile?.role),
-    refresh: async () => {
-      const p = await ensureProfile();
-      setProfile(p);
-      return p;
-    },
+    isAdmin: isAdminRole(profile?.role),
   };
 }
