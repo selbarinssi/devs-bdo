@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { useEffect, useState, type ReactNode } from "react";
+import { type ReactNode } from "react";
 import { Anchor, FlaskConical, ListChecks, Radio, Swords } from "lucide-react";
 import { AuthPanel } from "@/components/auth-panel";
 import { LoginLanding, useSupabaseUser } from "@/components/login-landing";
@@ -13,6 +13,14 @@ const NAV = [
   { to: "/alchemy", label: "Alchemy", icon: FlaskConical, exact: false },
   { to: "/voyage", label: "Voyage", icon: Anchor, exact: false },
 ] as const;
+
+const PAGE_META: Record<string, { title: string; eyebrow: string }> = {
+  "/feed": { title: "Hub Feed", eyebrow: "Community" },
+  "/routines": { title: "Routines", eyebrow: "Task Tracker" },
+  "/grind": { title: "Grind", eyebrow: "PvE Tracker" },
+  "/alchemy": { title: "Alchemy Planner", eyebrow: "Harmony Draught Pipeline" },
+  "/voyage": { title: "Voyage", eyebrow: "Daily Sailies & Bartering" },
+};
 
 function HubMark({ className }: { className?: string }) {
   return (
@@ -88,16 +96,13 @@ export function AppShell({
   eyebrow?: string;
 }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+    const meta =
+    PAGE_META[pathname] ??
+    Object.entries(PAGE_META).find(([path]) => pathname.startsWith(path))?.[1];
+  const pageTitle = title ?? meta?.title;
+  const pageEyebrow = eyebrow ?? meta?.eyebrow;
   const isPending = useRouterState({ select: (s) => s.status === "pending" });
   const { user, loading } = useSupabaseUser();
-  // Brief opacity settle after route change — content stays visible (no second full-page loader).
-  const [entering, setEntering] = useState(false);
-
-  useEffect(() => {
-    setEntering(true);
-    const id = window.setTimeout(() => setEntering(false), 160);
-    return () => clearTimeout(id);
-  }, [pathname]);
 
   if (loading) {
     return (
@@ -181,8 +186,8 @@ export function AppShell({
 
       <div className="mx-auto max-w-[1400px] px-4 py-5 sm:px-6 sm:py-6">
         <div className="mb-5">
-          {eyebrow ? <p className="hub-label mb-1.5">{eyebrow}</p> : null}
-          {title ? <h2 className="hub-page-title">{title}</h2> : null}
+          {pageEyebrow ? <p className="hub-label mb-1.5">{pageEyebrow}</p> : null}
+          {pageTitle ? <h2 className="hub-page-title">{pageTitle}</h2> : null}
         </div>
                 <div className="min-h-[42vh]">{children}</div>
       </div>
