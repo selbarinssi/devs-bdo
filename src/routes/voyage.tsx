@@ -1,6 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useNavigate } from "@tanstack/react-router";
-import { AppShell } from "@/components/app-shell";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { VoyageLog } from "@/components/voyage-log";
 import { ShipTracker } from "@/components/ship-tracker";
 
@@ -21,10 +19,7 @@ function VoyagePage() {
   const active = tab === "carrack" ? "carrack" : "sailies";
 
   return (
-    <AppShell
-      eyebrow={active === "carrack" ? "Epheria Carrack" : "Daily Sailies & Bartering"}
-      title="Voyage"
-    >
+    <>
       <div className="hub-tab-rail mb-5">
         <button
           type="button"
@@ -44,6 +39,6 @@ function VoyagePage() {
         </button>
       </div>
       {active === "carrack" ? <ShipTracker /> : <VoyageLog />}
-    </AppShell>
+    </>
   );
 }
