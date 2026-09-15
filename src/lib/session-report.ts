@@ -15,6 +15,11 @@ export type SessionReportInput = {
   metaByLootId?: Record<string, SessionReportLootMeta | undefined>;
   /** Fallback when loot_id is missing: lowercased loot name → meta */
   metaByName?: Record<string, SessionReportLootMeta | undefined>;
+  showCharacter?: boolean;
+  showDropRate?: boolean;
+  showAgris?: boolean;
+  showMinutes?: boolean;
+  agris?: number | null;
 };
 
 function fmtSilver(n: number) {
@@ -170,7 +175,19 @@ function drawHubLogo(ctx: CanvasRenderingContext2D, cx: number, cy: number, scal
 }
 
 export async function downloadSessionReportPng(input: SessionReportInput): Promise<void> {
-  const { session, spot, lines, iconByLootId = {}, metaByLootId = {}, metaByName = {} } = input;
+  const {
+    session,
+    spot,
+    lines,
+    iconByLootId = {},
+    metaByLootId = {},
+    metaByName = {},
+    showCharacter = true,
+    showDropRate = true,
+    showAgris = true,
+    showMinutes = true,
+    agris = null,
+  } = input;
   const sorted = [...lines].sort((a, b) => Number(b.line_value) - Number(a.line_value));
   const totalSilver = Number(session.total_value) || 0;
 
@@ -234,13 +251,14 @@ export async function downloadSessionReportPng(input: SessionReportInput): Promi
   ctx.font = `700 26px ${font}`;
   ctx.fillText(spot?.name || "Unknown Spot", nameX, y + 52);
 
-  const sub = [
-    session.character_name || "Unknown",
-    `${session.minutes} min`,
-    fmtDate(session.created_at),
-  ]
-    .filter(Boolean)
-    .join("  ·  ");
+  const subParts: string[] = [];
+    if (showCharacter) subParts.push(session.character_name || "Unknown");
+    if (showMinutes) subParts.push(`${session.minutes} min`);
+    if (showAgris && agris != null && Number.isFinite(Number(agris))) {
+      subParts.push(`Agris ${Number(agris)}`);
+    }
+    subParts.push(fmtDate(session.created_at));
+    const sub = subParts.filter(Boolean).join("  ·  ");
   ctx.fillStyle = "rgba(148,163,184,0.95)";
   ctx.font = `500 14px ${font}`;
   ctx.fillText(sub, nameX, y + 80);
@@ -255,7 +273,7 @@ export async function downloadSessionReportPng(input: SessionReportInput): Promi
   }
 
   const dr = session.drop_rate;
-  if (dr != null && Number.isFinite(Number(dr))) {
+  if (showDropRate && dr != null && Number.isFinite(Number(dr))) {
     const label = `Drop Rate  ${Number(dr)}%`;
     ctx.font = `700 13px ${font}`;
     const tw = ctx.measureText(label).width;
