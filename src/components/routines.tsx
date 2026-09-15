@@ -1,3 +1,4 @@
+import { TabLoader } from "@/components/tab-loader";
 import { Check, Loader2, Plus, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Progress } from "@/components/ui/progress";
@@ -5,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useCloudOnlyStorage } from "@/lib/user-sync";
 import { cn } from "@/lib/utils";
+
 
 const STORAGE_KEY = "bdo_routines_v1";
 
@@ -174,12 +176,8 @@ export function Routines() {
     setValue((prev) => ({ tasks: prev.tasks.filter((t) => t.id !== id) }));
   };
 
-  if (!hydrated) {
-    return (
-      <div className="flex items-center justify-center gap-2 py-20 text-sm text-muted-foreground">
-        <Loader2 className="size-4 animate-spin text-cyan-300" /> Loading Routines…
-      </div>
-    );
+    if (!hydrated) {
+    return <TabLoader label="Routines" />;
   }
 
   return (
