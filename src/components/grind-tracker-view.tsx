@@ -325,10 +325,9 @@ export function GrindTrackerView(g: G & { selectedSpot: SpotRow | undefined }) {
                               <p className="truncate text-sm font-semibold text-foreground sm:text-[0.95rem]">{l.name}</p>
                               <div className="mt-0.5 flex flex-wrap items-center gap-1">
                                 <LootMetaTags kind={l.kind} rarity={l.rarity} />
-                                <span className="font-mono text-[0.65rem] font-semibold tabular-nums text-muted-foreground">
-                                  {formatSilver(effectiveUnitSilver(l.unit_price, l.kind))}
-                                  <span className="font-sans font-normal opacity-70"> /ea</span>
-                                </span>
+                                <span className="rounded-md bg-cyan-400/15 px-1.5 py-0.5 font-mono text-[0.65rem] font-bold tabular-nums text-cyan-300 ring-1 ring-cyan-400/40">
+  {formatSilver(Number(l.unit_price))}
+</span>
                               </div>
                             </div>
                           </div>
