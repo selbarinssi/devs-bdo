@@ -1,4 +1,4 @@
-const REGION = "na"; // change to "eu" if needed
+const REGION = "eu"; // change to "eu" if needed
 const LANG = "en";
 
 export type ArshaPriceHit = {
