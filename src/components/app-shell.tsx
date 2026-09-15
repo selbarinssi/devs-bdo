@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Anchor, FlaskConical, ListChecks, Radio, Swords } from "lucide-react";
 import { AuthPanel } from "@/components/auth-panel";
 import { LoginLanding, useSupabaseUser } from "@/components/login-landing";
@@ -90,6 +90,14 @@ export function AppShell({
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const isPending = useRouterState({ select: (s) => s.status === "pending" });
   const { user, loading } = useSupabaseUser();
+  // Brief opacity settle after route change — content stays visible (no second full-page loader).
+  const [entering, setEntering] = useState(false);
+
+  useEffect(() => {
+    setEntering(true);
+    const id = window.setTimeout(() => setEntering(false), 160);
+    return () => clearTimeout(id);
+  }, [pathname]);
 
   if (loading) {
     return (
@@ -105,6 +113,7 @@ export function AppShell({
 
   return (
     <div className="min-h-screen pb-14 text-foreground">
+      {/* Single thin progress indicator while router is pending */}
       <div
         className={cn(
           "pointer-events-none fixed inset-x-0 top-0 z-50 h-0.5 origin-left bg-gradient-to-r from-cyan-400 via-violet-400 to-cyan-300 transition-transform duration-300 ease-out",
@@ -175,7 +184,14 @@ export function AppShell({
           {eyebrow ? <p className="hub-label mb-1.5">{eyebrow}</p> : null}
           {title ? <h2 className="hub-page-title">{title}</h2> : null}
         </div>
-        <div className="min-h-[42vh]">{children}</div>
+        <div
+          className={cn(
+            "min-h-[42vh] transition-opacity duration-200 ease-out",
+            entering || isPending ? "opacity-60" : "opacity-100",
+          )}
+        >
+          {children}
+        </div>
       </div>
     </div>
   );
