@@ -61,6 +61,16 @@ export function GrindTrackerView(g: G & { selectedSpot: SpotRow | undefined }) {
     setDropRate,
     minutes,
     setMinutes,
+    agris,
+    setAgris,
+    showCharacter,
+    setShowCharacter,
+    showDropRate,
+    setShowDropRate,
+    showAgris,
+    setShowAgris,
+    showMinutes,
+    setShowMinutes,
     timerOn,
     hh,
     mm,
@@ -249,11 +259,21 @@ export function GrindTrackerView(g: G & { selectedSpot: SpotRow | undefined }) {
                 character={character}
                 dropRate={dropRate}
                 minutes={minutes}
+                agris={agris}
+                showCharacter={showCharacter}
+                showDropRate={showDropRate}
+                showAgris={showAgris}
+                showMinutes={showMinutes}
                 onToggle={toggleTimer}
                 onReset={resetTimer}
                 onCharacter={setCharacter}
                 onDropRate={setDropRate}
                 onMinutes={setMinutes}
+                onAgris={setAgris}
+                onShowCharacter={setShowCharacter}
+                onShowDropRate={setShowDropRate}
+                onShowAgris={setShowAgris}
+                onShowMinutes={setShowMinutes}
               />
 
               <div className="glass p-3 sm:p-4">
