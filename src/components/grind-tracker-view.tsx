@@ -122,6 +122,7 @@ export function GrindTrackerView(g: G & { selectedSpot: SpotRow | undefined }) {
     beginEditSpot,
     onSaveSpot,
     onCreateLoot,
+    onFetchMarketPrice,
     beginEditLoot,
     saveLootEdit,
     onShareSession,
@@ -296,6 +297,14 @@ export function GrindTrackerView(g: G & { selectedSpot: SpotRow | undefined }) {
                       ))}
                     </select>
                     <Input type="number" value={lootPrice} onChange={(e) => setLootPrice(e.target.value)} placeholder="Price" className="h-9 text-sm" />
+                    <button
+                      type="button"
+                      disabled={busy || !lootName.trim()}
+                      onClick={() => void onFetchMarketPrice()}
+                      className="btn-ghost h-9 text-xs"
+                    >
+                      Market
+                    </button>
                     <button type="button" onClick={() => void pickIconFile().then((u) => u && setLootIconUrl(u))} className="btn-ghost h-9 text-xs">
                       Icon
                     </button>
