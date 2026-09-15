@@ -19,6 +19,7 @@ import {
 } from "@/components/grind-loot-meta";
 import type { SpotMode } from "@/data/grind-meta";
 import { downloadSessionReportPng } from "@/lib/session-report";
+import { fetchMarketPriceByName } from "@/lib/arsha-market";
 import {
   CHRONO_KEY,
   emptyDraft,
@@ -76,6 +77,11 @@ export function useGrindController() {
   const [character, setCharacter] = useState("");
   const [dropRate, setDropRate] = useState("");
   const [minutes, setMinutes] = useState("");
+  const [agris, setAgris] = useState("");
+  const [showCharacter, setShowCharacter] = useState(true);
+  const [showDropRate, setShowDropRate] = useState(true);
+  const [showAgris, setShowAgris] = useState(true);
+  const [showMinutes, setShowMinutes] = useState(true);
   const [timerOn, setTimerOn] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const timerStart = useRef<number | null>(null);
@@ -151,6 +157,11 @@ export function useGrindController() {
     setCharacter(draft.character ?? "");
     setDropRate(draft.dropRate ?? "");
     setMinutes(draft.minutes ?? "");
+    setAgris(draft.agris ?? "");
+    setShowCharacter(draft.showCharacter ?? true);
+    setShowDropRate(draft.showDropRate ?? true);
+    setShowAgris(draft.showAgris ?? true);
+    setShowMinutes(draft.showMinutes ?? true);
     accumulated.current = draft.accumulatedMs ?? 0;
     if (draft.running && draft.startedAt) {
       timerStart.current = draft.startedAt;
@@ -179,13 +190,18 @@ export function useGrindController() {
           character,
           dropRate,
           minutes,
+          agris,
+          showCharacter,
+          showDropRate,
+          showAgris,
+          showMinutes,
           running: timerOn,
           startedAt: timerStart.current,
           accumulatedMs: accumulated.current,
         },
       },
     }));
-  }, [selectedId, qty, character, dropRate, minutes, timerOn, elapsed, chronoHydrated, setChronoStore]);
+    }, [selectedId, qty, character, dropRate, minutes, agris, showCharacter, showDropRate, showAgris, showMinutes, timerOn, elapsed, chronoHydrated, setChronoStore]);
 
   useEffect(() => {
     if (!timerOn) return;
@@ -347,13 +363,27 @@ export function useGrindController() {
       const defaults = await findLootDefaultsByName(name);
       const icon = lootIconUrl || defaults?.icon_url || null;
       const priceParsed = parseFloat(lootPrice);
-      const unit_price =
+      let unit_price =
         lootPrice.trim() !== "" && Number.isFinite(priceParsed)
           ? priceParsed
           : defaults?.unit_price != null
             ? Number(defaults.unit_price)
             : 0;
       const kind = defaults?.kind ?? lootKind;
+      let market_item_id: number | null = null;
+
+      if (kind === "market" && unit_price <= 0) {
+        try {
+          const hit = await fetchMarketPriceByName(name);
+          if (hit) {
+            unit_price = hit.basePrice;
+            market_item_id = hit.id;
+          }
+        } catch {
+          /* keep 0 — user can type manually */
+        }
+      }
+
       const rarity = defaults?.rarity ?? lootRarity;
       const row = await createLoot({
         spot_id: selectedId,
@@ -362,6 +392,7 @@ export function useGrindController() {
         unit_price,
         icon_url: icon,
         rarity,
+        market_item_id,
       });
       setLoots((p) => sortLootsByRarity([...p, row]));
       setLootName("");
@@ -436,7 +467,21 @@ export function useGrindController() {
           if (match) metaByLootId[line.loot_id] = { kind: match.kind, rarity: match.rarity };
         }
       }
-      await downloadSessionReportPng({ session: s, spot, lines, iconByLootId, metaByLootId, metaByName });
+            await downloadSessionReportPng({
+        session: s,
+        spot,
+        lines,
+        iconByLootId,
+        metaByLootId,
+        metaByName,
+        showCharacter,
+        showDropRate,
+        showAgris,
+        showMinutes,
+        agris: Number.isFinite(parseFloat(agris))
+          ? parseFloat(agris)
+          : (s as { agris?: number | null }).agris ?? null,
+      });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Share report failed");
     } finally {
@@ -449,8 +494,9 @@ export function useGrindController() {
     setBusy(true);
     setError(null);
     try {
-      const mins = Math.max(1, Math.round(sessionTotals.mins || manualMins || 1));
+    const mins = Math.max(1, Math.round(sessionTotals.mins || manualMins || 1));
       const drParsed = parseFloat(dropRate);
+      const agrisParsed = parseFloat(agris);
       const saved = await createSession({
         spot_id: selectedId,
         character_name: character.trim() || "Unknown",
@@ -458,6 +504,7 @@ export function useGrindController() {
         total_value: sessionTotals.total,
         silver_per_hour: sessionTotals.sph,
         drop_rate: Number.isFinite(drParsed) ? drParsed : null,
+        agris: Number.isFinite(agrisParsed) ? agrisParsed : null,
         started_at: timerStart.current
           ? new Date(timerStart.current).toISOString()
           : elapsed > 0
@@ -526,6 +573,16 @@ export function useGrindController() {
     setDropRate,
     minutes,
     setMinutes,
+    agris,
+    setAgris,
+    showCharacter,
+    setShowCharacter,
+    showDropRate,
+    setShowDropRate,
+    showAgris,
+    setShowAgris,
+    showMinutes,
+    setShowMinutes,
     timerOn,
     elapsed,
     hh,
