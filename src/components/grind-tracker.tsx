@@ -9,6 +9,17 @@ export function GrindTracker() {
     return <TabLoader label="Grind" />;
   }
 
+    if (g.error && g.spots.length === 0) {
+    return (
+      <div className="py-16 text-center text-sm text-rose-200">
+        {g.error}
+        <button type="button" className="ml-2 underline" onClick={() => window.location.reload()}>
+          Retry
+        </button>
+      </div>
+    );
+  }
+
   const selectedSpot = g.spots.find((s) => s.id === g.selectedId);
 
   return <GrindTrackerView {...g} selectedSpot={selectedSpot} />;
