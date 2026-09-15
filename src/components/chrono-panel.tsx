@@ -18,11 +18,21 @@ export function ChronoPanel({
   character,
   dropRate,
   minutes,
+  agris,
+  showCharacter,
+  showDropRate,
+  showAgris,
+  showMinutes,
   onToggle,
   onReset,
   onCharacter,
   onDropRate,
   onMinutes,
+  onAgris,
+  onShowCharacter,
+  onShowDropRate,
+  onShowAgris,
+  onShowMinutes,
 }: {
   hh: string;
   mm: string;
@@ -33,11 +43,21 @@ export function ChronoPanel({
   character: string;
   dropRate: string;
   minutes: string;
+  agris: string;
+  showCharacter: boolean;
+  showDropRate: boolean;
+  showAgris: boolean;
+  showMinutes: boolean;
   onToggle: () => void;
   onReset: () => void;
   onCharacter: (v: string) => void;
   onDropRate: (v: string) => void;
   onMinutes: (v: string) => void;
+  onAgris: (v: string) => void;
+  onShowCharacter: (v: boolean) => void;
+  onShowDropRate: (v: boolean) => void;
+  onShowAgris: (v: boolean) => void;
+  onShowMinutes: (v: boolean) => void;
 }) {
   return (
     <div className="glass p-3 sm:p-4">
@@ -101,40 +121,84 @@ export function ChronoPanel({
         </div>
       </div>
 
-      <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3 sm:gap-3">
-        <div>
-          <Label className="mb-1 text-[0.65rem] uppercase tracking-wider text-muted-foreground">Character</Label>
-          <Input
-            value={character}
-            onChange={(e) => onCharacter(e.target.value)}
-            placeholder="Name"
-            className="h-9 text-sm"
-          />
-        </div>
-        <div>
-          <Label className="mb-1 text-[0.65rem] uppercase tracking-wider text-muted-foreground">Drop Rate %</Label>
-          <Input
-            type="number"
-            min={0}
-            step="0.1"
-            value={dropRate}
-            onChange={(e) => onDropRate(e.target.value)}
-            placeholder="e.g. 250"
-            className="h-9 text-sm"
-          />
-        </div>
-        <div>
-          <Label className="mb-1 text-[0.65rem] uppercase tracking-wider text-muted-foreground">Minutes</Label>
-          <Input
-            type="number"
-            min={0}
-            value={minutes}
-            onChange={(e) => onMinutes(e.target.value)}
-            placeholder="Manual if no timer"
-            className="h-9 text-sm"
-          />
-        </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+        {(
+          [
+            ["Character", showCharacter, onShowCharacter],
+            ["Drop Rate %", showDropRate, onShowDropRate],
+            ["Agris", showAgris, onShowAgris],
+            ["Minutes", showMinutes, onShowMinutes],
+          ] as const
+        ).map(([label, on, set]) => (
+          <button
+            key={label}
+            type="button"
+            onClick={() => set(!on)}
+            className={cn(
+              "rounded-full px-2.5 py-1 text-[0.65rem] font-semibold ring-1 transition",
+              on
+                ? "bg-cyan-400/15 text-cyan-200 ring-cyan-400/40"
+                : "bg-white/5 text-muted-foreground ring-white/10",
+            )}
+          >
+            {label}: {on ? "On" : "Off"}
+          </button>
+        ))}
       </div>
+
+      <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4 sm:gap-3">
+        {showCharacter && (
+          <div>
+            <Label className="mb-1 text-[0.65rem] uppercase tracking-wider text-muted-foreground">Character</Label>
+            <Input
+              value={character}
+              onChange={(e) => onCharacter(e.target.value)}
+              placeholder="Name"
+              className="h-9 text-sm"
+            />
+          </div>
+        )}
+        {showDropRate && (
+          <div>
+            <Label className="mb-1 text-[0.65rem] uppercase tracking-wider text-muted-foreground">Drop Rate %</Label>
+            <Input
+              type="number"
+              min={0}
+              step="0.1"
+              value={dropRate}
+              onChange={(e) => onDropRate(e.target.value)}
+              placeholder="e.g. 250"
+              className="h-9 text-sm"
+            />
+          </div>
+        )}
+        {showAgris && (
+          <div>
+            <Label className="mb-1 text-[0.65rem] uppercase tracking-wider text-muted-foreground">Agris</Label>
+            <Input
+              type="number"
+              min={0}
+              value={agris}
+              onChange={(e) => onAgris(e.target.value)}
+              placeholder="e.g. 100"
+              className="h-9 text-sm"
+            />
+          </div>
+        )}
+        {showMinutes && (
+          <div>
+            <Label className="mb-1 text-[0.65rem] uppercase tracking-wider text-muted-foreground">Minutes</Label>
+            <Input
+              type="number"
+              min={0}
+              value={minutes}
+              onChange={(e) => onMinutes(e.target.value)}
+              placeholder="Manual if no timer"
+              className="h-9 text-sm"
+            />
+          </div>
+        )}
+      </div>    
     </div>
   );
 }
