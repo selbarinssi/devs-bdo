@@ -6,6 +6,12 @@ export type ChronoDraft = {
   character: string;
   dropRate: string;
   minutes: string;
+  agris: string;
+  /** Session field visibility (On/Off) */
+  showCharacter: boolean;
+  showDropRate: boolean;
+  showAgris: boolean;
+  showMinutes: boolean;
   running: boolean;
   startedAt: number | null;
   accumulatedMs: number;
@@ -22,6 +28,11 @@ export function emptyDraft(): ChronoDraft {
     character: "",
     dropRate: "",
     minutes: "",
+    agris: "",
+    showCharacter: true,
+    showDropRate: true,
+    showAgris: true,
+    showMinutes: true,
     running: false,
     startedAt: null,
     accumulatedMs: 0,
