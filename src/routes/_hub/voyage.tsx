@@ -18,7 +18,7 @@ function VoyagePage() {
   const navigate = useNavigate({ from: "/voyage" });
   const active = tab === "carrack" ? "carrack" : "sailies";
 
-  return (
+    return (
     <>
       <div className="hub-tab-rail mb-5">
         <button
@@ -40,5 +40,4 @@ function VoyagePage() {
       </div>
       {active === "carrack" ? <ShipTracker /> : <VoyageLog />}
     </>
-  );
-}
+  );}
