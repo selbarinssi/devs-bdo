@@ -184,14 +184,7 @@ export function AppShell({
           {eyebrow ? <p className="hub-label mb-1.5">{eyebrow}</p> : null}
           {title ? <h2 className="hub-page-title">{title}</h2> : null}
         </div>
-        <div
-          className={cn(
-            "min-h-[42vh] transition-opacity duration-200 ease-out",
-            entering || isPending ? "opacity-60" : "opacity-100",
-          )}
-        >
-          {children}
-        </div>
+                <div className="min-h-[42vh]">{children}</div>
       </div>
     </div>
   );
