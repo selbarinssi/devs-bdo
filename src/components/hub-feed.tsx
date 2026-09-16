@@ -533,16 +533,16 @@ export function HubFeed() {
                         <SmilePlus className="size-4" />
                       </button>
                       {pickerPostId === post.id && (
-                      <div className="absolute bottom-full left-0 z-50 mb-2 w-[min(18rem,calc(100vw-2rem))] rounded-2xl border border-white/15 bg-[#0a0e1a]/98 p-2 shadow-[0_12px_40px_rgba(0,0,0,0.55)] backdrop-blur-xl">
+                      <div className="absolute bottom-full left-0 z-50 mb-2 w-[min(15rem,calc(100vw-2rem))] rounded-2xl border border-white/15 bg-[#0a0e1a]/98 p-2 shadow-[0_12px_40px_rgba(0,0,0,0.55)] backdrop-blur-xl">
                         <p className="mb-1.5 px-1 text-[0.65rem] font-semibold uppercase tracking-wider text-muted-foreground/70">
                           Reactions
                         </p>
-                        <div className="grid grid-cols-5 gap-1">
+                        <div className="grid grid-cols-6 gap-0.5">
                           {REACTION_EMOJIS.map((emoji) => (
                             <button
                               key={emoji}
                               type="button"
-                              className="flex size-9 items-center justify-center rounded-xl text-lg transition hover:bg-cyan-400/15 hover:scale-110"
+                              className="flex size-8 items-center justify-center rounded-lg text-base transition hover:bg-cyan-400/15 hover:scale-110"
                               onClick={() => {
                                 void onReact(post.id, emoji);
                                 setPickerPostId(null);
@@ -557,7 +557,7 @@ export function HubFeed() {
                             <p className="mb-1.5 mt-2 px-1 text-[0.65rem] font-semibold uppercase tracking-wider text-muted-foreground/70">
                               Hub
                             </p>
-                            <div className="grid grid-cols-5 gap-1">
+                            <div className="grid grid-cols-6 gap-0.5">
                               {hubPack.map((em) => (
                                 <button
                                   key={em.id}
