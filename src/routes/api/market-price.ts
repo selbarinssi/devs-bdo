@@ -10,36 +10,54 @@ type ArshaPriceHit = {
   sid?: number;
 };
 
-async function fetchFromArsha(name: string): Promise<ArshaPriceHit | null> {
+type CodexHit = {
+  value: number;
+  name: string;
+  link_type?: string;
+  object_type?: string;
+};
+
+/** Resolve item name → mainKey via BDO Codex autocomplete (clean JSON). */
+async function resolveItemIdByName(
+  name: string,
+): Promise<{ id: number; name: string } | null> {
   const q = name.trim();
   if (!q) return null;
 
-  // Search (no Content-Type needed for simple POST body on server)
-  const searchRes = await fetch(
-    `https://api.arsha.io/v2/${REGION}/GetWorldMarketSearchList?lang=${LANG}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(q),
-    },
-  );
-  if (!searchRes.ok) return null;
+  const url = new URL("https://bdocodex.com/ac.php");
+  url.searchParams.set("l", "us");
+  url.searchParams.set("term", q);
 
-  const searchJson = await searchRes.json();
-  const list: any[] = Array.isArray(searchJson)
-    ? searchJson
-    : Array.isArray(searchJson?.result)
-      ? searchJson.result
-      : [];
+  const res = await fetch(url.toString(), {
+    headers: { Accept: "application/json" },
+  });
+  if (!res.ok) return null;
 
-  if (!list.length) return null;
+  const raw = await res.text();
+  // Codex sometimes prefixes a UTF-8 BOM
+  const json = JSON.parse(raw.replace(/^\uFEFF/, "")) as CodexHit[];
+  if (!Array.isArray(json) || !json.length) return null;
 
   const lower = q.toLowerCase();
+  // Prefer exact name match on real items (not recipes/knowledge)
+  const items = json.filter(
+    (x) =>
+      (x.link_type === "item" || x.object_type === "Item") &&
+      Number.isFinite(Number(x.value)),
+  );
+  const pool = items.length ? items : json;
   const exact =
-    list.find((x) => String(x.name || "").toLowerCase() === lower) ?? list[0];
-  const id = Number(exact.id ?? exact.mainKey);
-  if (!Number.isFinite(id)) return null;
+    pool.find((x) => String(x.name || "").toLowerCase() === lower) ?? pool[0];
 
+  const id = Number(exact.value);
+  if (!Number.isFinite(id) || id <= 0) return null;
+  return { id, name: String(exact.name || q) };
+}
+
+async function fetchPriceById(
+  id: number,
+  fallbackName: string,
+): Promise<ArshaPriceHit | null> {
   const subRes = await fetch(
     `https://api.arsha.io/v2/${REGION}/GetWorldMarketSubList?lang=${LANG}`,
     {
@@ -51,6 +69,7 @@ async function fetchFromArsha(name: string): Promise<ArshaPriceHit | null> {
   if (!subRes.ok) return null;
 
   const subJson = await subRes.json();
+  // V2 returns either [{...variants}] or a flat list of variants
   const variants: any[] = Array.isArray(subJson?.[0])
     ? subJson[0]
     : Array.isArray(subJson)
@@ -66,10 +85,27 @@ async function fetchFromArsha(name: string): Promise<ArshaPriceHit | null> {
 
   return {
     id,
-    name: String(base.name || exact.name || q),
+    name: String(base.name || fallbackName),
     basePrice,
     sid: Number(base.sid) || 0,
   };
+}
+
+async function fetchFromArsha(
+  name: string,
+  idParam?: number | null,
+): Promise<ArshaPriceHit | null> {
+  let id = idParam && Number.isFinite(idParam) && idParam > 0 ? idParam : null;
+  let resolvedName = name.trim();
+
+  if (!id) {
+    const resolved = await resolveItemIdByName(resolvedName);
+    if (!resolved) return null;
+    id = resolved.id;
+    resolvedName = resolved.name;
+  }
+
+  return fetchPriceById(id, resolvedName);
 }
 
 export const Route = createFileRoute("/api/market-price")({
@@ -78,11 +114,18 @@ export const Route = createFileRoute("/api/market-price")({
       GET: async ({ request }) => {
         const url = new URL(request.url);
         const name = url.searchParams.get("name") ?? "";
-        if (!name.trim()) {
-          return Response.json({ error: "name required" }, { status: 400 });
+        const idRaw = url.searchParams.get("id");
+        const idParam = idRaw != null && idRaw !== "" ? Number(idRaw) : null;
+
+        if (!name.trim() && !(idParam && idParam > 0)) {
+          return Response.json(
+            { error: "name or id required" },
+            { status: 400 },
+          );
         }
+
         try {
-          const hit = await fetchFromArsha(name);
+          const hit = await fetchFromArsha(name, idParam);
           if (!hit) {
             return Response.json({ error: "not found" }, { status: 404 });
           }
