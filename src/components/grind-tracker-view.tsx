@@ -123,6 +123,7 @@ export function GrindTrackerView(g: G & { selectedSpot: SpotRow | undefined }) {
     onSaveSpot,
     onCreateLoot,
     onFetchMarketPrice,
+    onRefreshMarketPrices,
     beginEditLoot,
     saveLootEdit,
     onShareSession,
@@ -278,11 +279,21 @@ export function GrindTrackerView(g: G & { selectedSpot: SpotRow | undefined }) {
               />
 
               <div className="glass p-3 sm:p-4">
-                <div className="mb-2 flex items-center justify-between">
+                  <div className="mb-2 flex items-center justify-between gap-2">
                   <h3 className="text-xs font-semibold uppercase tracking-wider text-cyan-300/90">Loot</h3>
-                  <button type="button" onClick={() => setAddingLoot((v) => !v)} className="btn-ghost h-8 px-2 text-xs">
-                    <Plus className="size-3.5" /> Add Loot
-                  </button>
+                  <div className="flex flex-wrap gap-1.5">
+                    <button
+                      type="button"
+                      disabled={busy || loots.length === 0}
+                      onClick={() => void onRefreshMarketPrices()}
+                      className="btn-ghost h-8 px-2 text-xs"
+                    >
+                      Refresh prices
+                    </button>
+                    <button type="button" onClick={() => setAddingLoot((v) => !v)} className="btn-ghost h-8 px-2 text-xs">
+                      <Plus className="size-3.5" /> Add Loot
+                    </button>
+                  </div>
                 </div>
                 {addingLoot && (
                   <div className="mb-2 grid grid-cols-2 gap-1.5 rounded-lg bg-white/5 p-2 sm:grid-cols-3 lg:grid-cols-6">
