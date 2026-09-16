@@ -32,133 +32,76 @@ function HubMark({ className }: { className?: string }) {
       aria-hidden
     >
       <defs>
-        <linearGradient id="hubMw" x1="2" y1="30" x2="38" y2="8" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="#22d3ee" stopOpacity="0" />
-          <stop offset="18%" stopColor="#a855f7" stopOpacity="0.9" />
-          <stop offset="42%" stopColor="#22d3ee" stopOpacity="1" />
-          <stop offset="62%" stopColor="#4ade80" stopOpacity="0.95" />
-          <stop offset="82%" stopColor="#c026d3" stopOpacity="0.85" />
-          <stop offset="100%" stopColor="#22d3ee" stopOpacity="0" />
-        </linearGradient>
-        <linearGradient id="hubRing" x1="0" y1="0" x2="40" y2="40">
-          <stop offset="0%" stopColor="#22d3ee" />
-          <stop offset="50%" stopColor="#a855f7" />
-          <stop offset="100%" stopColor="#4ade80" />
-        </linearGradient>
-        <radialGradient id="hubCore" cx="50%" cy="50%" r="50%">
+        <filter id="hubNeon" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="1.1" result="b" />
+          <feMerge>
+            <feMergeNode in="b" />
+            <feMergeNode in="b" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+        <radialGradient id="hubNucleus" cx="50%" cy="50%" r="50%">
           <stop offset="0%" stopColor="#ffffff" />
-          <stop offset="25%" stopColor="#e0f2fe" />
-          <stop offset="55%" stopColor="#c084fc" />
-          <stop offset="100%" stopColor="#6d28d9" />
+          <stop offset="45%" stopColor="#e9d5ff" />
+          <stop offset="100%" stopColor="#a855f7" />
         </radialGradient>
-        <filter id="hubGlow" x="-120%" y="-120%" width="340%" height="340%">
-          <feGaussianBlur stdDeviation="1.6" result="b" />
-          <feMerge>
-            <feMergeNode in="b" />
-            <feMergeNode in="b" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
-        </filter>
-        <filter id="hubBolt" x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur stdDeviation="0.45" result="b" />
-          <feMerge>
-            <feMergeNode in="b" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
-        </filter>
       </defs>
 
-      {/* deep space disc */}
-      <circle cx="20" cy="20" r="19" fill="#05010f" opacity="0.55" />
+      {/* tiny sparkles */}
+      <circle cx="6" cy="8" r="0.45" fill="#67e8f9" opacity="0.85" />
+      <circle cx="34" cy="7" r="0.4" fill="#c084fc" opacity="0.8" />
+      <circle cx="33" cy="30" r="0.35" fill="#4ade80" opacity="0.75" />
+      <circle cx="7" cy="31" r="0.35" fill="#22d3ee" opacity="0.7" />
+      <circle cx="20" cy="3.5" r="0.3" fill="#f0abfc" opacity="0.65" />
 
-      {/* cyber rings */}
-      <circle cx="20" cy="20" r="18" stroke="url(#hubRing)" strokeWidth="0.35" opacity="0.55" className="hub-pulse" />
-      <circle cx="20" cy="20" r="14.5" stroke="#22d3ee" strokeWidth="0.3" opacity="0.4" strokeDasharray="2 3" />
-      <circle cx="20" cy="20" r="11" stroke="#a855f7" strokeWidth="0.35" opacity="0.5" strokeDasharray="1.5 2.5" />
-      <circle cx="20" cy="20" r="7.5" stroke="#4ade80" strokeWidth="0.3" opacity="0.45" />
+      <g className="hub-atom-drift">
+        {/* orbit rings — static relative to atom, neon like the ref */}
+        <ellipse
+          cx="20" cy="20" rx="15" ry="6"
+          transform="rotate(-35 20 20)"
+          stroke="#c084fc"
+          strokeWidth="1.15"
+          filter="url(#hubNeon)"
+          opacity="0.95"
+        />
+        <ellipse
+          cx="20" cy="20" rx="15" ry="6"
+          transform="rotate(25 20 20)"
+          stroke="#4ade80"
+          strokeWidth="1.15"
+          filter="url(#hubNeon)"
+          opacity="0.95"
+        />
+        <ellipse
+          cx="20" cy="20" rx="15" ry="6"
+          transform="rotate(85 20 20)"
+          stroke="#22d3ee"
+          strokeWidth="1.15"
+          filter="url(#hubNeon)"
+          opacity="0.95"
+        />
 
-      {/* inclined neon galaxy band */}
-      <ellipse
-        cx="20"
-        cy="20"
-        rx="18"
-        ry="4.2"
-        transform="rotate(-32 20 20)"
-        fill="url(#hubMw)"
-        filter="url(#hubGlow)"
-        opacity="0.95"
-      />
-      <ellipse
-        cx="20"
-        cy="20"
-        rx="18"
-        ry="2.2"
-        transform="rotate(-32 20 20)"
-        fill="none"
-        stroke="#67e8f9"
-        strokeWidth="0.45"
-        opacity="0.85"
-        filter="url(#hubBolt)"
-      />
-      <ellipse
-        cx="20"
-        cy="20"
-        rx="16"
-        ry="6.5"
-        transform="rotate(-32 20 20)"
-        fill="none"
-        stroke="#c026d3"
-        strokeWidth="0.25"
-        opacity="0.35"
-        strokeDasharray="0.8 2.2"
-      />
+        {/* electrons — motion */}
+        <g className="hub-electron-a">
+          <circle cx="20" cy="5" r="1.35" fill="#e9d5ff" filter="url(#hubNeon)" />
+          <circle cx="20" cy="5" r="0.55" fill="#ffffff" />
+        </g>
+        <g className="hub-electron-b">
+          <circle cx="34" cy="23" r="1.25" fill="#86efac" filter="url(#hubNeon)" />
+          <circle cx="34" cy="23" r="0.5" fill="#ffffff" />
+        </g>
+        <g className="hub-electron-c">
+          <circle cx="8" cy="26" r="1.2" fill="#67e8f9" filter="url(#hubNeon)" />
+          <circle cx="8" cy="26" r="0.45" fill="#ffffff" />
+        </g>
 
-      {/* static star field */}
-      <circle cx="6" cy="8" r="0.35" fill="#e0f2fe" opacity="0.9" />
-      <circle cx="33" cy="7" r="0.3" fill="#c084fc" opacity="0.85" />
-      <circle cx="35" cy="24" r="0.28" fill="#4ade80" opacity="0.8" />
-      <circle cx="5" cy="26" r="0.32" fill="#22d3ee" opacity="0.85" />
-      <circle cx="28" cy="34" r="0.25" fill="#f0abfc" opacity="0.75" />
-      <circle cx="10" cy="34" r="0.22" fill="#67e8f9" opacity="0.7" />
-      <circle cx="18" cy="4" r="0.2" fill="#ffffff" opacity="0.8" />
-      <circle cx="22" cy="36" r="0.22" fill="#a3e635" opacity="0.75" />
-
-      {/* lightning orbit trails + bodies */}
-      <g className="hub-orbit hub-orbit-xfast" filter="url(#hubGlow)">
-        <path d="M20 3.5 C22 5 23 7 22.5 9" stroke="#c084fc" strokeWidth="0.7" strokeLinecap="round" fill="none" opacity="0.9" />
-        <circle cx="20" cy="3.5" r="1.5" fill="#e9d5ff" />
-        <circle cx="20" cy="3.5" r="0.55" fill="#ffffff" />
+        {/* nucleus */}
+        <circle cx="20" cy="20" r="3.6" fill="url(#hubNucleus)" filter="url(#hubNeon)" />
+        <circle cx="20" cy="20" r="1.5" fill="#ffffff" opacity="0.95" />
+        {/* mini inner “atom” hint */}
+        <ellipse cx="20" cy="20" rx="2.4" ry="1" stroke="#a5f3fc" strokeWidth="0.35" opacity="0.7" />
+        <ellipse cx="20" cy="20" rx="2.4" ry="1" transform="rotate(60 20 20)" stroke="#e9d5ff" strokeWidth="0.3" opacity="0.6" />
       </g>
-      <g className="hub-orbit hub-orbit-fast" filter="url(#hubGlow)">
-        <path d="M36 20 C34 22 32 23 30 22.5" stroke="#22d3ee" strokeWidth="0.7" strokeLinecap="round" fill="none" opacity="0.9" />
-        <circle cx="36.2" cy="20" r="1.25" fill="#67e8f9" />
-        <circle cx="36.2" cy="20" r="0.45" fill="#ffffff" />
-      </g>
-      <g className="hub-orbit hub-orbit-fast-rev" filter="url(#hubGlow)">
-        <path d="M4 21 C6 19 8 18 10 18.5" stroke="#4ade80" strokeWidth="0.7" strokeLinecap="round" fill="none" opacity="0.9" />
-        <circle cx="4" cy="21" r="1.15" fill="#86efac" />
-        <circle cx="4" cy="21" r="0.4" fill="#ffffff" />
-      </g>
-      <g className="hub-orbit hub-orbit-med" filter="url(#hubGlow)">
-        <path d="M28 34 C26 32 24 31 22 31.5" stroke="#a855f7" strokeWidth="0.55" strokeLinecap="round" fill="none" opacity="0.85" />
-        <circle cx="28.5" cy="34" r="0.95" fill="#d946ef" />
-        <circle cx="28.5" cy="34" r="0.35" fill="#ffffff" />
-      </g>
-      <g className="hub-orbit hub-orbit-med2" filter="url(#hubGlow)">
-        <circle cx="11" cy="9" r="0.75" fill="#22d3ee" />
-        <circle cx="11" cy="9" r="0.28" fill="#ffffff" />
-      </g>
-      <g className="hub-orbit hub-orbit-xfast" filter="url(#hubGlow)">
-        <circle cx="31" cy="29" r="0.55" fill="#4ade80" />
-      </g>
-      <g className="hub-orbit hub-orbit-mid-rev" filter="url(#hubGlow)">
-        <circle cx="15" cy="33" r="0.5" fill="#f0abfc" />
-      </g>
-
-      {/* core star */}
-      <circle cx="20" cy="20" r="4.2" fill="url(#hubCore)" filter="url(#hubGlow)" />
-      <circle cx="20" cy="20" r="2.1" fill="#f5f3ff" opacity="0.95" />
-      <circle cx="20" cy="20" r="0.9" fill="#ffffff" />
     </svg>
   );
 }
