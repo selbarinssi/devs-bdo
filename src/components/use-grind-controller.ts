@@ -369,6 +369,31 @@ export function useGrindController() {
       setBusy(false);
     }
   };
+    const onRefreshMarketPrices = async () => {
+    if (!loots.length) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const next = [...loots];
+      for (let i = 0; i < next.length; i++) {
+        const l = next[i];
+        if (l.kind !== "market") continue;
+        try {
+          const hit = await fetchMarketPriceByName(l.name);
+          if (!hit) continue;
+          const row = await updateLoot(l.id, { unit_price: hit.basePrice });
+          next[i] = row;
+        } catch {
+          /* skip this item */
+        }
+      }
+      setLoots(sortLootsByRarity(next));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Refresh market prices failed");
+    } finally {
+      setBusy(false);
+    }
+  };
   const onCreateLoot = async () => {
     if (!selectedId || !lootName.trim()) return;
     setBusy(true);
@@ -650,6 +675,7 @@ export function useGrindController() {
     onSaveSpot,
     onCreateLoot,
     onFetchMarketPrice,
+    onRefreshMarketPrices,
     beginEditLoot,
     saveLootEdit,
     onShareSession,
