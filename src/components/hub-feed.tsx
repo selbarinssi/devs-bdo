@@ -39,6 +39,11 @@ function roleBadge(role: HubRole) {
     return "bg-amber-500/20 text-amber-100 ring-1 ring-amber-400/40 shadow-[0_0_12px_rgba(251,191,36,0.2)]";
   return "bg-white/5 text-muted-foreground ring-1 ring-white/10";
 }
+function roleLabel(role: HubRole) {
+  if (role === "admin") return "Admin";
+  if (role === "moderator") return "Moderator";
+  return "Member";
+}
 
 const URL_IN_TEXT = /https?:\/\/[^\s<>\[\]()"']+/gi;
 
@@ -394,12 +399,26 @@ export function HubFeed() {
             <Users className="size-3.5" /> {showRoles ? "Hide" : "Manage"} roles
           </button>
           {showRoles && (
-            <ul className="mt-2 max-h-48 space-y-1 overflow-y-auto">
+            <ul className="mt-2 max-h-56 space-y-1.5 overflow-y-auto">
               {profiles.map((pr) => (
-                <li key={pr.id} className="flex items-center justify-between gap-2 text-xs">
-                  <span className="truncate">{pr.display_name || pr.id}</span>
+                <li key={pr.id} className="flex items-center gap-2.5 rounded-lg bg-white/[0.03] px-2 py-1.5 text-xs">
+                  {pr.avatar_url ? (
+                    <img
+                      src={pr.avatar_url}
+                      alt=""
+                      className="size-7 shrink-0 rounded-full object-cover ring-1 ring-white/10"
+                      referrerPolicy="no-referrer"
+                    />
+                  ) : (
+                    <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-violet-500/25 text-[0.65rem] font-bold text-violet-100 ring-1 ring-violet-400/30">
+                      {(pr.display_name || "?")[0]?.toUpperCase()}
+                    </span>
+                  )}
+                  <span className="min-w-0 flex-1 truncate font-medium">
+                    {pr.display_name || pr.id.slice(0, 8)}
+                  </span>
                   <select
-                    className="field-select h-8 text-xs"
+                    className="field-select h-8 shrink-0 text-xs"
                     value={pr.role}
                     onChange={async (e) => {
                       try {
@@ -412,9 +431,9 @@ export function HubFeed() {
                       }
                     }}
                   >
-                    <option value="member">member</option>
-                    <option value="moderator">moderator</option>
-                    <option value="admin">admin</option>
+                    <option value="member">Member</option>
+                    <option value="moderator">Moderator</option>
+                    <option value="admin">Admin</option>
                   </select>
                 </li>
               ))}
@@ -448,9 +467,9 @@ export function HubFeed() {
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="text-sm font-semibold text-foreground">{post.author?.display_name || "Player"}</span>
-                    {post.author?.role && post.author.role !== "member" && (
+                    {post.author?.role && post.author.role !== "Member" && (
                       <span className={cn("metric-pill font-bold uppercase", roleBadge(post.author.role))}>
-                        {post.author.role}
+                        {roleLabel(post.author.role)}
                       </span>
                     )}
                     <span className="hub-meta">{timeAgo(post.created_at)}</span>
@@ -514,12 +533,16 @@ export function HubFeed() {
                         <SmilePlus className="size-4" />
                       </button>
                       {pickerPostId === post.id && (
-                        <div className="absolute bottom-full left-0 z-50 mb-1 flex flex-wrap gap-1 rounded-xl border border-white/10 bg-[#0a0e1a]/95 p-1.5 backdrop-blur-xl">
+                      <div className="absolute bottom-full left-0 z-50 mb-2 w-[min(18rem,calc(100vw-2rem))] rounded-2xl border border-white/15 bg-[#0a0e1a]/98 p-2 shadow-[0_12px_40px_rgba(0,0,0,0.55)] backdrop-blur-xl">
+                        <p className="mb-1.5 px-1 text-[0.65rem] font-semibold uppercase tracking-wider text-muted-foreground/70">
+                          Reactions
+                        </p>
+                        <div className="grid grid-cols-5 gap-1">
                           {REACTION_EMOJIS.map((emoji) => (
                             <button
                               key={emoji}
                               type="button"
-                              className="flex size-8 items-center justify-center rounded-lg text-sm hover:bg-cyan-400/15"
+                              className="flex size-9 items-center justify-center rounded-xl text-lg transition hover:bg-cyan-400/15 hover:scale-110"
                               onClick={() => {
                                 void onReact(post.id, emoji);
                                 setPickerPostId(null);
@@ -528,22 +551,32 @@ export function HubFeed() {
                               {emoji}
                             </button>
                           ))}
-                          {hubPack.map((em) => (
-                            <button
-                              key={em.id}
-                              type="button"
-                              title={em.name}
-                              className="flex size-8 items-center justify-center rounded-lg hover:bg-violet-400/15"
-                              onClick={() => {
-                                void onReact(post.id, hubReactionToken(em.id));
-                                setPickerPostId(null);
-                              }}
-                            >
-                              <img src={em.image_url} alt={em.name} className="size-5" />
-                            </button>
-                          ))}
                         </div>
-                      )}
+                        {hubPack.length > 0 && (
+                          <>
+                            <p className="mb-1.5 mt-2 px-1 text-[0.65rem] font-semibold uppercase tracking-wider text-muted-foreground/70">
+                              Hub
+                            </p>
+                            <div className="grid grid-cols-5 gap-1">
+                              {hubPack.map((em) => (
+                                <button
+                                  key={em.id}
+                                  type="button"
+                                  title={em.name}
+                                  className="flex size-9 items-center justify-center rounded-xl transition hover:bg-violet-400/15 hover:scale-110"
+                                  onClick={() => {
+                                    void onReact(post.id, hubReactionToken(em.id));
+                                    setPickerPostId(null);
+                                  }}
+                                >
+                                  <img src={em.image_url} alt={em.name} className="size-5" />
+                                </button>
+                              ))}
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    )}
                     </div>
                   </div>
                 </div>
