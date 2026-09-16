@@ -58,37 +58,66 @@ async function fetchPriceById(
   id: number,
   fallbackName: string,
 ): Promise<ArshaPriceHit | null> {
-  const subRes = await fetch(
-    `https://api.arsha.io/v2/${REGION}/GetWorldMarketSubList?lang=${LANG}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify([id]),
-    },
-  );
-  if (!subRes.ok) return null;
+  // 1) Official EU Central Market API
+  try {
+    const res = await fetch(
+      "https://eu-trade.naeu.playblackdesert.com/Trademarket/GetWorldMarketSubList",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "User-Agent": "BlackDesert",
+        },
+        body: JSON.stringify({ keyType: 0, mainKey: id }),
+      },
+    );
+    if (res.ok) {
+      const json = (await res.json()) as { resultCode?: number; resultMsg?: string };
+      if (json.resultCode === 0 && typeof json.resultMsg === "string") {
+        // resultMsg: "id-min-max-basePrice-stock-...|id-min-max-basePrice-..."
+        const groups = json.resultMsg.split("|");
+        for (const g of groups) {
+          const p = g.split("-");
+          if (p.length >= 4 && Number(p[1]) === 0) {
+            const basePrice = Number(p[3]);
+            if (Number.isFinite(basePrice) && basePrice > 0) {
+              return { id, name: fallbackName, basePrice, sid: 0 };
+            }
+          }
+        }
+      }
+    }
+  } catch {
+    /* fall through */
+  }
 
-  const subJson = await subRes.json();
-  // V2 returns either [{...variants}] or a flat list of variants
-  const variants: any[] = Array.isArray(subJson?.[0])
-    ? subJson[0]
-    : Array.isArray(subJson)
-      ? subJson
-      : [];
+  // 2) Fallback: arsha NA (EU is blocked)
+  try {
+    const res = await fetch(
+      `https://api.arsha.io/v2/na/item?id=${id}&lang=en`,
+    );
+    if (res.ok) {
+      const data = await res.json();
+      const list = Array.isArray(data) ? data : [];
+      const base =
+        list.find((v: any) => Number(v.sid) === 0) ?? list[0] ?? null;
+      if (base) {
+        const basePrice = Number(base.basePrice ?? base.lastSoldPrice ?? 0);
+        if (Number.isFinite(basePrice) && basePrice > 0) {
+          return {
+            id,
+            name: String(base.name || fallbackName),
+            basePrice,
+            sid: Number(base.sid) || 0,
+          };
+        }
+      }
+    }
+  } catch {
+    /* ignore */
+  }
 
-  const base =
-    variants.find((v) => Number(v.sid) === 0) ?? variants[0] ?? null;
-  if (!base) return null;
-
-  const basePrice = Number(base.basePrice ?? base.lastSoldPrice ?? 0);
-  if (!Number.isFinite(basePrice) || basePrice <= 0) return null;
-
-  return {
-    id,
-    name: String(base.name || fallbackName),
-    basePrice,
-    sid: Number(base.sid) || 0,
-  };
+  return null;
 }
 
 async function fetchFromArsha(
