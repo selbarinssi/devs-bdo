@@ -12,56 +12,68 @@ function HubMark({ className }: { className?: string }) {
       aria-hidden
     >
       <defs>
-        <radialGradient id="hubStarLogin" cx="50%" cy="50%" r="50%">
+        <linearGradient id="hubMw" x1="4" y1="28" x2="36" y2="10" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#22d3ee" stopOpacity="0" />
+          <stop offset="25%" stopColor="#a855f7" stopOpacity="0.55" />
+          <stop offset="50%" stopColor="#22d3ee" stopOpacity="0.85" />
+          <stop offset="75%" stopColor="#4ade80" stopOpacity="0.65" />
+          <stop offset="100%" stopColor="#22d3ee" stopOpacity="0" />
+        </linearGradient>
+        <radialGradient id="hubCore" cx="50%" cy="50%" r="50%">
           <stop offset="0%" stopColor="#ffffff" />
-          <stop offset="55%" stopColor="#f8fafc" />
-          <stop offset="100%" stopColor="#e2e8f0" stopOpacity="0.85" />
+          <stop offset="40%" stopColor="#e9d5ff" />
+          <stop offset="100%" stopColor="#7c3aed" stopOpacity="0.9" />
         </radialGradient>
-        <radialGradient id="hubPlanetALogin" cx="35%" cy="30%" r="65%">
-          <stop offset="0%" stopColor="#f5f3ff" />
-          <stop offset="55%" stopColor="#a78bfa" />
-          <stop offset="100%" stopColor="#7c3aed" />
-        </radialGradient>
-        <radialGradient id="hubPlanetBLogin" cx="40%" cy="35%" r="60%">
-          <stop offset="0%" stopColor="#e9d5ff" />
-          <stop offset="100%" stopColor="#8b5cf6" />
-        </radialGradient>
-        <radialGradient id="hubPlanetCLogin" cx="30%" cy="30%" r="70%">
-          <stop offset="0%" stopColor="#ddd6fe" />
-          <stop offset="100%" stopColor="#6d28d9" />
-        </radialGradient>
-        <filter id="hubStarGlowLogin" x="-100%" y="-100%" width="300%" height="300%">
-          <feGaussianBlur stdDeviation="1.4" result="b" />
+        <filter id="hubGlow" x="-80%" y="-80%" width="260%" height="260%">
+          <feGaussianBlur stdDeviation="1.2" result="b" />
           <feMerge>
             <feMergeNode in="b" />
             <feMergeNode in="SourceGraphic" />
           </feMerge>
         </filter>
       </defs>
-      <circle cx="20" cy="20" r="8" stroke="rgba(167,139,250,0.28)" strokeWidth="0.45" fill="none" />
-      <circle cx="20" cy="20" r="11.5" stroke="rgba(139,92,246,0.2)" strokeWidth="0.4" fill="none" />
-      <circle cx="20" cy="20" r="15" stroke="rgba(124,58,237,0.14)" strokeWidth="0.35" fill="none" />
-      <circle cx="20" cy="20" r="18" stroke="rgba(167,139,250,0.1)" strokeWidth="0.3" fill="none" />
+      {/* inclined milky-way band */}
+      <ellipse
+        cx="20"
+        cy="20"
+        rx="17"
+        ry="5.5"
+        transform="rotate(-28 20 20)"
+        fill="url(#hubMw)"
+        opacity="0.9"
+        filter="url(#hubGlow)"
+      />
+      <ellipse
+        cx="20"
+        cy="20"
+        rx="17"
+        ry="5.5"
+        transform="rotate(-28 20 20)"
+        fill="none"
+        stroke="rgba(34,211,238,0.35)"
+        strokeWidth="0.4"
+      />
+      {/* fast orbiting stars: purple / cyan / green neon */}
       <g className="hub-orbit hub-orbit-xfast">
-        <circle cx="20" cy="12" r="1.9" fill="url(#hubPlanetALogin)" />
+        <circle cx="20" cy="6" r="1.35" fill="#c084fc" filter="url(#hubGlow)" />
       </g>
       <g className="hub-orbit hub-orbit-fast">
-        <circle cx="31" cy="20" r="1.45" fill="url(#hubPlanetBLogin)" />
+        <circle cx="33" cy="18" r="1.1" fill="#22d3ee" filter="url(#hubGlow)" />
+      </g>
+      <g className="hub-orbit hub-orbit-fast-rev">
+        <circle cx="8" cy="22" r="1" fill="#4ade80" filter="url(#hubGlow)" />
       </g>
       <g className="hub-orbit hub-orbit-med">
-        <circle cx="20" cy="32" r="1.2" fill="url(#hubPlanetCLogin)" />
-      </g>
-      <g className="hub-orbit hub-orbit-slow">
-        <circle cx="9" cy="20" r="1.05" fill="url(#hubPlanetALogin)" />
-      </g>
-      <g className="hub-orbit hub-orbit-xslow">
-        <circle cx="26" cy="11" r="0.85" fill="url(#hubPlanetBLogin)" />
+        <circle cx="26" cy="32" r="0.85" fill="#a855f7" filter="url(#hubGlow)" />
       </g>
       <g className="hub-orbit hub-orbit-med2">
-        <circle cx="12" cy="27" r="0.7" fill="url(#hubPlanetCLogin)" />
+        <circle cx="12" cy="10" r="0.7" fill="#67e8f9" filter="url(#hubGlow)" />
       </g>
-      <circle cx="20" cy="20" r="3.2" fill="url(#hubStarLogin)" filter="url(#hubStarGlowLogin)" />
-      <circle cx="20" cy="20" r="1.1" fill="#ffffff" opacity="0.95" />
+      <g className="hub-orbit hub-orbit-xfast" style={{ animationDuration: "1.6s" } as React.CSSProperties}>
+        <circle cx="30" cy="28" r="0.55" fill="#86efac" />
+      </g>
+      <circle cx="20" cy="20" r="3.4" fill="url(#hubCore)" filter="url(#hubGlow)" />
+      <circle cx="20" cy="20" r="1.2" fill="#ffffff" opacity="0.95" />
     </svg>
   );
 }
