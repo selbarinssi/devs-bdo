@@ -61,6 +61,7 @@ export function useGrindController() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(() => grindCache == null);
   const [busy, setBusy] = useState(false);
+  const [refreshingPrices, setRefreshingPrices] = useState(false);
   const [sharingId, setSharingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [importOpen, setImportOpen] = useState(false);
@@ -372,6 +373,7 @@ export function useGrindController() {
     const onRefreshMarketPrices = async () => {
     if (!loots.length) return;
     setBusy(true);
+    setRefreshingPrices(true);
     setError(null);
     try {
       const next = [...loots];
@@ -392,6 +394,7 @@ export function useGrindController() {
       setError(e instanceof Error ? e.message : "Refresh market prices failed");
     } finally {
       setBusy(false);
+      setRefreshingPrices(false);
     }
   };
   const onCreateLoot = async () => {
@@ -587,6 +590,7 @@ export function useGrindController() {
     error,
     setError,
     busy,
+    refreshingPrices,
     sharingId,
     importOpen,
     setImportOpen,
