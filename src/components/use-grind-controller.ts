@@ -522,9 +522,7 @@ export function useGrindController() {
         showDropRate,
         showAgris,
         showMinutes,
-        agris: Number.isFinite(parseFloat(agris))
-          ? parseFloat(agris)
-          : (s as { agris?: number | null }).agris ?? null,
+        agris: agris === "on" ? 1 : 0,
       });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Share report failed");
@@ -540,7 +538,6 @@ export function useGrindController() {
     try {
     const mins = Math.max(1, Math.round(sessionTotals.mins || manualMins || 1));
       const drParsed = parseFloat(dropRate);
-      const agrisParsed = parseFloat(agris);
       const saved = await createSession({
         spot_id: selectedId,
         character_name: character.trim() || "Unknown",
@@ -548,7 +545,7 @@ export function useGrindController() {
         total_value: sessionTotals.total,
         silver_per_hour: sessionTotals.sph,
         drop_rate: Number.isFinite(drParsed) ? drParsed : null,
-        agris: Number.isFinite(agrisParsed) ? agrisParsed : null,
+        agris: agris === "on" ? 1 : 0,
         started_at: timerStart.current
           ? new Date(timerStart.current).toISOString()
           : elapsed > 0
