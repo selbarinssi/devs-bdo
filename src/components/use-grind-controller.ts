@@ -78,7 +78,7 @@ export function useGrindController() {
   const [character, setCharacter] = useState("");
   const [dropRate, setDropRate] = useState("");
   const [minutes, setMinutes] = useState("");
-  const [agris, setAgris] = useState("");
+  const [agris, setAgris] = useState("off");
   const [showCharacter, setShowCharacter] = useState(true);
   const [showDropRate, setShowDropRate] = useState(true);
   const [showAgris, setShowAgris] = useState(true);
@@ -158,7 +158,9 @@ export function useGrindController() {
     setCharacter(draft.character ?? "");
     setDropRate(draft.dropRate ?? "");
     setMinutes(draft.minutes ?? "");
-    setAgris(draft.agris ?? "");
+    setAgris(
+      draft.agris === "on" || Number(draft.agris) > 0 ? "on" : "off",
+    );
     setShowCharacter(draft.showCharacter ?? true);
     setShowDropRate(draft.showDropRate ?? true);
     setShowAgris(draft.showAgris ?? true);
