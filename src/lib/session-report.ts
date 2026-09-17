@@ -254,8 +254,8 @@ export async function downloadSessionReportPng(input: SessionReportInput): Promi
   const subParts: string[] = [];
     if (showCharacter) subParts.push(session.character_name || "Unknown");
     if (showMinutes) subParts.push(`${session.minutes} min`);
-    if (showAgris && agris != null && Number.isFinite(Number(agris))) {
-      subParts.push(`Agris ${Number(agris)}`);
+    if (showAgris) {
+      subParts.push(`Agris ${agris != null && Number(agris) > 0 ? "ON" : "OFF"}`);
     }
     subParts.push(fmtDate(session.created_at));
     const sub = subParts.filter(Boolean).join("  ·  ");
