@@ -201,7 +201,7 @@ export function GrindTrackerView(g: G & { selectedSpot: SpotRow | undefined }) {
                     <Pencil className="size-3.5" /> Edit
                   </button>
                   <button type="button" onClick={() => setImportOpen(true)} className="btn-ghost h-9 px-2.5 text-xs">
-                    <ImagePlus className="size-3.5" /> Import Qty
+                                        <ImagePlus className="size-3.5" /> Update Session with AI
                   </button>
                   <button
                     type="button"
