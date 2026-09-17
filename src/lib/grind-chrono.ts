@@ -28,7 +28,7 @@ export function emptyDraft(): ChronoDraft {
     character: "",
     dropRate: "",
     minutes: "",
-    agris: "",
+    agris: "off",
     showCharacter: true,
     showDropRate: true,
     showAgris: true,
