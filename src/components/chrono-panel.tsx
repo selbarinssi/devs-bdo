@@ -175,14 +175,18 @@ export function ChronoPanel({
         {showAgris && (
           <div>
             <Label className="mb-1 text-[0.65rem] uppercase tracking-wider text-muted-foreground">Agris</Label>
-            <Input
-              type="number"
-              min={0}
-              value={agris}
-              onChange={(e) => onAgris(e.target.value)}
-              placeholder="e.g. 100"
-              className="h-9 text-sm"
-            />
+            <button
+              type="button"
+              onClick={() => onAgris(agris === "on" ? "off" : "on")}
+              className={cn(
+                "flex h-9 w-full items-center justify-center rounded-md text-xs font-bold tracking-wide ring-1 transition",
+                agris === "on"
+                  ? "bg-emerald-500/20 text-emerald-200 ring-emerald-400/40"
+                  : "bg-white/5 text-muted-foreground ring-white/10 hover:bg-white/10",
+              )}
+            >
+              {agris === "on" ? "ON" : "OFF"}
+            </button>
           </div>
         )}
         {showMinutes && (
