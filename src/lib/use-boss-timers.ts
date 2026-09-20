@@ -47,40 +47,47 @@ function saveSettings(s: Settings) {
 /** Pick the best matching female English voice for the chosen slot */
 function pickFemaleVoice(choice: VoiceChoice): SpeechSynthesisVoice | null {
   const voices = window.speechSynthesis.getVoices();
-  const femaleHints = [
-    "female",
-    "zira",
-    "susan",
-    "samantha",
-    "karen",
-    "moira",
-    "tessa",
-    "fiona",
-    "victoria",
-    "google uk english female",
-    "google us english",
-    "microsoft zira",
-    "microsoft aria",
-    "microsoft jenny",
-    "siri",
+  if (!voices.length) return null;
+
+  const en = voices.filter((v) => v.lang.toLowerCase().startsWith("en"));
+
+  // Prefer clearly different female-leaning voices
+  const preferA = [
+    /zira/i,
+    /aria/i,
+    /jenny/i,
+    /samantha/i,
+    /karen/i,
+    /susan/i,
+    /female/i,
+    /google.*english.*female/i,
+  ];
+  const preferB = [
+    /moira/i,
+    /tessa/i,
+    /fiona/i,
+    /victoria/i,
+    /catherine/i,
+    /hazel/i,
+    /uk.*english/i,
+    /australian/i,
   ];
 
-  const english = voices.filter(
-    (v) => v.lang.toLowerCase().startsWith("en") && !/male|david|mark|james|george/i.test(v.name),
-  );
+  const score = (v: SpeechSynthesisVoice, prefs: RegExp[]) =>
+    prefs.reduce((s, re) => (re.test(v.name) ? s + 2 : s), 0) +
+    (v.lang.toLowerCase().includes("en-gb") ? 1 : 0) +
+    (v.lang.toLowerCase().includes("en-au") ? 1 : 0);
 
-  const ranked = english
-    .map((v) => {
-      const name = v.name.toLowerCase();
-      const score = femaleHints.reduce((s, h) => (name.includes(h) ? s + 1 : s), 0);
-      return { v, score };
-    })
-    .sort((a, b) => b.score - a.score);
+  const rankedA = [...en].sort((a, b) => score(b, preferA) - score(a, preferA));
+  const rankedB = [...en].sort((a, b) => score(b, preferB) - score(a, preferB));
 
-  if (ranked.length === 0) return null;
-  if (choice === "female1") return ranked[0].v;
-  // female2 = second best, or first if only one
-  return ranked[1]?.v ?? ranked[0].v;
+  if (choice === "female1") {
+    return rankedA[0] ?? en[0] ?? null;
+  }
+  // Voice B: force a different voice from A if possible
+  const a = rankedA[0];
+  const b = rankedB.find((v) => v.name !== a?.name) ?? rankedB[0] ?? en[1] ?? en[0];
+  return b ?? null;
 }
 
 function speakBossName(name: string, volume: number, voiceChoice: VoiceChoice) {
