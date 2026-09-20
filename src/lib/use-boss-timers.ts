@@ -10,18 +10,22 @@ export type BossTimer = {
   secondsLeft: number;
 };
 
+export type VoiceChoice = "female1" | "female2";
+
 type Settings = {
   enabled: boolean;
-  leadMinutes: number; // e.g. 5
+  leadMinutes: number;
   enabledBosses: BossId[];
-  volume: number; // 0-1
+  volume: number;
+  voice: VoiceChoice;
 };
 
 const DEFAULT_SETTINGS: Settings = {
   enabled: true,
   leadMinutes: 5,
   enabledBosses: Object.keys(BOSS_META) as BossId[],
-  volume: 0.9,
+  volume: 0.95,
+  voice: "female1",
 };
 
 const STORAGE_KEY = "devs-hub-boss-alerts";
@@ -40,31 +44,86 @@ function saveSettings(s: Settings) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
 }
 
-function speak(text: string, volume: number) {
+/** Pick the best matching female English voice for the chosen slot */
+function pickFemaleVoice(choice: VoiceChoice): SpeechSynthesisVoice | null {
+  const voices = window.speechSynthesis.getVoices();
+  const femaleHints = [
+    "female",
+    "zira",
+    "susan",
+    "samantha",
+    "karen",
+    "moira",
+    "tessa",
+    "fiona",
+    "victoria",
+    "google uk english female",
+    "google us english",
+    "microsoft zira",
+    "microsoft aria",
+    "microsoft jenny",
+    "siri",
+  ];
+
+  const english = voices.filter(
+    (v) => v.lang.toLowerCase().startsWith("en") && !/male|david|mark|james|george/i.test(v.name),
+  );
+
+  const ranked = english
+    .map((v) => {
+      const name = v.name.toLowerCase();
+      const score = femaleHints.reduce((s, h) => (name.includes(h) ? s + 1 : s), 0);
+      return { v, score };
+    })
+    .sort((a, b) => b.score - a.score);
+
+  if (ranked.length === 0) return null;
+  if (choice === "female1") return ranked[0].v;
+  // female2 = second best, or first if only one
+  return ranked[1]?.v ?? ranked[0].v;
+}
+
+function speakBossName(name: string, volume: number, voiceChoice: VoiceChoice) {
   if (!("speechSynthesis" in window)) return;
   window.speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(text);
+
+  const u = new SpeechSynthesisUtterance(name);
   u.volume = volume;
-  u.rate = 1.05;
-  u.pitch = 1;
-  // Prefer a clear English voice if available
-  const voices = window.speechSynthesis.getVoices();
-  const preferred =
-    voices.find((v) => v.lang.startsWith("en") && v.name.includes("Google")) ||
-    voices.find((v) => v.lang.startsWith("en"));
-  if (preferred) u.voice = preferred;
+  u.rate = 0.95;
+  u.pitch = 1.05;
+
+  const voice = pickFemaleVoice(voiceChoice);
+  if (voice) u.voice = voice;
+
   window.speechSynthesis.speak(u);
+}
+
+function extractBossList(msg: any): any[] {
+  // boss_timers push
+  if (Array.isArray(msg?.data?.bosses)) return msg.data.bosses;
+  // connection_ack shapes
+  if (Array.isArray(msg?.cached_data?.boss_timers?.bosses)) return msg.cached_data.boss_timers.bosses;
+  if (Array.isArray(msg?.cached_data?.bosses)) return msg.cached_data.bosses;
+  if (Array.isArray(msg?.bosses)) return msg.bosses;
+  return [];
 }
 
 export function useBossTimers(region: "eu" | "na" = "eu") {
   const [bosses, setBosses] = useState<BossTimer[]>([]);
   const [connected, setConnected] = useState(false);
   const [settings, setSettingsState] = useState<Settings>(DEFAULT_SETTINGS);
-  const alertedRef = useRef<Set<string>>(new Set()); // key = bossId + spawn timestamp
+  const [status, setStatus] = useState<"connecting" | "live" | "error">("connecting");
+  const alertedRef = useRef<Set<string>>(new Set());
 
-  // load settings once
   useEffect(() => {
     setSettingsState(loadSettings());
+    // Chrome loads voices async
+    if ("speechSynthesis" in window) {
+      window.speechSynthesis.getVoices();
+      window.speechSynthesis.onvoiceschanged = () => {
+        window.speechSynthesis.getVoices();
+      };
+    }
   }, []);
 
   const setSettings = useCallback((patch: Partial<Settings>) => {
@@ -83,10 +142,12 @@ export function useBossTimers(region: "eu" | "na" = "eu") {
     let closed = false;
 
     const connect = () => {
+      setStatus("connecting");
       ws = new WebSocket(`wss://api.bdoalerts.net/ws?region=${region}`);
 
       ws.onopen = () => {
         setConnected(true);
+        setStatus("live");
         pingTimer = window.setInterval(() => {
           if (ws?.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({ type: "ping" }));
@@ -96,54 +157,75 @@ export function useBossTimers(region: "eu" | "na" = "eu") {
 
       ws.onclose = () => {
         setConnected(false);
+        setStatus("error");
         if (!closed) {
           reconnectTimer = window.setTimeout(connect, 4000);
         }
       };
 
       ws.onerror = () => {
+        setStatus("error");
         ws?.close();
       };
 
       ws.onmessage = (ev) => {
         try {
           const msg = JSON.parse(ev.data);
-          if (msg.type !== "boss_timers" && msg.type !== "connection_ack") return;
+          if (msg.type === "heartbeat" || msg.type === "pong") return;
 
-          const list =
-            msg.type === "connection_ack"
-              ? msg.cached_data?.boss_timers?.bosses ?? msg.cached_data?.bosses
-              : msg.data?.bosses;
-
-          if (!Array.isArray(list)) return;
+          const list = extractBossList(msg);
+          if (list.length === 0) return;
 
           const now = Date.now();
           const parsed: BossTimer[] = [];
 
           for (const b of list) {
-            const id = normalizeBossName(b.boss_name || b.name || "");
+            const rawName = b.boss_name || b.name || b.boss || "";
+            const id = normalizeBossName(String(rawName));
             if (!id) continue;
 
-            const spawn = new Date(b.spawn_time || b.spawnAt || b.time);
-            if (Number.isNaN(spawn.getTime())) continue;
+            // Prefer time_until (always present in the API)
+            let totalSec = 0;
+            if (b.time_until && typeof b.time_until === "object") {
+              const h = Number(b.time_until.hours) || 0;
+              const m = Number(b.time_until.minutes) || 0;
+              const s = Number(b.time_until.seconds) || 0;
+              totalSec = h * 3600 + m * 60 + s;
+            } else {
+              // fallback: parse spawn timestamp
+              const spawnRaw =
+                b.spawn_time || b.spawnAt || b.spawn || b.time || b.next_spawn;
+              const spawn = new Date(spawnRaw);
+              if (Number.isNaN(spawn.getTime())) continue;
+              totalSec = Math.max(0, Math.floor((spawn.getTime() - now) / 1000));
+            }
 
-            const msLeft = spawn.getTime() - now;
-            if (msLeft < -60_000) continue; // already passed
+            if (totalSec < 0) continue;
 
-            const totalSec = Math.max(0, Math.floor(msLeft / 1000));
+            const spawnAt = new Date(now + totalSec * 1000);
+
             parsed.push({
               id,
               name: BOSS_META[id].name,
-              spawnAt: spawn,
+              spawnAt,
               minutesLeft: Math.floor(totalSec / 60),
               secondsLeft: totalSec % 60,
             });
           }
 
-          parsed.sort((a, b) => a.spawnAt.getTime() - b.spawnAt.getTime());
-          setBosses(parsed);
+          // de-dupe by id, keep soonest
+          const byId = new Map<BossId, BossTimer>();
+          for (const p of parsed) {
+            const existing = byId.get(p.id);
+            if (!existing || p.spawnAt < existing.spawnAt) byId.set(p.id, p);
+          }
+
+          const sorted = Array.from(byId.values()).sort(
+            (a, b) => a.spawnAt.getTime() - b.spawnAt.getTime(),
+          );
+          setBosses(sorted);
         } catch {
-          /* ignore */
+          /* ignore bad packets */
         }
       };
     };
@@ -158,7 +240,29 @@ export function useBossTimers(region: "eu" | "na" = "eu") {
     };
   }, [region]);
 
-  // Alert engine
+  // Local countdown tick so the UI updates every second without waiting for WS
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      setBosses((prev) =>
+        prev
+          .map((b) => {
+            const totalSec = Math.max(
+              0,
+              Math.floor((b.spawnAt.getTime() - Date.now()) / 1000),
+            );
+            return {
+              ...b,
+              minutesLeft: Math.floor(totalSec / 60),
+              secondsLeft: totalSec % 60,
+            };
+          })
+          .filter((b) => b.minutesLeft > 0 || b.secondsLeft > 0),
+      );
+    }, 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  // Alert engine — speaks only the boss name
   useEffect(() => {
     if (!settings.enabled) return;
 
@@ -173,27 +277,24 @@ export function useBossTimers(region: "eu" | "na" = "eu") {
 
         if (minLeft <= settings.leadMinutes && minLeft > 0 && !alertedRef.current.has(key)) {
           alertedRef.current.add(key);
-          const text =
-            settings.leadMinutes === 1
-              ? `${BOSS_META[b.id].short} in 1 minute`
-              : `${BOSS_META[b.id].short} in ${settings.leadMinutes} minutes`;
-          speak(text, settings.volume);
+          speakBossName(BOSS_META[b.id].short, settings.volume, settings.voice);
         }
       }
     };
 
-    const id = window.setInterval(tick, 15_000);
-    tick(); // immediate
+    const id = window.setInterval(tick, 10_000);
+    tick();
     return () => clearInterval(id);
   }, [bosses, settings]);
 
   const testAlert = useCallback(() => {
-    speak("Boss in 5 minutes", settings.volume);
-  }, [settings.volume]);
+    speakBossName("Karanda", settings.volume, settings.voice);
+  }, [settings.volume, settings.voice]);
 
   return {
     bosses,
     connected,
+    status,
     settings,
     setSettings,
     testAlert,
