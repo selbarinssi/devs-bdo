@@ -23,13 +23,13 @@ export const BOSS_META: Record<
     short: "Kzarka",
     color: "#f87171",
     // Prefer hosting these in /public/bosses/ yourself for reliability
-    icon: "https://bdocodex.com/items/ui_artwork/ic_04082.webp",
+    icon: "/bosses/kzarka.jpeg",
   },
   karanda: {
     name: "Karanda",
     short: "Karanda",
     color: "#c084fc",
-    icon: "https://bdocodex.com/items/ui_artwork/ic_04370.webp",
+    icon: "/bosses/karanda.jpeg",
   },
   nouver: {
     name: "Nouver",
@@ -41,7 +41,7 @@ export const BOSS_META: Record<
     name: "Ancient Kutum",
     short: "Kutum",
     color: "#34d399",
-    icon: "https://bdocodex.com/items/ui_artwork/collected_study.webp",
+    icon: "/bosses/kutum.jpeg",
   },
   garmoth: {
     name: "Garmoth",
@@ -59,19 +59,19 @@ export const BOSS_META: Record<
     name: "Quint",
     short: "Quint",
     color: "#a78bfa",
-    icon: "https://bdocodex.com/items/ui_artwork/ic_05056.webp",
+    icon: "/bosses/quint.jpeg",
   },
   muraka: {
     name: "Muraka",
     short: "Muraka",
     color: "#f472b6",
-    icon: "https://bdocodex.com/items/ui_artwork/ic_05057.webp",
+    icon: "/bosses/muraka.jpeg",
   },
   offin: {
     name: "Offin",
     short: "Offin",
     color: "#94a3b8",
-    icon: "https://bdocodex.com/items/ui_artwork/ic_04110.webp",
+    icon: "/bosses/offin.jpeg",
   },
   uturi: {
     name: "Uturi",
