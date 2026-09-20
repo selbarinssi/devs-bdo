@@ -1,6 +1,5 @@
 // src/components/world-bosses-panel.tsx
-import { useState } from "react";
-import { ChevronDown, ChevronUp, Volume2, VolumeX, Wifi, WifiOff } from "lucide-react";
+import { Volume2, VolumeX, Wifi, WifiOff } from "lucide-react";
 import { BOSS_META, type BossId } from "@/data/world-bosses";
 import { useBossTimers, type VoiceChoice } from "@/lib/use-boss-timers";
 import { cn } from "@/lib/utils";
@@ -14,17 +13,123 @@ function formatCountdown(min: number, sec: number) {
   return `${min.toString().padStart(2, "0")}:${sec.toString().padStart(2, "0")}`;
 }
 
+function BossCard({
+  boss,
+  large,
+  leadMinutes,
+}: {
+  boss: {
+    id: BossId;
+    name: string;
+    spawnAt: Date;
+    minutesLeft: number;
+    secondsLeft: number;
+  };
+  large?: boolean;
+  leadMinutes: number;
+}) {
+  const meta = BOSS_META[boss.id];
+  const urgent = boss.minutesLeft < leadMinutes;
+
+  return (
+    <div
+      className={cn(
+        "relative flex flex-col overflow-hidden rounded-2xl border transition-all",
+        large ? "min-h-[320px] flex-[1.35]" : "min-h-[240px] flex-1",
+        urgent
+          ? "border-emerald-400/40 shadow-[0_0_28px_rgba(52,211,153,0.18)]"
+          : "border-white/10",
+      )}
+      style={{
+        background: `
+          linear-gradient(165deg,
+            rgba(12, 18, 32, 0.92) 0%,
+            rgba(10, 16, 28, 0.88) 50%,
+            ${meta.color}14 100%
+          )`,
+      }}
+    >
+      {/* top accent line */}
+      <div
+        className="h-1 w-full shrink-0"
+        style={{
+          background: `linear-gradient(90deg, ${meta.color}, transparent 80%)`,
+        }}
+      />
+
+      <div className={cn("flex flex-1 flex-col p-4", large && "p-5")}>
+        {/* portrait */}
+        <div
+          className={cn(
+            "relative mx-auto overflow-hidden rounded-xl ring-1 ring-white/10",
+            large ? "mb-4 size-28 sm:size-32" : "mb-3 size-16 sm:size-20",
+          )}
+          style={{ boxShadow: `0 0 22px ${meta.color}33` }}
+        >
+          <img
+            src={meta.icon}
+            alt={meta.name}
+            className="size-full object-cover"
+            loading="lazy"
+            onError={(e) => {
+              (e.target as HTMLImageElement).style.display = "none";
+            }}
+          />
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={{
+              background: `linear-gradient(to top, ${meta.color}40 0%, transparent 50%)`,
+            }}
+          />
+        </div>
+
+        <div className="mt-auto text-center">
+          <p
+            className={cn(
+              "font-bold uppercase tracking-[0.14em]",
+              large ? "text-[0.7rem]" : "text-[0.6rem]",
+            )}
+            style={{ color: meta.color }}
+          >
+            {meta.short}
+          </p>
+          <p
+            className={cn(
+              "mt-0.5 font-semibold text-slate-100",
+              large ? "text-lg" : "text-sm",
+            )}
+          >
+            {meta.name}
+          </p>
+
+          {/* EMERALD timer */}
+          <p
+            className={cn(
+              "mt-2 font-mono font-bold tabular-nums neon-emerald",
+              large ? "text-3xl sm:text-4xl" : "text-xl sm:text-2xl",
+            )}
+          >
+            {formatCountdown(boss.minutesLeft, boss.secondsLeft)}
+          </p>
+
+          <p className="hub-meta mt-1">
+            {boss.spawnAt.toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function WorldBossesPanel() {
   const { bosses, connected, status, settings, setSettings, testAlert } =
     useBossTimers("eu");
-  const [activeIndex, setActiveIndex] = useState(0);
 
-  // clamp when list shrinks
-  const safeIndex = Math.min(activeIndex, Math.max(0, bosses.length - 1));
-  const active = bosses[safeIndex] ?? null;
-
-  const goPrev = () => setActiveIndex((i) => Math.max(0, i - 1));
-  const goNext = () => setActiveIndex((i) => Math.min(bosses.length - 1, i + 1));
+  const next = bosses[0] ?? null;
+  const upcoming = bosses.slice(1, 5); // up to 4 more → 5 total visible
 
   const toggleBoss = (id: BossId) => {
     const set = new Set(settings.enabledBosses);
@@ -35,20 +140,18 @@ export function WorldBossesPanel() {
 
   return (
     <div className="space-y-5">
-      {/* Header controls */}
+      {/* Controls bar */}
       <div className="glass flex flex-wrap items-center justify-between gap-3 p-4">
-        <div className="flex items-center gap-3">
-          <div
-            className={cn(
-              "flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ring-1",
-              connected
-                ? "bg-emerald-500/15 text-emerald-200 ring-emerald-400/40"
-                : "bg-rose-500/15 text-rose-200 ring-rose-400/40",
-            )}
-          >
-            {connected ? <Wifi className="size-3.5" /> : <WifiOff className="size-3.5" />}
-            {connected ? "Live EU" : status === "connecting" ? "Connecting…" : "Offline"}
-          </div>
+        <div
+          className={cn(
+            "flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ring-1",
+            connected
+              ? "bg-emerald-500/15 text-emerald-200 ring-emerald-400/40"
+              : "bg-rose-500/15 text-rose-200 ring-rose-400/40",
+          )}
+        >
+          {connected ? <Wifi className="size-3.5" /> : <WifiOff className="size-3.5" />}
+          {connected ? "Live EU" : status === "connecting" ? "Connecting…" : "Offline"}
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -58,7 +161,7 @@ export function WorldBossesPanel() {
             className={cn(
               "inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-xs font-semibold ring-1 transition",
               settings.enabled
-                ? "bg-cyan-400/20 text-cyan-100 ring-cyan-400/50"
+                ? "bg-emerald-500/20 text-emerald-100 ring-emerald-400/45"
                 : "bg-white/5 text-muted-foreground ring-white/10",
             )}
           >
@@ -98,132 +201,44 @@ export function WorldBossesPanel() {
         </div>
       </div>
 
-      {/* Vertical card stack */}
-      <div className="mx-auto w-full max-w-md">
-        {bosses.length === 0 ? (
-          <div className="hub-empty">
-            {status === "connecting"
-              ? "Connecting to EU timers…"
-              : status === "error"
-                ? "Could not reach the timer feed. Retrying…"
-                : "No upcoming bosses in the current window."}
-          </div>
-        ) : (
-          <div className="relative flex flex-col items-center">
-            {/* Up / Down nav */}
-            <div className="mb-3 flex items-center gap-3">
-              <button
-                type="button"
-                onClick={goPrev}
-                disabled={safeIndex === 0}
-                className="btn-ghost h-9 w-9 disabled:opacity-30"
-                aria-label="Previous boss"
-              >
-                <ChevronUp className="size-4" />
-              </button>
-              <span className="hub-meta tabular-nums">
-                {safeIndex + 1} / {bosses.length}
-              </span>
-              <button
-                type="button"
-                onClick={goNext}
-                disabled={safeIndex >= bosses.length - 1}
-                className="btn-ghost h-9 w-9 disabled:opacity-30"
-                aria-label="Next boss"
-              >
-                <ChevronDown className="size-4" />
-              </button>
+      {/* Horizontal boss strip */}
+      {bosses.length === 0 ? (
+        <div className="hub-empty">
+          {status === "connecting"
+            ? "Connecting to EU timers…"
+            : status === "error"
+              ? "Could not reach the timer feed. Retrying…"
+              : "No upcoming bosses in the current window."}
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch">
+          {/* NEXT — large left */}
+          {next && (
+            <div className="sm:w-[38%] sm:min-w-[240px] sm:max-w-[320px]">
+              <p className="hub-label mb-2 text-emerald-300/90">Next</p>
+              <BossCard boss={next} large leadMinutes={settings.leadMinutes} />
             </div>
+          )}
 
-            {/* Stack */}
-            <div className="relative h-[340px] w-full">
-              {bosses.map((b, i) => {
-                const offset = i - safeIndex;
-                const isActive = i === safeIndex;
-                const meta = BOSS_META[b.id];
-                const urgent = b.minutesLeft < settings.leadMinutes;
-
-                // only render nearby cards for performance
-                if (Math.abs(offset) > 3) return null;
-
-                return (
-                  <button
+          {/* UPCOMING — smaller, horizontal row */}
+          {upcoming.length > 0 && (
+            <div className="min-w-0 flex-1">
+              <p className="hub-label-muted mb-2">Upcoming</p>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                {upcoming.map((b) => (
+                  <BossCard
                     key={`${b.id}-${b.spawnAt.getTime()}`}
-                    type="button"
-                    onClick={() => setActiveIndex(i)}
-                    className={cn(
-                      "absolute left-0 right-0 mx-auto w-[92%] origin-top transition-all duration-300 ease-out",
-                      isActive ? "z-20 cursor-default" : "z-10 cursor-pointer",
-                    )}
-                    style={{
-                      top: `${Math.max(0, offset) * 18}px`,
-                      transform: `
-                        translateY(${offset < 0 ? offset * 12 : 0}px)
-                        scale(${isActive ? 1 : 1 - Math.abs(offset) * 0.04})
-                      `,
-                      opacity: Math.abs(offset) > 2 ? 0.25 : 1 - Math.abs(offset) * 0.18,
-                      pointerEvents: Math.abs(offset) > 2 ? "none" : "auto",
-                    }}
-                  >
-                    <div
-                      className={cn(
-                        "glass overflow-hidden rounded-2xl p-5 text-left transition-shadow",
-                        isActive && urgent && "ring-1 ring-cyan-400/50 shadow-[0_0_32px_rgba(34,211,238,0.22)]",
-                        isActive && !urgent && "ring-1 ring-white/15 shadow-[0_12px_40px_rgba(0,0,0,0.45)]",
-                      )}
-                    >
-                      {/* Portrait */}
-                      <div
-                        className="relative mx-auto mb-4 aspect-[3/4] w-full max-w-[200px] overflow-hidden rounded-xl ring-1 ring-white/10"
-                        style={{ boxShadow: `0 0 28px ${meta.color}40` }}
-                      >
-                        <img
-                          src={meta.icon}
-                          alt={meta.name}
-                          className="size-full object-cover"
-                          loading="lazy"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).style.display = "none";
-                          }}
-                        />
-                        <div
-                          className="absolute inset-0"
-                          style={{
-                            background: `linear-gradient(to top, ${meta.color}55 0%, transparent 55%)`,
-                          }}
-                        />
-                        <div className="absolute bottom-2 left-0 right-0 text-center">
-                          <p
-                            className="text-sm font-bold tracking-wide drop-shadow"
-                            style={{ color: meta.color }}
-                          >
-                            {meta.short}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="text-center">
-                        <p className="hub-title">{meta.name}</p>
-                        <p className="mt-2 font-mono text-3xl font-bold tabular-nums text-cyan-200">
-                          {formatCountdown(b.minutesLeft, b.secondsLeft)}
-                        </p>
-                        <p className="hub-meta mt-1">
-                          {b.spawnAt.toLocaleTimeString([], {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </p>
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
+                    boss={b}
+                    leadMinutes={settings.leadMinutes}
+                  />
+                ))}
+              </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
 
-      {/* Boss filter */}
+      {/* Alerts filter */}
       <div className="glass p-4">
         <p className="hub-label mb-3">Alerts</p>
         <div className="flex flex-wrap gap-2">
@@ -238,9 +253,18 @@ export function WorldBossesPanel() {
                 className={cn(
                   "inline-flex items-center gap-2 rounded-full px-2.5 py-1.5 text-xs font-semibold ring-1 transition",
                   on
-                    ? "bg-cyan-400/15 text-cyan-100 ring-cyan-400/40"
+                    ? "ring-1 text-slate-100"
                     : "bg-white/5 text-muted-foreground ring-white/10",
                 )}
+                style={
+                  on
+                    ? {
+                        background: `${meta.color}22`,
+                        borderColor: `${meta.color}66`,
+                        boxShadow: `0 0 14px ${meta.color}22`,
+                      }
+                    : undefined
+                }
               >
                 <img
                   src={meta.icon}
