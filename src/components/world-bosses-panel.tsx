@@ -1,7 +1,7 @@
 // src/components/world-bosses-panel.tsx
 import { Volume2, VolumeX, Wifi, WifiOff } from "lucide-react";
 import { BOSS_META, type BossId } from "@/data/world-bosses";
-import { useBossTimers } from "@/lib/use-boss-timers";
+import { useBossTimers, type VoiceChoice } from "@/lib/use-boss-timers";
 import { cn } from "@/lib/utils";
 
 function formatCountdown(min: number, sec: number) {
@@ -14,7 +14,8 @@ function formatCountdown(min: number, sec: number) {
 }
 
 export function WorldBossesPanel() {
-  const { bosses, connected, settings, setSettings, testAlert } = useBossTimers("eu");
+  const { bosses, connected, status, settings, setSettings, testAlert } =
+    useBossTimers("eu");
 
   const toggleBoss = (id: BossId) => {
     const set = new Set(settings.enabledBosses);
@@ -37,9 +38,8 @@ export function WorldBossesPanel() {
             )}
           >
             {connected ? <Wifi className="size-3.5" /> : <WifiOff className="size-3.5" />}
-            {connected ? "Live EU" : "Reconnecting…"}
+            {connected ? "Live EU" : status === "connecting" ? "Connecting…" : "Offline"}
           </div>
-          <p className="hub-meta">Sound alert when a selected boss is ≤ lead time</p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -58,16 +58,31 @@ export function WorldBossesPanel() {
           </button>
 
           <select
-            className="field-select h-9 w-[7.5rem] text-xs"
+            className="field-select h-9 w-[6.5rem] text-xs"
             value={settings.leadMinutes}
             onChange={(e) => setSettings({ leadMinutes: Number(e.target.value) })}
           >
             {[10, 5, 3, 1].map((m) => (
               <option key={m} value={m}>
-                {m} min lead
+                {m} min
               </option>
             ))}
           </select>
+
+          {/* Female voice toggle */}
+          <div className="hub-tab-rail">
+            {(["female1", "female2"] as VoiceChoice[]).map((v) => (
+              <button
+                key={v}
+                type="button"
+                data-active={settings.voice === v}
+                className="hub-tab text-xs"
+                onClick={() => setSettings({ voice: v })}
+              >
+                {v === "female1" ? "Voice A" : "Voice B"}
+              </button>
+            ))}
+          </div>
 
           <button type="button" onClick={testAlert} className="btn-ghost h-9 text-xs">
             Test voice
@@ -78,7 +93,13 @@ export function WorldBossesPanel() {
       {/* Upcoming bosses */}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {bosses.length === 0 && (
-          <div className="hub-empty col-span-full">Waiting for boss data…</div>
+          <div className="hub-empty col-span-full">
+            {status === "connecting"
+              ? "Connecting to EU timers…"
+              : status === "error"
+                ? "Could not reach the timer feed. Retrying…"
+                : "No upcoming bosses in the current window."}
+          </div>
         )}
 
         {bosses.map((b) => {
@@ -109,7 +130,9 @@ export function WorldBossesPanel() {
                   />
                   <div
                     className="absolute inset-0 opacity-30"
-                    style={{ background: `linear-gradient(135deg, ${meta.color}55, transparent)` }}
+                    style={{
+                      background: `linear-gradient(135deg, ${meta.color}55, transparent)`,
+                    }}
                   />
                 </div>
 
@@ -122,7 +145,10 @@ export function WorldBossesPanel() {
                     {formatCountdown(b.minutesLeft, b.secondsLeft)}
                   </p>
                   <p className="hub-meta mt-0.5">
-                    {b.spawnAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                    {b.spawnAt.toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
                   </p>
                 </div>
               </div>
@@ -133,7 +159,7 @@ export function WorldBossesPanel() {
 
       {/* Boss filter */}
       <div className="glass p-4">
-        <p className="hub-label mb-3">Alert for these bosses</p>
+        <p className="hub-label mb-3">Alerts</p>
         <div className="flex flex-wrap gap-2">
           {(Object.keys(BOSS_META) as BossId[]).map((id) => {
             const on = settings.enabledBosses.includes(id);
@@ -150,7 +176,11 @@ export function WorldBossesPanel() {
                     : "bg-white/5 text-muted-foreground ring-white/10",
                 )}
               >
-                <img src={meta.icon} alt="" className="size-5 rounded-md object-cover" />
+                <img
+                  src={meta.icon}
+                  alt=""
+                  className="size-5 rounded-md object-cover"
+                />
                 {meta.short}
               </button>
             );
