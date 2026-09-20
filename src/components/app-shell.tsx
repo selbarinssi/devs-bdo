@@ -1,7 +1,6 @@
 import { Anchor, FlaskConical, ListChecks, Radio, Swords, Skull } from "lucide-react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { type ReactNode } from "react";
-import { Anchor, FlaskConical, ListChecks, Radio, Swords } from "lucide-react";
 import { AuthPanel } from "@/components/auth-panel";
 import { LoginLanding, useSupabaseUser } from "@/components/login-landing";
 import { TabLoader } from "@/components/tab-loader";
