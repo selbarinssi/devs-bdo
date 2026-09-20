@@ -14,7 +14,8 @@ export type VoiceChoice = "female1" | "female2";
 
 type Settings = {
   enabled: boolean;
-  leadMinutes: number;
+  /** Multiple alert thresholds, e.g. [15, 5, 1] */
+  leadMinutes: number[];
   enabledBosses: BossId[];
   volume: number;
   voice: VoiceChoice;
@@ -22,7 +23,7 @@ type Settings = {
 
 const DEFAULT_SETTINGS: Settings = {
   enabled: true,
-  leadMinutes: 5,
+  leadMinutes: [15, 5, 1],
   enabledBosses: Object.keys(BOSS_META) as BossId[],
   volume: 0.95,
   voice: "female1",
@@ -34,7 +35,12 @@ function loadSettings(): Settings {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return DEFAULT_SETTINGS;
-    return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) };
+    const parsed = JSON.parse(raw);
+    // migrate old single leadMinutes number → array
+    if (typeof parsed.leadMinutes === "number") {
+      parsed.leadMinutes = [parsed.leadMinutes];
+    }
+    return { ...DEFAULT_SETTINGS, ...parsed };
   } catch {
     return DEFAULT_SETTINGS;
   }
@@ -269,44 +275,51 @@ export function useBossTimers(region: "eu" | "na" = "eu") {
     return () => clearInterval(id);
   }, []);
 
-  // Alert engine — speaks only the boss name
+    // Alert engine — one shot per threshold per spawn
   useEffect(() => {
     if (!settings.enabled) return;
 
     const tick = () => {
       const now = Date.now();
+      const leads = [...settings.leadMinutes].sort((a, b) => b - a); // 15 → 1
+
       for (const b of bosses) {
         if (!settings.enabledBosses.includes(b.id)) continue;
 
         const msLeft = b.spawnAt.getTime() - now;
+        if (msLeft <= 0) continue;
         const minLeft = msLeft / 60_000;
-        const key = `${b.id}-${b.spawnAt.getTime()}`;
 
-        if (minLeft <= settings.leadMinutes && minLeft > 0 && !alertedRef.current.has(key)) {
-          alertedRef.current.add(key);
-          const mins = settings.leadMinutes;
-          const phrase =
-            mins === 1
-              ? `${BOSS_META[b.id].short} in 1 minute`
-              : `${BOSS_META[b.id].short} in ${mins} minutes`;
-          speakBossName(phrase, settings.volume, settings.voice);
+        for (const lead of leads) {
+          // fire once when we cross into this window
+          if (minLeft <= lead && minLeft > lead - 0.35) {
+            const key = `${b.id}-${b.spawnAt.getTime()}-${lead}`;
+            if (alertedRef.current.has(key)) continue;
+            alertedRef.current.add(key);
+
+            const phrase =
+              lead === 1
+                ? `${BOSS_META[b.id].short} in 1 minute`
+                : `${BOSS_META[b.id].short} in ${lead} minutes`;
+            speakBossName(phrase, settings.volume, settings.voice);
+          }
         }
       }
     };
 
-    const id = window.setInterval(tick, 10_000);
+    const id = window.setInterval(tick, 8_000);
     tick();
     return () => clearInterval(id);
   }, [bosses, settings]);
 
-  const testAlert = useCallback(() => {
-  const mins = settings.leadMinutes;
-  const phrase =
-    mins === 1
-      ? `Karanda in 1 minute`
-      : `Karanda in ${mins} minutes`;
-  speakBossName(phrase, settings.volume, settings.voice);
-}, [settings.volume, settings.voice, settings.leadMinutes]);
+    const testAlert = useCallback(() => {
+    const lead = settings.leadMinutes.includes(5)
+      ? 5
+      : settings.leadMinutes[0] ?? 5;
+    const phrase =
+      lead === 1 ? `Karanda in 1 minute` : `Karanda in ${lead} minutes`;
+    speakBossName(phrase, settings.volume, settings.voice);
+  }, [settings.volume, settings.voice, settings.leadMinutes]);
 
   return {
     bosses,
