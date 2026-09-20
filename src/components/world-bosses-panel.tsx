@@ -1,5 +1,6 @@
 // src/components/world-bosses-panel.tsx
-import { Volume2, VolumeX, Wifi, WifiOff } from "lucide-react";
+import { useState } from "react";
+import { ChevronDown, ChevronUp, Volume2, VolumeX, Wifi, WifiOff } from "lucide-react";
 import { BOSS_META, type BossId } from "@/data/world-bosses";
 import { useBossTimers, type VoiceChoice } from "@/lib/use-boss-timers";
 import { cn } from "@/lib/utils";
@@ -16,6 +17,14 @@ function formatCountdown(min: number, sec: number) {
 export function WorldBossesPanel() {
   const { bosses, connected, status, settings, setSettings, testAlert } =
     useBossTimers("eu");
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  // clamp when list shrinks
+  const safeIndex = Math.min(activeIndex, Math.max(0, bosses.length - 1));
+  const active = bosses[safeIndex] ?? null;
+
+  const goPrev = () => setActiveIndex((i) => Math.max(0, i - 1));
+  const goNext = () => setActiveIndex((i) => Math.min(bosses.length - 1, i + 1));
 
   const toggleBoss = (id: BossId) => {
     const set = new Set(settings.enabledBosses);
@@ -69,7 +78,6 @@ export function WorldBossesPanel() {
             ))}
           </select>
 
-          {/* Female voice toggle */}
           <div className="hub-tab-rail">
             {(["female1", "female2"] as VoiceChoice[]).map((v) => (
               <button
@@ -90,71 +98,129 @@ export function WorldBossesPanel() {
         </div>
       </div>
 
-      {/* Upcoming bosses */}
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {bosses.length === 0 && (
-          <div className="hub-empty col-span-full">
+      {/* Vertical card stack */}
+      <div className="mx-auto w-full max-w-md">
+        {bosses.length === 0 ? (
+          <div className="hub-empty">
             {status === "connecting"
               ? "Connecting to EU timers…"
               : status === "error"
                 ? "Could not reach the timer feed. Retrying…"
                 : "No upcoming bosses in the current window."}
           </div>
-        )}
-
-        {bosses.map((b) => {
-          const meta = BOSS_META[b.id];
-          const urgent = b.minutesLeft < settings.leadMinutes;
-
-          return (
-            <div
-              key={`${b.id}-${b.spawnAt.getTime()}`}
-              className={cn(
-                "glass relative overflow-hidden p-4 transition-all",
-                urgent && "ring-1 ring-cyan-400/50 shadow-[0_0_28px_rgba(34,211,238,0.18)]",
-              )}
-            >
-              <div className="flex items-start gap-3">
-                <div
-                  className="relative size-14 shrink-0 overflow-hidden rounded-xl ring-1 ring-white/10"
-                  style={{ boxShadow: `0 0 18px ${meta.color}33` }}
-                >
-                  <img
-                    src={meta.icon}
-                    alt={meta.name}
-                    className="size-full object-cover"
-                    loading="lazy"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = "none";
-                    }}
-                  />
-                  <div
-                    className="absolute inset-0 opacity-30"
-                    style={{
-                      background: `linear-gradient(135deg, ${meta.color}55, transparent)`,
-                    }}
-                  />
-                </div>
-
-                <div className="min-w-0 flex-1">
-                  <p className="hub-label" style={{ color: meta.color }}>
-                    {meta.short}
-                  </p>
-                  <p className="hub-title truncate">{meta.name}</p>
-                  <p className="mt-1 font-mono text-2xl font-bold tabular-nums text-cyan-200">
-                    {formatCountdown(b.minutesLeft, b.secondsLeft)}
-                  </p>
-                  <p className="hub-meta mt-0.5">
-                    {b.spawnAt.toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </p>
-                </div>
-              </div>
+        ) : (
+          <div className="relative flex flex-col items-center">
+            {/* Up / Down nav */}
+            <div className="mb-3 flex items-center gap-3">
+              <button
+                type="button"
+                onClick={goPrev}
+                disabled={safeIndex === 0}
+                className="btn-ghost h-9 w-9 disabled:opacity-30"
+                aria-label="Previous boss"
+              >
+                <ChevronUp className="size-4" />
+              </button>
+              <span className="hub-meta tabular-nums">
+                {safeIndex + 1} / {bosses.length}
+              </span>
+              <button
+                type="button"
+                onClick={goNext}
+                disabled={safeIndex >= bosses.length - 1}
+                className="btn-ghost h-9 w-9 disabled:opacity-30"
+                aria-label="Next boss"
+              >
+                <ChevronDown className="size-4" />
+              </button>
             </div>
-          );
-        })}
+
+            {/* Stack */}
+            <div className="relative h-[340px] w-full">
+              {bosses.map((b, i) => {
+                const offset = i - safeIndex;
+                const isActive = i === safeIndex;
+                const meta = BOSS_META[b.id];
+                const urgent = b.minutesLeft < settings.leadMinutes;
+
+                // only render nearby cards for performance
+                if (Math.abs(offset) > 3) return null;
+
+                return (
+                  <button
+                    key={`${b.id}-${b.spawnAt.getTime()}`}
+                    type="button"
+                    onClick={() => setActiveIndex(i)}
+                    className={cn(
+                      "absolute left-0 right-0 mx-auto w-[92%] origin-top transition-all duration-300 ease-out",
+                      isActive ? "z-20 cursor-default" : "z-10 cursor-pointer",
+                    )}
+                    style={{
+                      top: `${Math.max(0, offset) * 18}px`,
+                      transform: `
+                        translateY(${offset < 0 ? offset * 12 : 0}px)
+                        scale(${isActive ? 1 : 1 - Math.abs(offset) * 0.04})
+                      `,
+                      opacity: Math.abs(offset) > 2 ? 0.25 : 1 - Math.abs(offset) * 0.18,
+                      pointerEvents: Math.abs(offset) > 2 ? "none" : "auto",
+                    }}
+                  >
+                    <div
+                      className={cn(
+                        "glass overflow-hidden rounded-2xl p-5 text-left transition-shadow",
+                        isActive && urgent && "ring-1 ring-cyan-400/50 shadow-[0_0_32px_rgba(34,211,238,0.22)]",
+                        isActive && !urgent && "ring-1 ring-white/15 shadow-[0_12px_40px_rgba(0,0,0,0.45)]",
+                      )}
+                    >
+                      {/* Portrait */}
+                      <div
+                        className="relative mx-auto mb-4 aspect-[3/4] w-full max-w-[200px] overflow-hidden rounded-xl ring-1 ring-white/10"
+                        style={{ boxShadow: `0 0 28px ${meta.color}40` }}
+                      >
+                        <img
+                          src={meta.icon}
+                          alt={meta.name}
+                          className="size-full object-cover"
+                          loading="lazy"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = "none";
+                          }}
+                        />
+                        <div
+                          className="absolute inset-0"
+                          style={{
+                            background: `linear-gradient(to top, ${meta.color}55 0%, transparent 55%)`,
+                          }}
+                        />
+                        <div className="absolute bottom-2 left-0 right-0 text-center">
+                          <p
+                            className="text-sm font-bold tracking-wide drop-shadow"
+                            style={{ color: meta.color }}
+                          >
+                            {meta.short}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="text-center">
+                        <p className="hub-title">{meta.name}</p>
+                        <p className="mt-2 font-mono text-3xl font-bold tabular-nums text-cyan-200">
+                          {formatCountdown(b.minutesLeft, b.secondsLeft)}
+                        </p>
+                        <p className="hub-meta mt-1">
+                          {b.spawnAt.toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </p>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Boss filter */}
