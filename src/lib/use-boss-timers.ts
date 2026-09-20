@@ -277,7 +277,12 @@ export function useBossTimers(region: "eu" | "na" = "eu") {
 
         if (minLeft <= settings.leadMinutes && minLeft > 0 && !alertedRef.current.has(key)) {
           alertedRef.current.add(key);
-          speakBossName(BOSS_META[b.id].short, settings.volume, settings.voice);
+          const mins = settings.leadMinutes;
+          const phrase =
+            mins === 1
+              ? `${BOSS_META[b.id].short} in 1 minute`
+              : `${BOSS_META[b.id].short} in ${mins} minutes`;
+          speakBossName(phrase, settings.volume, settings.voice);
         }
       }
     };
@@ -288,8 +293,13 @@ export function useBossTimers(region: "eu" | "na" = "eu") {
   }, [bosses, settings]);
 
   const testAlert = useCallback(() => {
-    speakBossName("Karanda", settings.volume, settings.voice);
-  }, [settings.volume, settings.voice]);
+  const mins = settings.leadMinutes;
+  const phrase =
+    mins === 1
+      ? `Karanda in 1 minute`
+      : `Karanda in ${mins} minutes`;
+  speakBossName(phrase, settings.volume, settings.voice);
+}, [settings.volume, settings.voice, settings.leadMinutes]);
 
   return {
     bosses,
