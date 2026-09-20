@@ -77,7 +77,7 @@ export const BOSS_META: Record<
     name: "Uturi",
     short: "Uturi",
     color: "#22d3ee",
-    icon: "https://bdocodex.com/items/ui_artwork/ic_04110.webp",
+    icon: "/bosses/uturi.jpeg",
   },
   sangoon: {
     name: "Sangoon",
