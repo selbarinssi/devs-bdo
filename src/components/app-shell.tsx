@@ -1,3 +1,4 @@
+import { Anchor, FlaskConical, ListChecks, Radio, Swords, Skull } from "lucide-react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { type ReactNode } from "react";
 import { Anchor, FlaskConical, ListChecks, Radio, Swords } from "lucide-react";
@@ -10,6 +11,7 @@ const NAV = [
   { to: "/feed", label: "Feed", icon: Radio, exact: false },
   { to: "/routines", label: "Routines", icon: ListChecks, exact: false },
   { to: "/grind", label: "Grind", icon: Swords, exact: false },
+  { to: "/bosses", label: "Bosses", icon: Skull, exact: false },
   { to: "/alchemy", label: "Alchemy", icon: FlaskConical, exact: false },
   { to: "/voyage", label: "Voyage", icon: Anchor, exact: false },
 ] as const;
@@ -18,6 +20,7 @@ const PAGE_META: Record<string, { title: string; eyebrow: string }> = {
   "/feed": { title: "Hub Feed", eyebrow: "Community" },
   "/routines": { title: "Routines", eyebrow: "Task Tracker" },
   "/grind": { title: "Grind", eyebrow: "PvE Tracker" },
+  "/bosses": { title: "World Bosses", eyebrow: "EU Schedule & Alerts" },
   "/alchemy": { title: "Alchemy Planner", eyebrow: "Harmony Draught Pipeline" },
   "/voyage": { title: "Voyage", eyebrow: "Daily Sailies & Bartering" },
 };
@@ -182,7 +185,7 @@ export function AppShell({
           </nav>
           <AuthPanel className="shrink-0" />
         </div>
-        <nav className="grid grid-cols-5 gap-0.5 border-t border-white/5 px-2 py-1.5 md:hidden">
+        <nav className="grid grid-cols-6 gap-0.5 border-t border-white/5 px-2 py-1.5 md:hidden">
           {NAV.map((item) => {
             const active = item.exact ? pathname === item.to : pathname.startsWith(item.to);
             const Icon = item.icon;
