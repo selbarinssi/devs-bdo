@@ -4,6 +4,7 @@ import { type ReactNode } from "react";
 import { AuthPanel } from "@/components/auth-panel";
 import { LoginLanding, useSupabaseUser } from "@/components/login-landing";
 import { TabLoader } from "@/components/tab-loader";
+import { BossAlertProvider } from "@/components/boss-alert-provider";
 import { cn } from "@/lib/utils";
 
 const NAV = [
@@ -137,8 +138,9 @@ export function AppShell({
     return <LoginLanding />;
   }
 
-  return (
+    return (
     <div className="min-h-screen pb-14 text-foreground">
+      <BossAlertProvider />
       {/* Single thin progress indicator while router is pending */}
       <div
         className={cn(
