@@ -47,13 +47,13 @@ export const BOSS_META: Record<
     name: "Garmoth",
     short: "Garmoth",
     color: "#fb7185",
-    icon: "https://bdocodex.com/items/ui_artwork/ic_05056.webp", // replace if wrong
+    icon: "/bosses/garmoth.jpeg", // replace if wrong
   },
   vell: {
     name: "Vell",
     short: "Vell",
     color: "#67e8f9",
-    icon: "https://bdocodex.com/items/ui_artwork/ic_04110.webp",
+    icon: "/bosses/vell.jpeg",
   },
   quint: {
     name: "Quint",
@@ -83,19 +83,19 @@ export const BOSS_META: Record<
     name: "Sangoon",
     short: "Sangoon",
     color: "#f59e0b",
-    icon: "https://bdocodex.com/items/ui_artwork/ic_04110.webp",
+    icon: "/bosses/sangoon.jpeg",
   },
   bulgasal: {
     name: "Bulgasal",
     short: "Bulgasal",
     color: "#ef4444",
-    icon: "https://bdocodex.com/items/ui_artwork/ic_04110.webp",
+    icon: "/bosses/bulgasal.jpeg",
   },
   golden_pig: {
     name: "Golden Pig King",
     short: "Pig",
     color: "#facc15",
-    icon: "https://bdocodex.com/items/ui_artwork/ic_04110.webp",
+    icon: "/bosses/goldenpig.jpeg",
   },
 };
 
