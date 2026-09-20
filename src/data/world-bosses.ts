@@ -35,7 +35,7 @@ export const BOSS_META: Record<
     name: "Nouver",
     short: "Nouver",
     color: "#fbbf24",
-    icon: "https://bdocodex.com/items/ui_artwork/ic_04920.webp",
+    icon: "/bosses/nouver.jpeg",
   },
   kutum: {
     name: "Ancient Kutum",
