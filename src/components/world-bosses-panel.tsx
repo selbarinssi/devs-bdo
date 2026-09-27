@@ -1,7 +1,8 @@
 // src/components/world-bosses-panel.tsx
 import { Volume2, VolumeX, Wifi, WifiOff } from "lucide-react";
 import { BOSS_META, type BossId } from "@/data/world-bosses";
-import { useBossTimers, type VoiceChoice } from "@/lib/use-boss-timers";
+import { useBossTimersContext } from "@/components/boss-alert-provider";
+import type { VoiceChoice } from "@/lib/use-boss-timers";
 import { cn } from "@/lib/utils";
 
 /** 04:19 when ≥ 1h, else MM:SS */
@@ -126,7 +127,7 @@ function BossCard({
 
 export function WorldBossesPanel() {
   const { bosses, connected, status, settings, setSettings, testAlert } =
-    useBossTimers("eu");
+  useBossTimersContext();
 
   // Only show bosses the user has alerts enabled for
   const visible = bosses.filter((b) => settings.enabledBosses.includes(b.id));
