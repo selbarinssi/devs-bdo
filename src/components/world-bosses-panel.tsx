@@ -187,7 +187,7 @@ export function WorldBossesPanel() {
               <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
                 {upcoming.map((b) => (
                   <BossCard
-                    key={`${b.id}-${b.spawnAt.getTime()}`}
+                    key={b.id}
                     boss={b}
                     urgent={b.minutesLeft < minLead}
                   />
