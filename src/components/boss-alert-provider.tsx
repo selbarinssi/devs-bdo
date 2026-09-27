@@ -1,11 +1,23 @@
-// src/components/boss-alert-provider.tsx
+import { createContext, useContext, type ReactNode } from "react";
 import { useBossTimers } from "@/lib/use-boss-timers";
 
-/**
- * Keeps the EU boss WebSocket + voice alerts alive on every hub page.
- * Renders nothing — settings are still edited on /bosses (localStorage).
- */
-export function BossAlertProvider() {
-  useBossTimers("eu");
-  return null;
+type BossTimersApi = ReturnType<typeof useBossTimers>;
+
+const BossTimersContext = createContext<BossTimersApi | null>(null);
+
+export function BossAlertProvider({ children }: { children?: ReactNode }) {
+  const api = useBossTimers("eu");
+  return (
+    <BossTimersContext.Provider value={api}>
+      {children ?? null}
+    </BossTimersContext.Provider>
+  );
+}
+
+export function useBossTimersContext(): BossTimersApi {
+  const ctx = useContext(BossTimersContext);
+  if (!ctx) {
+    throw new Error("useBossTimersContext must be used under BossAlertProvider");
+  }
+  return ctx;
 }
