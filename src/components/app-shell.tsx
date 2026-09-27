@@ -140,7 +140,7 @@ export function AppShell({
 
     return (
     <div className="min-h-screen pb-14 text-foreground">
-      <BossAlertProvider />
+      <BossAlertProvider>
       {/* Single thin progress indicator while router is pending */}
       <div
         className={cn(
@@ -215,5 +215,6 @@ export function AppShell({
                 <div className="min-h-[42vh]">{children}</div>
       </div>
     </div>
+  </BossAlertProvider>
   );
 }
