@@ -1,8 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   createLoot,
   createSession,
   createSpot,
+  deleteLoot,
+  deleteSession,
   findLootDefaultsByName,
   listLoots,
   listSessionLoots,
@@ -22,12 +24,28 @@ import { downloadSessionReportPng } from "@/lib/session-report";
 import { fetchMarketPriceByName } from "@/lib/arsha-market";
 import {
   CHRONO_KEY,
+  CHRONO_KEY_LEGACY,
+  bumpQty,
   emptyDraft,
+  emptyStore,
   formatElapsed,
-  type ChronoStore,
+  migrateLegacyStore,
+  setQtyValue,
+  type PullDraft,
+  type PullStore,
 } from "@/lib/grind-chrono";
+import {
+  computeSpotStats,
+  pullInsight,
+  silverPerHour,
+  sortBoardLoots,
+  sumPullValue,
+  topContributors,
+  valueLines,
+} from "@/lib/grind-metrics";
 import { useCloudStorage } from "@/lib/user-sync";
-import { effectiveUnitSilver, formatSilverCompact } from "@/lib/utils";
+import { formatSilverCompact } from "@/lib/utils";
+import { readStorage } from "@/lib/storage";
 
 let grindCache: { spots: SpotRow[]; sessions: SessionRow[] } | null = null;
 
@@ -54,6 +72,13 @@ async function pickIconFile(): Promise<string | null> {
   });
 }
 
+function initialPullStore(): PullStore {
+  const legacy = readStorage<unknown>(CHRONO_KEY_LEGACY, null);
+  const migrated = migrateLegacyStore(legacy);
+  if (migrated) return migrated;
+  return emptyStore();
+}
+
 export function useGrindController() {
   const [spots, setSpots] = useState<SpotRow[]>(() => grindCache?.spots ?? []);
   const [loots, setLoots] = useState<LootRow[]>([]);
@@ -65,29 +90,34 @@ export function useGrindController() {
   const [sharingId, setSharingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [importOpen, setImportOpen] = useState(false);
+  const [undoUntil, setUndoUntil] = useState<number | null>(null);
+  const [lastEndedSummary, setLastEndedSummary] = useState<string | null>(null);
+  const undoSessionRef = useRef<SessionRow | null>(null);
+
   const {
-    value: chronoStore,
-    setValue: setChronoStore,
-    hydrated: chronoHydrated,
-  } = useCloudStorage<ChronoStore>(CHRONO_KEY, { lastSpotId: null, bySpot: {} });
+    value: pullStore,
+    setValue: setPullStore,
+    hydrated: pullHydrated,
+  } = useCloudStorage<PullStore>(CHRONO_KEY, initialPullStore());
 
   const [spotQuery, setSpotQuery] = useState("");
   const [regionFilter, setRegionFilter] = useState("all");
+  const [archiveOpen, setArchiveOpen] = useState(false);
 
-  const [qty, setQty] = useState<Record<string, string>>({});
-  const [character, setCharacter] = useState("");
+  // Live pull fields (synced into pullStore.bySpot)
+  const [qty, setQty] = useState<Record<string, number>>({});
+  const [pilot, setPilot] = useState("");
   const [dropRate, setDropRate] = useState("");
   const [minutes, setMinutes] = useState("");
-  const [agris, setAgris] = useState("off");
-  const [showCharacter, setShowCharacter] = useState(true);
-  const [showDropRate, setShowDropRate] = useState(true);
-  const [showAgris, setShowAgris] = useState(true);
-  const [showMinutes, setShowMinutes] = useState(true);
+  const [agris, setAgris] = useState(false);
+  const [hotkeys, setHotkeys] = useState<Record<string, string>>({});
   const [timerOn, setTimerOn] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const timerStart = useRef<number | null>(null);
   const accumulated = useRef(0);
+  const pulseRef = useRef<{ t: number; sph: number }[]>([]);
 
+  // Spot / loot forms
   const [spotName, setSpotName] = useState("");
   const [spotMonsters, setSpotMonsters] = useState("");
   const [spotTerritory, setSpotTerritory] = useState("");
@@ -95,55 +125,53 @@ export function useGrindController() {
   const [spotMode, setSpotMode] = useState<SpotMode>("pve");
   const [addingSpot, setAddingSpot] = useState(false);
   const [editingSpot, setEditingSpot] = useState(false);
-
   const [addingLoot, setAddingLoot] = useState(false);
   const [lootName, setLootName] = useState("");
   const [lootKind, setLootKind] = useState<"market" | "npc">("market");
   const [lootRarity, setLootRarity] = useState<LootRarity>("common");
   const [lootPrice, setLootPrice] = useState("");
   const [lootIconUrl, setLootIconUrl] = useState<string | null>(null);
-
   const [editingLootId, setEditingLootId] = useState<string | null>(null);
   const [editLootName, setEditLootName] = useState("");
   const [editLootKind, setEditLootKind] = useState<"market" | "npc">("market");
   const [editLootRarity, setEditLootRarity] = useState<LootRarity>("common");
   const [editLootPrice, setEditLootPrice] = useState("");
   const [editLootIconUrl, setEditLootIconUrl] = useState<string | null>(null);
+  const [bindHotkeyLootId, setBindHotkeyLootId] = useState<string | null>(null);
 
+  // Bootstrap spots + sessions
   useEffect(() => {
-  let cancelled = false;
-  setLoading(true);
-  (async () => {
-    try {
-      const [sp, se] = await Promise.all([listSpots(), listSessions()]);
-      if (cancelled) return;
-      
-      grindCache = { spots: sp, sessions: se };
-      setSpots(sp);
-      setSessions(se);
-    } catch (e) {
-      if (!cancelled) setError(e instanceof Error ? e.message : "Failed to load");
-    } finally {
-      // Always clear spinner for this mount (Strict Mode cancel must not leave a stuck true).
-      setLoading(false);
+    let cancelled = false;
+    (async () => {
+      try {
+        const [sp, sess] = await Promise.all([listSpots(), listSessions(80)]);
+        if (cancelled) return;
+        setSpots(sp);
+        setSessions(sess);
+        grindCache = { spots: sp, sessions: sess };
+      } catch (e) {
+        if (!cancelled) setError(e instanceof Error ? e.message : "Failed to load grind data");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Resume last spot once hydrated
+  useEffect(() => {
+    if (!pullHydrated || selectedId || !spots.length) return;
+    const last = pullStore.lastSpotId;
+    if (last && spots.some((s) => s.id === last)) {
+      setSelectedId(last);
     }
-  })();
-  return () => {
-    cancelled = true;
-  };
-}, []);
+  }, [pullHydrated, pullStore.lastSpotId, spots, selectedId]);
 
+  // Load loots + draft when spot changes
   useEffect(() => {
-    if (!chronoHydrated || loading || selectedId) return;
-    if (chronoStore.lastSpotId && spots.some((s) => s.id === chronoStore.lastSpotId)) {
-      setSelectedId(chronoStore.lastSpotId);
-    } else if (spots[0]) {
-      setSelectedId(spots[0].id);
-    }
-  }, [chronoHydrated, loading, spots, chronoStore.lastSpotId, selectedId]);
-
-  useEffect(() => {
-    if (!selectedId || !chronoHydrated) return;
+    if (!selectedId || !pullHydrated) return;
     let cancelled = false;
     (async () => {
       try {
@@ -153,18 +181,15 @@ export function useGrindController() {
         if (!cancelled) setError(e instanceof Error ? e.message : "Failed to load loots");
       }
     })();
-    const draft = chronoStore.bySpot[selectedId] ?? emptyDraft();
+    const draft: PullDraft = pullStore.bySpot[selectedId] ?? emptyDraft();
     setQty(draft.qty ?? {});
-    setCharacter(draft.character ?? "");
+    const pilotName = draft.pilot || pullStore.lastPilot || "";
+    setPilot(pilotName);
     setDropRate(draft.dropRate ?? "");
     setMinutes(draft.minutes ?? "");
-    setAgris(
-      draft.agris === "on" || Number(draft.agris) > 0 ? "on" : "off",
-    );
-    setShowCharacter(draft.showCharacter ?? true);
-    setShowDropRate(draft.showDropRate ?? true);
-    setShowAgris(draft.showAgris ?? true);
-    setShowMinutes(draft.showMinutes ?? true);
+    setAgris(Boolean(draft.agris));
+    setHotkeys(draft.hotkeys ?? {});
+    pulseRef.current = draft.pulse ?? [];
     accumulated.current = draft.accumulatedMs ?? 0;
     if (draft.running && draft.startedAt) {
       timerStart.current = draft.startedAt;
@@ -180,47 +205,106 @@ export function useGrindController() {
     return () => {
       cancelled = true;
     };
-  }, [selectedId, chronoHydrated]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedId, pullHydrated]);
 
+  // Persist draft
   useEffect(() => {
-    if (!selectedId || !chronoHydrated) return;
-    setChronoStore((prev) => ({
-      lastSpotId: selectedId,
-      bySpot: {
-        ...prev.bySpot,
-        [selectedId]: {
-          qty,
-          character,
-          dropRate,
-          minutes,
-          agris,
-          showCharacter,
-          showDropRate,
-          showAgris,
-          showMinutes,
-          running: timerOn,
-          startedAt: timerStart.current,
-          accumulatedMs: accumulated.current,
+    if (!selectedId || !pullHydrated) return;
+    setPullStore((prev) => {
+      const pilots = new Set(prev.pilots);
+      if (pilot.trim()) pilots.add(pilot.trim());
+      return {
+        ...prev,
+        lastSpotId: selectedId,
+        lastPilot: pilot.trim() || prev.lastPilot,
+        pilots: Array.from(pilots),
+        bySpot: {
+          ...prev.bySpot,
+          [selectedId]: {
+            qty,
+            pilot,
+            dropRate,
+            minutes,
+            agris,
+            hotkeys,
+            favoriteLootIds: prev.bySpot[selectedId]?.favoriteLootIds ?? [],
+            running: timerOn,
+            startedAt: timerStart.current,
+            accumulatedMs: accumulated.current,
+            pulse: pulseRef.current.slice(-48),
+          },
         },
-      },
-    }));
-    }, [selectedId, qty, character, dropRate, minutes, agris, showCharacter, showDropRate, showAgris, showMinutes, timerOn, elapsed, chronoHydrated, setChronoStore]);
+      };
+    });
+  }, [
+    selectedId,
+    qty,
+    pilot,
+    dropRate,
+    minutes,
+    agris,
+    hotkeys,
+    timerOn,
+    elapsed,
+    pullHydrated,
+    setPullStore,
+  ]);
 
+  // Timer tick + pulse samples
   useEffect(() => {
     if (!timerOn) return;
     const id = window.setInterval(() => {
       if (timerStart.current != null) {
-        setElapsed(Date.now() - timerStart.current + accumulated.current);
+        const ms = Date.now() - timerStart.current + accumulated.current;
+        setElapsed(ms);
+        const mins = ms / 60_000;
+        const lines = valueLines(loots, qty);
+        const { total } = sumPullValue(lines);
+        const sph = silverPerHour(total, mins);
+        const last = pulseRef.current[pulseRef.current.length - 1];
+        if (!last || Date.now() - last.t > 20_000) {
+          pulseRef.current = [...pulseRef.current.slice(-47), { t: Date.now(), sph }];
+        }
       }
     }, 250);
     return () => clearInterval(id);
-  }, [timerOn]);
+  }, [timerOn, loots, qty]);
+
+  // Global hotkeys 1-9 while not typing
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!selectedId) return;
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      if (bindHotkeyLootId) {
+        if (/^[1-9]$/.test(e.key)) {
+          e.preventDefault();
+          setHotkeys((prev) => {
+            const next = { ...prev };
+            for (const [id, k] of Object.entries(next)) {
+              if (k === e.key) delete next[id];
+            }
+            next[bindHotkeyLootId] = e.key;
+            return next;
+          });
+          setBindHotkeyLootId(null);
+        }
+        return;
+      }
+      if (!/^[1-9]$/.test(e.key)) return;
+      const lootId = Object.entries(hotkeys).find(([, k]) => k === e.key)?.[0];
+      if (!lootId) return;
+      e.preventDefault();
+      setQty((q) => bumpQty(q, lootId, e.shiftKey ? 10 : 1));
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [selectedId, hotkeys, bindHotkeyLootId]);
 
   const regions = useMemo(() => {
     const set = new Set<string>();
-    for (const s of spots) {
-      set.add((s.territory || "").trim() || "Unspecified");
-    }
+    for (const s of spots) set.add((s.territory || "").trim() || "Unspecified");
     return ["all", ...Array.from(set).sort((a, b) => a.localeCompare(b))];
   }, [spots]);
 
@@ -238,40 +322,120 @@ export function useGrindController() {
     });
   }, [spots, spotQuery, regionFilter]);
 
+  const favoriteSet = useMemo(
+    () => new Set(pullStore.favoriteSpotIds ?? []),
+    [pullStore.favoriteSpotIds],
+  );
+
+  const orderedSpots = useMemo(() => {
+    const fav = filteredSpots.filter((s) => favoriteSet.has(s.id));
+    const rest = filteredSpots.filter((s) => !favoriteSet.has(s.id));
+    const recentIds = sessions
+      .map((s) => s.spot_id)
+      .filter((id, i, a) => a.indexOf(id) === i)
+      .slice(0, 5);
+    rest.sort((a, b) => {
+      const ra = recentIds.indexOf(a.id);
+      const rb = recentIds.indexOf(b.id);
+      if (ra !== -1 || rb !== -1) {
+        if (ra === -1) return 1;
+        if (rb === -1) return -1;
+        return ra - rb;
+      }
+      return a.name.localeCompare(b.name);
+    });
+    return [...fav, ...rest];
+  }, [filteredSpots, favoriteSet, sessions]);
+
   const spotsByRegion = useMemo(() => {
     const map = new Map<string, SpotRow[]>();
-    for (const s of filteredSpots) {
+    for (const s of orderedSpots) {
       const key = (s.territory || "").trim() || "Unspecified";
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(s);
     }
     return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b));
-  }, [filteredSpots]);
+  }, [orderedSpots]);
 
   const { hh, mm, ss, mins: timerMins } = formatElapsed(elapsed);
   const manualMins = parseFloat(minutes) || 0;
   const effectiveMins = timerOn || elapsed > 0 ? timerMins : manualMins;
 
-  const sessionTotals = useMemo(() => {
-    let total = 0;
-    for (const l of loots) {
-      const q = parseFloat(qty[l.id] || "0") || 0;
-      total += q * effectiveUnitSilver(l.unit_price, l.kind);
-    }
-    const mins = effectiveMins > 0 ? effectiveMins : 0;
-    const sph = mins > 0 ? total / (mins / 60) : 0;
-    return { total, sph, mins };
-  }, [loots, qty, effectiveMins]);
+  const lines = useMemo(() => valueLines(loots, qty), [loots, qty]);
+  const { total, trash, rare } = useMemo(() => sumPullValue(lines), [lines]);
+  const liveSph = useMemo(() => silverPerHour(total, effectiveMins), [total, effectiveMins]);
 
   const spotSessions = useMemo(
     () => (selectedId ? sessions.filter((s) => s.spot_id === selectedId) : []),
     [sessions, selectedId],
   );
+  const spotStats = useMemo(() => computeSpotStats(spotSessions), [spotSessions]);
+  const insight = useMemo(
+    () =>
+      pullInsight({
+        liveSph,
+        stats: spotStats,
+        trash,
+        rare,
+        total,
+        minutes: effectiveMins,
+      }),
+    [liveSph, spotStats, trash, rare, total, effectiveMins],
+  );
+  const boardLoots = useMemo(() => sortBoardLoots(loots, qty), [loots, qty]);
+  const contributors = useMemo(() => topContributors(lines, 3), [lines]);
+  const pulse = pulseRef.current;
 
-  const avgSph = useMemo(() => {
-    if (!spotSessions.length) return 0;
-    return spotSessions.reduce((a, s) => a + Number(s.silver_per_hour), 0) / spotSessions.length;
-  }, [spotSessions]);
+  const suggested = useMemo(() => {
+    if (!spots.length || !sessions.length) return null;
+    const bySpot = new Map<string, SessionRow[]>();
+    for (const s of sessions) {
+      if (!bySpot.has(s.spot_id)) bySpot.set(s.spot_id, []);
+      bySpot.get(s.spot_id)!.push(s);
+    }
+    let best: { spot: SpotRow; stats: ReturnType<typeof computeSpotStats> } | null = null;
+    for (const spot of spots) {
+      if (!favoriteSet.has(spot.id) && bySpot.get(spot.id)?.length) {
+        /* allow non-fav if enough data */
+      }
+      const st = computeSpotStats(bySpot.get(spot.id) ?? []);
+      if (st.count < 2) continue;
+      if (!best || st.medianSph > best.stats.medianSph) best = { spot, stats: st };
+    }
+    // Prefer favorites when close
+    for (const id of favoriteSet) {
+      const spot = spots.find((s) => s.id === id);
+      if (!spot) continue;
+      const st = computeSpotStats(bySpot.get(id) ?? []);
+      if (st.count < 1) continue;
+      if (!best || st.medianSph >= best.stats.medianSph * 0.92) best = { spot, stats: st };
+    }
+    return best;
+  }, [spots, sessions, favoriteSet]);
+
+  const armSuggested = () => {
+    if (!suggested) return;
+    setSelectedId(suggested.spot.id);
+  };
+
+  const toggleFavoriteSpot = (id: string) => {
+    setPullStore((prev) => {
+      const set = new Set(prev.favoriteSpotIds ?? []);
+      if (set.has(id)) set.delete(id);
+      else set.add(id);
+      return { ...prev, favoriteSpotIds: Array.from(set) };
+    });
+  };
+
+  const addQty = (lootId: string, delta: number) => {
+    setQty((q) => bumpQty(q, lootId, delta));
+  };
+
+  const writeQty = (lootId: string, value: number) => {
+    setQty((q) => setQtyValue(q, lootId, value));
+  };
+
+  const clearQty = () => setQty({});
 
   const toggleTimer = () => {
     if (timerOn) {
@@ -292,6 +456,14 @@ export function useGrindController() {
     accumulated.current = 0;
     setTimerOn(false);
     setElapsed(0);
+    pulseRef.current = [];
+  };
+
+  const armPull = () => {
+    if (!timerOn) {
+      timerStart.current = Date.now();
+      setTimerOn(true);
+    }
   };
 
   const onCreateSpot = async () => {
@@ -314,13 +486,7 @@ export function useGrindController() {
       setSpotMode("pve");
       setAddingSpot(false);
     } catch (e) {
-      const msg =
-        e instanceof Error
-          ? e.message
-          : e && typeof e === "object" && "message" in e
-            ? String((e as { message: unknown }).message)
-            : "Create spot failed";
-      setError(msg);
+      setError(e instanceof Error ? e.message : "Create spot failed");
     } finally {
       setBusy(false);
     }
@@ -358,7 +524,7 @@ export function useGrindController() {
     }
   };
 
-    const onFetchMarketPrice = async () => {
+  const onFetchMarketPrice = async () => {
     if (!lootName.trim()) return;
     setBusy(true);
     setError(null);
@@ -372,7 +538,8 @@ export function useGrindController() {
       setBusy(false);
     }
   };
-    const onRefreshMarketPrices = async () => {
+
+  const onRefreshMarketPrices = async () => {
     if (!loots.length) return;
     setBusy(true);
     setRefreshingPrices(true);
@@ -388,7 +555,7 @@ export function useGrindController() {
           const row = await updateLoot(l.id, { unit_price: hit.basePrice });
           next[i] = row;
         } catch {
-          /* skip this item */
+          /* skip */
         }
       }
       setLoots(sortLootsByRarity(next));
@@ -399,6 +566,7 @@ export function useGrindController() {
       setRefreshingPrices(false);
     }
   };
+
   const onCreateLoot = async () => {
     if (!selectedId || !lootName.trim()) return;
     setBusy(true);
@@ -415,7 +583,6 @@ export function useGrindController() {
             : 0;
       const kind = defaults?.kind ?? lootKind;
       let market_item_id: number | null = null;
-
       if (kind === "market" && unit_price <= 0) {
         try {
           const hit = await fetchMarketPriceByName(name);
@@ -424,10 +591,9 @@ export function useGrindController() {
             market_item_id = hit.id;
           }
         } catch {
-          /* keep 0 — user can type manually */
+          /* keep 0 */
         }
       }
-
       const rarity = defaults?.rarity ?? lootRarity;
       const row = await createLoot({
         spot_id: selectedId,
@@ -484,45 +650,28 @@ export function useGrindController() {
     setSharingId(s.id);
     setError(null);
     try {
-      const lines = await listSessionLoots(s.id);
-      const spot = spots.find((x) => x.id === s.spot_id);
-      const iconByLootId: Record<string, string | null | undefined> = {};
+      const linesDb = await listSessionLoots(s.id);
+      const spot = spots.find((x) => x.id === s.spot_id) ?? null;
+      const iconByLootId: Record<string, string> = {};
       const metaByLootId: Record<
         string,
-        { kind?: "market" | "npc"; rarity?: "common" | "uncommon" | "rare" | "epic" | "legendary" | null }
-      > = {};
-      const metaByName: Record<
-        string,
-        { kind?: "market" | "npc"; rarity?: "common" | "uncommon" | "rare" | "epic" | "legendary" | null }
+        { kind: "market" | "npc"; rarity: ReturnType<typeof normalizeRarity> }
       > = {};
       for (const l of loots) {
-        if (l.id) {
-          iconByLootId[l.id] = l.icon_url;
-          metaByLootId[l.id] = { kind: l.kind, rarity: l.rarity };
-        }
-        if (l.name) {
-          metaByName[l.name.trim().toLowerCase()] = { kind: l.kind, rarity: l.rarity };
-        }
+        if (l.icon_url) iconByLootId[l.id] = l.icon_url;
+        metaByLootId[l.id] = { kind: l.kind, rarity: normalizeRarity(l.rarity) };
       }
-      for (const line of lines) {
-        if (line.loot_id && !iconByLootId[line.loot_id]) {
-          const match = loots.find((x) => x.name === line.loot_name);
-          if (match?.icon_url) iconByLootId[line.loot_id] = match.icon_url;
-          if (match) metaByLootId[line.loot_id] = { kind: match.kind, rarity: match.rarity };
-        }
-      }
-            await downloadSessionReportPng({
+      await downloadSessionReportPng({
         session: s,
         spot,
-        lines,
+        lines: linesDb,
         iconByLootId,
         metaByLootId,
-        metaByName,
-        showCharacter,
-        showDropRate,
-        showAgris,
-        showMinutes,
-        agris: agris === "on" ? 1 : 0,
+        showCharacter: true,
+        showDropRate: true,
+        showAgris: true,
+        showMinutes: true,
+        agris: s.agris != null ? Number(s.agris) : null,
       });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Share report failed");
@@ -531,57 +680,91 @@ export function useGrindController() {
     }
   };
 
-  const onSaveSession = async () => {
-    if (!selectedId || sessionTotals.total <= 0) return;
+  const endPull = async () => {
+    if (!selectedId || total <= 0) return;
+    if (timerOn) {
+      if (timerStart.current != null) {
+        accumulated.current += Date.now() - timerStart.current;
+      }
+      timerStart.current = null;
+      setTimerOn(false);
+      setElapsed(accumulated.current);
+    }
     setBusy(true);
     setError(null);
     try {
-    const mins = Math.max(1, Math.round(sessionTotals.mins || manualMins || 1));
+      const mins = Math.max(1, Math.round(effectiveMins || manualMins || 1));
+      const sph = silverPerHour(total, mins);
       const drParsed = parseFloat(dropRate);
       const saved = await createSession({
         spot_id: selectedId,
-        character_name: character.trim() || "Unknown",
+        character_name: pilot.trim() || "Unknown",
         minutes: mins,
-        total_value: sessionTotals.total,
-        silver_per_hour: sessionTotals.sph,
+        total_value: total,
+        silver_per_hour: sph,
         drop_rate: Number.isFinite(drParsed) ? drParsed : null,
-        agris: agris === "on" ? 1 : 0,
-        started_at: timerStart.current
-          ? new Date(timerStart.current).toISOString()
-          : elapsed > 0
-            ? new Date(Date.now() - elapsed).toISOString()
-            : null,
-        lines: loots
-          .map((l) => {
-            const q = parseFloat(qty[l.id] || "0") || 0;
-            const eff = effectiveUnitSilver(l.unit_price, l.kind);
-            return {
-              loot_id: l.id,
-              loot_name: l.name,
-              unit_price: Number(l.unit_price),
-              quantity: q,
-              line_value: q * eff,
-            };
-          })
-          .filter((l) => l.quantity > 0),
+        agris: agris ? 1 : 0,
+        started_at:
+          elapsed > 0 ? new Date(Date.now() - elapsed).toISOString() : null,
+        lines: lines
+          .filter((l) => l.qty > 0)
+          .map((l) => ({
+            loot_id: l.loot.id,
+            loot_name: l.loot.name,
+            unit_price: Number(l.loot.unit_price),
+            quantity: l.qty,
+            line_value: l.lineValue,
+          })),
       });
       setSessions((prev) => [saved, ...prev.filter((x) => x.id !== saved.id)]);
+      undoSessionRef.current = saved;
+      setUndoUntil(Date.now() + 15_000);
+      setLastEndedSummary(
+        `${formatSilver(total)} · ${formatSilver(sph)}/h · ${mins}m`,
+      );
       setQty({});
-      setTimerOn(false);
-      timerStart.current = null;
       accumulated.current = 0;
       setElapsed(0);
+      pulseRef.current = [];
+      timerStart.current = null;
+      setTimerOn(false);
     } catch (e) {
-      const msg =
-        e instanceof Error
-          ? e.message
-          : e && typeof e === "object" && "message" in e
-            ? String((e as { message: unknown }).message)
-            : "Save session failed";
-      setError(msg);
+      setError(e instanceof Error ? e.message : "End pull failed");
     } finally {
       setBusy(false);
     }
+  };
+
+  const undoEndPull = async () => {
+    const s = undoSessionRef.current;
+    if (!s) return;
+    try {
+      await deleteSession(s.id);
+      setSessions((p) => p.filter((x) => x.id !== s.id));
+      setUndoUntil(null);
+      undoSessionRef.current = null;
+      setLastEndedSummary(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Undo failed");
+    }
+  };
+
+  useEffect(() => {
+    if (!undoUntil) return;
+    const t = window.setTimeout(() => {
+      setUndoUntil(null);
+      undoSessionRef.current = null;
+    }, Math.max(0, undoUntil - Date.now()));
+    return () => clearTimeout(t);
+  }, [undoUntil]);
+
+  const applyImportQty = (next: Record<string, string>) => {
+    const q: Record<string, number> = {};
+    for (const [id, v] of Object.entries(next)) {
+      const n = Number(v);
+      if (n > 0) q[id] = n;
+    }
+    setQty(q);
   };
 
   return {
@@ -607,34 +790,52 @@ export function useGrindController() {
     setRegionFilter,
     regions,
     spotsByRegion,
+    orderedSpots,
+    favoriteSet,
+    toggleFavoriteSpot,
     qty,
-    setQty,
-    character,
-    setCharacter,
+    addQty,
+    writeQty,
+    clearQty,
+    pilot,
+    setPilot,
+    pilots: pullStore.pilots ?? [],
     dropRate,
     setDropRate,
     minutes,
     setMinutes,
     agris,
     setAgris,
-    showCharacter,
-    setShowCharacter,
-    showDropRate,
-    setShowDropRate,
-    showAgris,
-    setShowAgris,
-    showMinutes,
-    setShowMinutes,
+    hotkeys,
+    setBindHotkeyLootId,
+    bindHotkeyLootId,
     timerOn,
     elapsed,
     hh,
     mm,
     ss,
-    sessionTotals,
-    spotSessions,
-    avgSph,
+    total,
+    trash,
+    rare,
+    liveSph,
+    effectiveMins,
+    spotStats,
+    insight,
+    boardLoots,
+    contributors,
+    pulse,
+    lines,
+    suggested,
+    armSuggested,
+    archiveOpen,
+    setArchiveOpen,
+    undoUntil,
+    lastEndedSummary,
+    undoEndPull,
+    armPull,
     toggleTimer,
     resetTimer,
+    endPull,
     spotName,
     setSpotName,
     spotMonsters,
@@ -682,8 +883,10 @@ export function useGrindController() {
     beginEditLoot,
     saveLootEdit,
     onShareSession,
-    onSaveSession,
+    applyImportQty,
     pickIconFile,
     formatSilver,
+    deleteLoot,
+    deleteSession,
   };
 }
