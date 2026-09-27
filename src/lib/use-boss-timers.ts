@@ -96,8 +96,18 @@ function pickFemaleVoice(choice: VoiceChoice): SpeechSynthesisVoice | null {
   return b ?? null;
 }
 
+let lastSpeakAt = 0;
+let lastSpeakPhrase = "";
+
 function speakBossName(name: string, volume: number, voiceChoice: VoiceChoice) {
   if (!("speechSynthesis" in window)) return;
+
+  const now = Date.now();
+  // block same phrase within 4s (safety net against any remaining double-fire)
+  if (name === lastSpeakPhrase && now - lastSpeakAt < 4000) return;
+  lastSpeakPhrase = name;
+  lastSpeakAt = now;
+
   window.speechSynthesis.cancel();
 
   const u = new SpeechSynthesisUtterance(name);
@@ -127,6 +137,8 @@ export function useBossTimers(region: "eu" | "na" = "eu") {
   const [settings, setSettingsState] = useState<Settings>(DEFAULT_SETTINGS);
   const [status, setStatus] = useState<"connecting" | "live" | "error">("connecting");
   const alertedRef = useRef<Set<string>>(new Set());
+    const bossesRef = useRef<BossTimer[]>([]);
+    bossesRef.current = bosses;
 
   useEffect(() => {
     setSettingsState(loadSettings());
@@ -233,10 +245,35 @@ export function useBossTimers(region: "eu" | "na" = "eu") {
             if (!existing || p.spawnAt < existing.spawnAt) byId.set(p.id, p);
           }
 
-          const sorted = Array.from(byId.values()).sort(
-            (a, b) => a.spawnAt.getTime() - b.spawnAt.getTime(),
-          );
-          setBosses(sorted);
+          setBosses((prev) => {
+            const prevById = new Map(prev.map((b) => [b.id, b]));
+            const merged: BossTimer[] = [];
+
+            for (const p of byId.values()) {
+              const old = prevById.get(p.id);
+              if (old) {
+                const driftMs = Math.abs(p.spawnAt.getTime() - old.spawnAt.getTime());
+                // Keep existing spawnAt if within 45s — stops countdown jumps + double alerts
+                if (driftMs < 45_000) {
+                  const totalSec = Math.max(
+                    0,
+                    Math.floor((old.spawnAt.getTime() - Date.now()) / 1000),
+                  );
+                  merged.push({
+                    ...old,
+                    minutesLeft: Math.floor(totalSec / 60),
+                    secondsLeft: totalSec % 60,
+                  });
+                  continue;
+                }
+              }
+              merged.push(p);
+            }
+
+            return merged.sort(
+              (a, b) => a.spawnAt.getTime() - b.spawnAt.getTime(),
+            );
+          });
         } catch {
           /* ignore bad packets */
         }
@@ -275,15 +312,17 @@ export function useBossTimers(region: "eu" | "na" = "eu") {
     return () => clearInterval(id);
   }, []);
 
-    // Alert engine — one shot per threshold per spawn
+  // Alert engine — one shot per threshold per spawn
+  // Does NOT depend on `bosses` (that changes every 1s and was causing double audio)
   useEffect(() => {
     if (!settings.enabled) return;
 
     const tick = () => {
       const now = Date.now();
       const leads = [...settings.leadMinutes].sort((a, b) => b - a); // 15 → 1
+      const list = bossesRef.current;
 
-      for (const b of bosses) {
+      for (const b of list) {
         if (!settings.enabledBosses.includes(b.id)) continue;
 
         const msLeft = b.spawnAt.getTime() - now;
@@ -291,9 +330,11 @@ export function useBossTimers(region: "eu" | "na" = "eu") {
         const minLeft = msLeft / 60_000;
 
         for (const lead of leads) {
-          // fire once when we cross into this window
-          if (minLeft <= lead && minLeft > lead - 0.35) {
-            const key = `${b.id}-${b.spawnAt.getTime()}-${lead}`;
+          // tight window (~5s) so we only fire once when crossing the threshold
+          if (minLeft <= lead && minLeft > lead - 0.08) {
+            // minute-bucket key so small spawnAt drift doesn't re-fire
+            const spawnMinute = Math.floor(b.spawnAt.getTime() / 60_000);
+            const key = `${b.id}-${spawnMinute}-${lead}`;
             if (alertedRef.current.has(key)) continue;
             alertedRef.current.add(key);
 
@@ -305,12 +346,23 @@ export function useBossTimers(region: "eu" | "na" = "eu") {
           }
         }
       }
+
+      // prune old keys (keep set from growing forever)
+      if (alertedRef.current.size > 200) {
+        alertedRef.current.clear();
+      }
     };
 
-    const id = window.setInterval(tick, 8_000);
+    const id = window.setInterval(tick, 2000);
     tick();
     return () => clearInterval(id);
-  }, [bosses, settings]);
+  }, [
+    settings.enabled,
+    settings.leadMinutes,
+    settings.enabledBosses,
+    settings.volume,
+    settings.voice,
+  ]);
 
     const testAlert = useCallback(() => {
     const lead = settings.leadMinutes.includes(5)
